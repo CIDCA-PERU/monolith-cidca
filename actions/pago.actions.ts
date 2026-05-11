@@ -2,6 +2,11 @@
 
 import { supabase } from '@/lib/supabase';
 import { getCurrentUser } from './auth.actions';
+import {
+  acceptPagoOrder,
+  createEstudianteCursoFromPago,
+  getOrdenById,
+} from '@/repository/pago.repository';
 
 function generateVoucherFilename(
   apellido1: string,
@@ -233,6 +238,75 @@ export async function uploadVoucher(
     };
   } catch (error) {
     console.error('Error uploading voucher:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido',
+    };
+  }
+}
+
+/**
+ * Acepta un pago (estado ENVIADO -> ACEPTADO) y crea la relación estudiante_curso
+ * Esta función es típicamente llamada por un admin o sistema de verificación
+ */
+export async function acceptPago(pagoId: number): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // 1. Verificar que el usuario esté autenticado
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'No estás autenticado' };
+    }
+
+    // 2. Obtener datos del pago
+    const pago = await getOrdenById(pagoId);
+    if (!pago) {
+      return { success: false, error: 'Orden de pago no encontrada' };
+    }
+
+    // 3. Validar que el pago esté en estado ENVIADO
+    if (pago.pago_estad_vac !== 'ENVIADO' && pago.pago_estad_vac !== 'PAGADO') {
+      return {
+        success: false,
+        error: `No se puede aceptar un pago en estado ${pago.pago_estad_vac}. Solo se pueden aceptar pagos ENVIADO o PAGADO.`,
+      };
+    }
+
+    // 4. Aceptar el pago (cambiar estado a ACEPTADO)
+    const pagoActualizado = await acceptPagoOrder(pagoId);
+    if (!pagoActualizado) {
+      return {
+        success: false,
+        error: 'Error al actualizar el estado del pago',
+      };
+    }
+
+    // 5. Crear la relación estudiante_curso
+    const estudianteCursoCreado = await createEstudianteCursoFromPago(
+      pago.estu_id_int,
+      pago.cur_id_int
+    );
+
+    if (!estudianteCursoCreado) {
+      return {
+        success: false,
+        error: 'Pago aceptado pero error al matricular al estudiante en el curso',
+      };
+    }
+
+    console.log(
+      `[PAGO ACEPTADO] Pago ID: ${pagoId}, Estudiante: ${pago.estu_id_int}, Curso: ${pago.cur_id_int}`
+    );
+
+    return {
+      success: true,
+      message: `Pago aceptado exitosamente. Estudiante matriculado en el curso.`,
+    };
+  } catch (error) {
+    console.error('Error accepting pago:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',

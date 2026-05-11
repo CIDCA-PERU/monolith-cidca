@@ -11,6 +11,28 @@ import {
 import { getCurrentUser } from '@/actions/auth.actions'
 import { getCertificadosByEstudiante, getEstudianteByUserId } from '@/repository/aula.repository'
 
+function formatearFechaBonita(isoString: string | null | undefined) {
+  if (!isoString) return '-';
+  
+  try {
+    const date = new Date(isoString);
+    
+    const formateador = new Intl.DateTimeFormat('es-PE', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/Lima'
+    });
+
+    return formateador.format(date);
+  } catch (error) {
+    return '-';
+  }
+}
+
 export default async function AulaCertificadosPage() {
   const user = await getCurrentUser()
   if (!user) {
@@ -21,12 +43,13 @@ export default async function AulaCertificadosPage() {
   const certificados = estudiante
     ? await getCertificadosByEstudiante(estudiante.estu_id_int)
     : []
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Mis certificados</h1>
         <p className="text-sm text-muted-foreground">
-          Descarga tus certificados cuando esten disponibles.
+          Descarga tus certificados cuando estén disponibles.
         </p>
       </div>
 
@@ -35,7 +58,7 @@ export default async function AulaCertificadosPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Curso</TableHead>
-              <TableHead>Codigo</TableHead>
+              <TableHead>Código</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Acciones</TableHead>
             </TableRow>
@@ -45,7 +68,10 @@ export default async function AulaCertificadosPage() {
               <TableRow key={cert.cert_id_int}>
                 <TableCell>{cert.curso?.cur_nomb_vac || 'Curso'}</TableCell>
                 <TableCell>{cert.cert_cod_vac || '-'}</TableCell>
-                <TableCell>{cert.cert_fec_emi_tmp || '-'}</TableCell>
+                <TableCell className="capitalize">
+                  {formatearFechaBonita(cert.cert_fec_emi_tmp)}
+                </TableCell>
+                
                 <TableCell>
                   {cert.cert_url_vac ? (
                     <Button size="sm" variant="outline" asChild>

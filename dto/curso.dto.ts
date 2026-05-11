@@ -12,6 +12,7 @@ export interface CursoDTO {
   fecha_inicio: string;
   fecha_fin: string;
   cantidad_estudiantes: number;
+  imagen_url?: string;
   created_at: string;
 }
 
@@ -20,6 +21,7 @@ export interface CreateCursoRequest {
   descripcion: string;
   fecha_inicio: string;
   fecha_fin: string;
+  imagen_url?: string;
 }
 
 export interface CursoListDto {
@@ -27,6 +29,7 @@ export interface CursoListDto {
   cur_uuid: string;
   cur_nomb_vac: string;
   cur_desc_vac: string;
+  cur_url_vac?: string;
   cur_est_int: number;
   cur_fec_inic_tmp: string;
   cur_fec_fin_tmp: string;
@@ -45,10 +48,12 @@ export interface CrearCursoRequestDto {
   cur_desc_vac: string;
   cur_fec_inic_tmp: string;
   cur_fec_fin_tmp: string;
+  cur_url_vac?: string;
 }
 
 export interface ActualizarCursoRequestDto extends Partial<CrearCursoRequestDto> {
   cur_est_int?: number;
+  cur_url_vac?: string;
 }
 
 export interface ModuloDto {

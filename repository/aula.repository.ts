@@ -7,6 +7,7 @@ export type AulaCurso = {
   cur_uuid?: string | null
   cur_nomb_vac: string
   cur_desc_vac: string | null
+  cur_url_vac?: string | null
   cur_est_int: number
   cur_fec_inic_tmp: string | null
   cur_fec_fin_tmp: string | null
@@ -71,11 +72,32 @@ export type AulaCertificado = {
   curso?: Pick<AulaCurso, 'cur_id_int' | 'cur_nomb_vac'> | null
 }
 
+export type TipoDocumento = {
+  doc_id_int: number
+  doc_tipo_vac: string | null
+  doc_desc_vac: string | null
+}
+
 export async function getEstudianteByUserId(userId: number) {
   const { data, error } = await supabase
     .from('estudiante')
     .select(
-      'estu_id_int, estu_nomb_vac, estu_apell_pat_vac, estu_apell_mat_vac, estu_gen_vac, usr_id_int'
+      `
+      estu_id_int,
+      estu_nomb_vac,
+      estu_apell_pat_vac,
+      estu_apell_mat_vac,
+      estu_gen_vac,
+      usr_id_int,
+      detalle_documento (
+        dtdoc_num_vac,
+        doc_id_int
+      ),
+      telefono (
+        tel_cod_pai_int,
+        tel_num_int
+      )
+      `
     )
     .eq('usr_id_int', userId)
     .single()
@@ -99,6 +121,7 @@ export async function getCursosByEstudiante(estuId: number): Promise<AulaCurso[]
         cur_uuid,
         cur_nomb_vac,
         cur_desc_vac,
+        cur_url_vac,
         cur_est_int,
         cur_fec_inic_tmp,
         cur_fec_fin_tmp
@@ -317,7 +340,10 @@ export async function getPagosByEstudiante(estuId: number): Promise<AulaPago[]> 
     .order('pago_cre_tmp', { ascending: false })
 
   if (error) throw error
-  return (data || []) as AulaPago[]
+  return ((data || []) as any[]).map((row: any) => ({
+    ...row,
+    curso: row.curso?.[0] || null
+  })) as AulaPago[]
 }
 
 export async function getPagoById(pagoId: number): Promise<AulaPago | null> {
@@ -351,7 +377,10 @@ export async function getPagoById(pagoId: number): Promise<AulaPago | null> {
     throw error
   }
 
-  return data as AulaPago
+  return {
+    ...(data as any),
+    curso: (data as any)?.curso?.[0] || null
+  } as AulaPago
 }
 
 export async function getPagoByUuid(pagoUuid: string): Promise<AulaPago | null> {
@@ -389,7 +418,10 @@ export async function getPagoByUuid(pagoUuid: string): Promise<AulaPago | null> 
     throw error
   }
 
-  return data as AulaPago
+  return {
+    ...(data as any),
+    curso: (data as any)?.curso?.[0] || null
+  } as AulaPago
 }
 
 export async function getCertificadosByEstudiante(
@@ -415,5 +447,18 @@ export async function getCertificadosByEstudiante(
     .order('cert_fec_emi_tmp', { ascending: false })
 
   if (error) throw error
-  return (data || []) as AulaCertificado[]
+  return ((data || []) as any[]).map((row: any) => ({
+    ...row,
+    curso: row.curso?.[0] || null
+  })) as AulaCertificado[]
+}
+
+export async function getTiposDocumento(): Promise<TipoDocumento[]> {
+  const { data, error } = await supabase
+    .from('documento')
+    .select('doc_id_int, doc_tipo_vac, doc_desc_vac')
+    .order('doc_tipo_vac', { ascending: true })
+
+  if (error) throw error
+  return (data || []) as TipoDocumento[]
 }
