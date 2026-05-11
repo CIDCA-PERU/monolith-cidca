@@ -22,16 +22,19 @@ export default async function AulaLayout({
     <SidebarProvider>
       <StudentSidebar />
       <SidebarInset>
-        <header className="flex h-14 items-center justify-between border-b border-border px-4">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger />
-            <span className="text-sm font-semibold">Aula virtual CIDCA</span>
+        <header className="sticky top-0 z-50 flex h-16 items-center justify-between bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-6 shadow-md">
+          <div className="flex items-center gap-3">
+            <SidebarTrigger className="h-5 w-5 text-slate-700 dark:text-slate-200" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">Aula Virtual</span>
+              <span className="text-xs text-slate-600 dark:text-slate-300">CIDCA</span>
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
             {user.usr_email_vac}
           </div>
         </header>
-        <div className="mx-auto w-full max-w-7xl px-4 py-6">
+        <div className="mx-auto w-full max-w-7xl px-6 py-8">
           {children}
         </div>
       </SidebarInset>

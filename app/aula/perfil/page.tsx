@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import { Card } from '@/components/ui/card'
 import { getCurrentUser } from '@/actions/auth.actions'
-import { getEstudianteByUserId } from '@/repository/aula.repository'
+import { getEstudianteByUserId, getTiposDocumento } from '@/repository/aula.repository'
+import { StudentProfileForm } from '@/components/aula/student-profile-form'
 
 export default async function AulaPerfilPage() {
   const user = await getCurrentUser()
@@ -10,48 +10,37 @@ export default async function AulaPerfilPage() {
   }
 
   const estudiante = await getEstudianteByUserId(user.usr_id_int)
+  const tiposDocumento = await getTiposDocumento()
+
+  // Extract document and phone data from relationships
+  const numeroDocumento = (estudiante?.detalle_documento?.[0]?.dtdoc_num_vac as string) || ''
+  const tipoDocumentoId = (estudiante?.detalle_documento?.[0]?.doc_id_int as number)?.toString() || ''
+  const telefonoData = estudiante?.telefono?.[0]
+  const telefonoCompleto = telefonoData
+    ? `${telefonoData.tel_cod_pai_int || ''}${telefonoData.tel_num_int || ''}`.replace(/^undefined/, '')
+    : ''
+
+  const initialData = {
+    nombre: estudiante?.estu_nomb_vac || '',
+    apellidoPaterno: estudiante?.estu_apell_pat_vac || '',
+    apellidoMaterno: estudiante?.estu_apell_mat_vac || '',
+    email: user.usr_email_vac || '',
+    genero: estudiante?.estu_gen_vac || '',
+    telefono: telefonoCompleto,
+    tipoDocumento: tipoDocumentoId,
+    numeroDocumento: numeroDocumento,
+  }
+
+  // Transform tipos de documento for component
+  const tiposDocumentoFormateados = tiposDocumento.map((tipo) => ({
+    id: tipo.doc_id_int.toString(),
+    nombre: tipo.doc_tipo_vac || '',
+  }))
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Mi perfil</h1>
-        <p className="text-sm text-muted-foreground">
-          Actualiza tus datos cuando sea necesario.
-        </p>
-      </div>
-
-      <Card className="p-4">
-        <div className="grid gap-3 text-sm">
-          <div>
-            <span className="text-muted-foreground">Email</span>
-            <div className="font-medium">{user.usr_email_vac}</div>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Nombres</span>
-            <div className="font-medium">
-              {estudiante?.estu_nomb_vac || '-'}
-            </div>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Apellido paterno</span>
-            <div className="font-medium">
-              {estudiante?.estu_apell_pat_vac || '-'}
-            </div>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Apellido materno</span>
-            <div className="font-medium">
-              {estudiante?.estu_apell_mat_vac || '-'}
-            </div>
-          </div>
-          <div>
-            <span className="text-muted-foreground">Genero</span>
-            <div className="font-medium">
-              {estudiante?.estu_gen_vac || '-'}
-            </div>
-          </div>
-        </div>
-      </Card>
-    </div>
+    <StudentProfileForm
+      initialData={initialData}
+      tiposDocumento={tiposDocumentoFormateados}
+    />
   )
 }

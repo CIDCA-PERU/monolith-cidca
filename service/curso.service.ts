@@ -77,6 +77,8 @@ export class CursoService {
       estado: 'activo',
       fecha_inicio: request.fecha_inicio,
       fecha_fin: request.fecha_fin,
+      cantidad_estudiantes: 0,
+      imagen_url: request.imagen_url,
     })
 
     return curso

@@ -14,9 +14,6 @@ import {
   Link as LinkIcon,
   Video,
   ClipboardList,
-  ChevronDown,
-  BookOpen,
-  Menu,
   Play,
   CheckCircle,
 } from "lucide-react";
@@ -31,7 +28,6 @@ import {
   getModuloByUuid,
   getModulosByCurso,
 } from "@/repository/aula.repository";
-import { ItemViewer } from "@/components/aula/item-viewer";
 import { NextModuleButton } from "@/components/aula/next-module-button";
 import { ModuleVideoPlayer } from "@/components/aula/module-video-player";
 

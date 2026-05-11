@@ -2,9 +2,8 @@ import 'server-only'
 
 import { createClient } from '@supabase/supabase-js'
 import { CursoDTO } from '@/dto/curso.dto'
-import { Database } from '@/types/db'
 
-const supabase = createClient<Database>(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
@@ -22,6 +21,7 @@ export class CursoRepository {
         fecha_inicio,
         fecha_fin,
         cantidad_estudiantes,
+        imagen_url,
         created_at
       `)
       .eq('docente_id', docenteId)
@@ -43,6 +43,7 @@ export class CursoRepository {
         fecha_inicio,
         fecha_fin,
         cantidad_estudiantes,
+        imagen_url,
         created_at
       `)
       .eq('id', cursoId)
@@ -66,6 +67,7 @@ export class CursoRepository {
         fecha_inicio: curso.fecha_inicio,
         fecha_fin: curso.fecha_fin,
         cantidad_estudiantes: 0,
+        imagen_url: curso.imagen_url,
       })
       .select()
       .single()

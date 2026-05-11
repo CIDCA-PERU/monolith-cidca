@@ -30,33 +30,46 @@ export function CursoList({ cursos, onDelete }: CursoListProps) {
       {cursos.map((curso) => (
         <Card
           key={curso.id}
-          className="p-6 hover:border-accent transition-colors"
+          className="p-0 overflow-hidden hover:border-accent transition-colors flex flex-col"
         >
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              {curso.nombre}
-            </h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {curso.descripcion}
-            </p>
-          </div>
+          {curso.imagen_url ? (
+            <img
+              src={curso.imagen_url}
+              alt={curso.nombre}
+              className="w-full aspect-[16/9] object-cover"
+            />
+          ) : (
+            <div className="aspect-[16/9] bg-muted flex items-center justify-center">
+              <span className="text-muted-foreground text-sm">Sin imagen</span>
+            </div>
+          )}
+          
+          <div className="p-6 flex-1 flex flex-col">
+            <div className="mb-4 flex-1">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                {curso.nombre}
+              </h3>
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {curso.descripcion}
+              </p>
+            </div>
 
-          <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
-            <Users className="w-4 h-4" />
-            <span>{curso.cantidad_estudiantes} estudiantes</span>
-          </div>
+            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span>{curso.cantidad_estudiantes} estudiantes</span>
+            </div>
 
-          <div className="flex items-center gap-2 mb-4">
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                curso.estado === 'activo'
-                  ? 'bg-green-900 text-green-100'
-                  : 'bg-gray-700 text-gray-100'
-              }`}
-            >
-              {curso.estado}
-            </span>
-          </div>
+            <div className="flex items-center gap-2 mb-4">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  curso.estado === 'activo'
+                    ? 'bg-green-900 text-green-100'
+                    : 'bg-gray-700 text-gray-100'
+                }`}
+              >
+                {curso.estado}
+              </span>
+            </div>
 
           <div className="flex gap-2">
             <Link href={`/dashboard/cursos/${curso.id}`} className="flex-1">
@@ -77,6 +90,7 @@ export function CursoList({ cursos, onDelete }: CursoListProps) {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
+          </div>
           </div>
         </Card>
       ))}
