@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/server';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Obtiene todas las órdenes de pago del usuario/estudiante
@@ -24,7 +24,7 @@ export async function getOrdenesByUsuario(usuarioId: number) {
           cur_nomb_vac
         )
       `)
-      .eq('estu_id_int', estudianteId)
+      .eq('estu_id_int', usuarioId)
       .order('pago_cre_tmp', { ascending: false });
 
     if (error) {
@@ -173,6 +173,94 @@ export async function getUsuarioDatos(estudianteId: number) {
   } catch (error) {
     console.error('Exception getting usuario datos:', error);
     return null;
+  }
+}
+
+/**
+ * Acepta un pago y lo cambia a estado ACEPTADO
+ */
+export async function acceptPagoOrder(pagoId: number) {
+  try {
+    const { error } = await supabase
+      .from('pago')
+      .update({
+        pago_estad_vac: 'ACEPTADO',
+        pago_upd_tmp: new Date().toISOString(),
+      })
+      .eq('pago_id_int', pagoId);
+
+    if (error) {
+      console.error('[v0] acceptPagoOrder - Error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[v0] acceptPagoOrder - Exception:', error);
+    return false;
+  }
+}
+
+/**
+ * Crea la relación entre estudiante y curso cuando el pago es aceptado
+ */
+export async function createEstudianteCursoFromPago(
+  estudianteId: number,
+  cursoId: number
+) {
+  try {
+    // Verificar si ya existe la relación
+    const { data: existing, error: checkError } = await supabase
+      .from('estudiante_curso')
+      .select('est_id_int')
+      .eq('est_id_int', estudianteId)
+      .eq('cur_id_int', cursoId)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('[v0] createEstudianteCursoFromPago - Check Error:', checkError);
+      return false;
+    }
+
+    // Si ya existe, solo actualizar el estado
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('estudiante_curso')
+        .update({
+          est_cur_estado_bol: true,
+          est_cur_upd_tmp: new Date().toISOString(),
+        })
+        .eq('est_id_int', estudianteId)
+        .eq('cur_id_int', cursoId);
+
+      if (updateError) {
+        console.error('[v0] createEstudianteCursoFromPago - Update Error:', updateError);
+        return false;
+      }
+
+      return true;
+    }
+
+    // Si no existe, crear nuevo registro
+    const { error: insertError } = await supabase
+      .from('estudiante_curso')
+      .insert({
+        est_id_int: estudianteId,
+        cur_id_int: cursoId,
+        est_cur_estado_bol: true,
+        est_cur_cre_tmp: new Date().toISOString(),
+        est_cur_upd_tmp: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error('[v0] createEstudianteCursoFromPago - Insert Error:', insertError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[v0] createEstudianteCursoFromPago - Exception:', error);
+    return false;
   }
 }
 

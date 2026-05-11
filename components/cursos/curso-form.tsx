@@ -26,6 +26,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
     descripcion: curso?.descripcion || '',
     fecha_inicio: curso?.fecha_inicio?.split('T')[0] || '',
     fecha_fin: curso?.fecha_fin?.split('T')[0] || '',
+    imagen_url: curso?.imagen_url || '',
   })
 
   const handleChange = (
@@ -34,6 +35,14 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
     setErrors((prev) => ({ ...prev, [name]: '' }))
+  }
+
+  const handleImageUrlChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { value } = e.target
+    setFormData((prev) => ({ ...prev, imagen_url: value }))
+    setErrors((prev) => ({ ...prev, imagen_url: '' }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,6 +56,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
         descripcion: formData.descripcion,
         fecha_inicio: new Date(formData.fecha_inicio).toISOString(),
         fecha_fin: new Date(formData.fecha_fin).toISOString(),
+        imagen_url: formData.imagen_url || undefined,
       }
 
       let result
@@ -156,6 +166,38 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
               required
             />
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor="imagen_url" className="text-foreground mb-2 block">
+            URL de Imagen del Curso
+          </Label>
+          <Input
+            id="imagen_url"
+            name="imagen_url"
+            type="url"
+            value={formData.imagen_url}
+            onChange={handleImageUrlChange}
+            placeholder="https://example.com/imagen.jpg"
+            className="bg-input border-border"
+          />
+          {errors.imagen_url && (
+            <p className="text-destructive text-sm mt-1">{errors.imagen_url}</p>
+          )}
+          
+          {formData.imagen_url && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-foreground mb-2">Preview:</p>
+              <img
+                src={formData.imagen_url}
+                alt="Preview del curso"
+                className="w-full h-48 object-cover rounded-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">

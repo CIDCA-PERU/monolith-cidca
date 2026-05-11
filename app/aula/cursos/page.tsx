@@ -26,16 +26,26 @@ export default async function AulaCursosPage() {
           <p className="text-sm text-muted-foreground">
             Accede a tus cursos activos y revisa tus modulos.
           </p>
-        </div>
+        </div>{/* 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">En curso</Button>
-        </div>
+        </div>*/}
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {cursos.map((curso) => (
-          <Card key={curso.cur_id_int} className="p-4">
-            <div className="aspect-[16/9] rounded-md bg-muted" />
+          <Card key={curso.cur_id_int} className="p-4 overflow-hidden">
+            {curso.cur_url_vac ? (
+              <img
+                src={curso.cur_url_vac}
+                alt={curso.cur_nomb_vac}
+                className="w-full aspect-[16/9] object-cover rounded-md"
+              />
+            ) : (
+              <div className="aspect-[16/9] rounded-md bg-muted flex items-center justify-center">
+                <span className="text-muted-foreground text-sm">Sin imagen</span>
+              </div>
+            )}
             <div className="mt-4 space-y-2">
               <h3 className="text-base font-semibold">{curso.cur_nomb_vac}</h3>
               <p className="text-sm text-muted-foreground">

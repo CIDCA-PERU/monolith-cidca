@@ -21,8 +21,8 @@ export default async function AulaPagosPage() {
           <p className="text-sm text-muted-foreground">
             Gestiona tus pagos pendientes.
           </p>
-        </div>
-        <Button variant="outline" size="sm">Pendientes</Button>
+        </div>{/* 
+        <Button variant="outline" size="sm">Pendientes</Button>*/}
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
