@@ -49,80 +49,81 @@ export function LoginForm({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black p-4">
-      <div className="w-full max-w-md">
-        <Card className="border-white/10 bg-black/50 backdrop-blur-md shadow-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center text-white">
-              CIDCA
-            </CardTitle>
-            <CardDescription className="text-center text-white">
-              Sistema de Gestión de Aprendizaje
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              
+    <Card className="w-full max-w-md border-white/10 bg-black/50 backdrop-blur-md shadow-xl">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold text-center text-white">
+          CIDCA
+        </CardTitle>
+        <CardDescription className="text-center text-white">
+          Sistema de Gestión de Aprendizaje
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="email" className="text-sm font-medium text-white">
+              Email
+            </label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="ejemplo@correo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              className="bg-black/30 border-white/20 text-white"
+              required
+            />
+          </div>
 
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-white">Email</label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="ejemplo@correo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  className="bg-black/30 border-white/20 text-white"
-                  required
-                />
-              </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium text-white"
+            >
+              Contraseña
+            </label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              className="bg-black/30 border-white/20 text-white"
+              required
+            />
+          </div>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-white">Contraseña</label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  className="bg-black/30 border-white/20 text-white"
-                  required
-                />
-              </div>
+          <Button
+            type="submit"
+            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-black"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Spinner className="mr-2 h-4 w-4 text-white" />
+                Iniciando sesión...
+              </>
+            ) : (
+              "Iniciar sesión"
+            )}
+          </Button>
 
-              <Button
-                type="submit"
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90 text-black"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Spinner className="mr-2 h-4 w-4 text-white" />
-                    Iniciando sesión...
-                  </>
-                ) : (
-                  "Iniciar sesión"
-                )}
-              </Button>
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </form>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-            </form>
-
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              ¿No tienes cuenta?{" "}
-              <a href="#" className="text-accent hover:underline">
-                Regístrate
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <div className="mt-4 text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?{" "}
+          <a href="#" className="text-accent hover:underline">
+            Regístrate
+          </a>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
