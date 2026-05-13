@@ -1,21 +1,25 @@
-import { redirect } from 'next/navigation'
-import { getCurrentUser } from '@/actions/auth.actions'
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import { StudentSidebar } from '@/components/layout/student-sidebar'
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/actions/auth.actions";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { StudentSidebar } from "@/components/layout/student-sidebar";
 
 export default async function AulaLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const user = await getCurrentUser()
+  const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/login')
+    redirect("/login");
   }
 
-  if (user.rol_nam_vc && user.rol_nam_vc !== 'ESTUDIANTE') {
-    redirect('/dashboard')
+  if (user.rol_nam_vc && user.rol_nam_vc !== "ESTUDIANTE") {
+    redirect("/dashboard");
   }
 
   return (
@@ -26,18 +30,20 @@ export default async function AulaLayout({
           <div className="flex items-center gap-3">
             <SidebarTrigger className="h-5 w-5 text-slate-700 dark:text-slate-200" />
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold text-slate-900 dark:text-white">Aula Virtual</span>
-              <span className="text-xs text-slate-600 dark:text-slate-300">CIDCA</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                Aula Virtual
+              </span>
+              <span className="text-xs text-slate-600 dark:text-slate-300">
+                CIDCA
+              </span>
             </div>
           </div>
           <div className="text-sm font-medium text-slate-700 dark:text-slate-200">
             {user.usr_email_vac}
           </div>
         </header>
-        <div className="mx-auto w-full max-w-7xl px-6 py-8">
-          {children}
-        </div>
+        <div className="mx-auto w-full max-w-7xl px-6 py-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
