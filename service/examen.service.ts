@@ -2,7 +2,6 @@ import 'server-only'
 
 import { ExamenRepository } from '@/repository/examen.repository'
 import { CursoRepository } from '@/repository/curso.repository'
-import { UsuarioRepository } from '@/repository/usuario.repository'
 import {
   ExamenListDto,
   ExamenDetailDto,
