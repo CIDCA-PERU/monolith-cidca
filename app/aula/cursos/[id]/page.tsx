@@ -72,7 +72,7 @@ export default async function AulaCursoDetallePage({
                   {modulo.mod_nomb_vac || "Módulo"}
                 </h3>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="text-sm text-muted-foreground line-clamp-2 [overflow-wrap:anywhere]">
                 {modulo.mod_desc_vac || "Sin descripción"}
               </p>
               <Link

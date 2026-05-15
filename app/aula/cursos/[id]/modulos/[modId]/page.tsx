@@ -30,6 +30,7 @@ import {
 } from "@/repository/aula.repository";
 import { NextModuleButton } from "@/components/aula/next-module-button";
 import { ModuleVideoPlayer } from "@/components/aula/module-video-player";
+import { ComentariosSection } from "@/components/aula/comentarios-section";
 
 export default async function AulaModuloPage({
   params,
@@ -169,8 +170,8 @@ export default async function AulaModuloPage({
   };
 
   return (
-    <div className="grid gap-6 grid-cols-1 lg:grid-cols-[7fr_3fr]">
-      <div className="space-y-4">
+    <div className="grid gap-6 grid-cols-1 lg:grid-cols-[7fr_3fr] min-w-0 overflow-hidden">
+      <div className="space-y-4 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <Link
@@ -198,8 +199,10 @@ export default async function AulaModuloPage({
             <TabsTrigger value="comentarios" className="p-4">Comentarios</TabsTrigger>
           </TabsList>
           <TabsContent value="descripcion">
-            <Card className="p-4 text-sm text-muted-foreground">
-              {modulo.mod_desc_vac || "Descripcion del modulo."}
+            <Card className="p-4 overflow-hidden">
+              <p className="text-sm text-muted-foreground [overflow-wrap:anywhere] whitespace-pre-line">
+                {modulo.mod_desc_vac || "Descripcion del modulo."}
+              </p>
             </Card>
           </TabsContent>
           <TabsContent value="materiales">
@@ -266,62 +269,12 @@ export default async function AulaModuloPage({
             </Card>
           </TabsContent>
           <TabsContent value="comentarios">
-            <Card className="p-4 text-sm text-muted-foreground">
-              {comentarios.length === 0 ? (
-                "No hay comentarios."
-              ) : (
-                <div className="space-y-4">
-                  {apartados.map((apartado) => {
-                    const comentariosApartado = comentarios.filter(
-                      (comentario) =>
-                        comentario.apar_id_int === apartado.apar_id_int,
-                    );
-                    if (comentariosApartado.length === 0) {
-                      return null;
-                    }
-
-                    return (
-                      <div key={apartado.apar_id_int}> 
-                        <ul className="mt-2 space-y-3">
-                          {comentariosApartado.map((comentario) => {
-                            // Formateamos la fecha para que se vea bonita (opcional)
-                            const fecha = comentario.com_cur_cre_tmp
-                              ? new Date(
-                                  comentario.com_cur_cre_tmp,
-                                ).toLocaleDateString("es-PE", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Fecha desconocida";
-
-                            return (
-                              <li
-                                key={comentario.com_cur_id_int}
-                                className="bg-muted/30 p-3 rounded-md"
-                              >
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs font-bold text-accent">
-                                    {comentario.autor_nombre}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {fecha}
-                                  </span>
-                                </div>
-                                <div className="text-sm text-foreground leading-relaxed">
-                                  {comentario.com_cur_text_vac}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+            <Card className="p-4 overflow-hidden">
+              <ComentariosSection
+                comentarios={comentarios}
+                aparId={apartados[0]?.apar_id_int ?? 0}
+                currentPath={`/aula/cursos/${curso.cur_uuid || curso.cur_id_int}/modulos/${modulo.mod_uuid || modulo.mod_id_int}`}
+              />
             </Card>
           </TabsContent>
         </Tabs>

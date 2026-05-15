@@ -28,7 +28,14 @@ export default async function AulaPagosPage() {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {pagos.map((pago) => {
           const curso = Array.isArray(pago.curso) ? pago.curso[0] : (pago.curso as any);
-          const montoAMostrar = pago.pago_mont_num || curso?.cur_precio_num || 0;
+          const cursoNombre = (
+            curso?.cur_nomb_vac?.toString().trim() ||
+            (curso as any)?.nombre ||
+            (curso as any)?.cur_nom_vac ||
+            (Array.isArray(pago.curso) ? pago.curso?.[0]?.cur_nomb_vac : undefined) ||
+            'Curso sin nombre'
+          );
+          const montoAMostrar = pago.pago_mont_num ?? curso?.cur_precio_num ?? 0;
           
           return (
             <Card key={pago.pago_id_int} className="p-4 space-y-4 flex flex-col h-full">
@@ -37,7 +44,7 @@ export default async function AulaPagosPage() {
                 <div>
                   <div className="text-xs text-muted-foreground">Orden de pago</div>
                   <div className="text-base font-semibold line-clamp-2">
-                    {curso?.cur_nomb_vac || 'Curso sin nombre'}
+                    {cursoNombre}
                   </div>
                 </div>
 

@@ -90,7 +90,7 @@ export async function getUsuarioWithPermissions(id: number) {
 export async function createUsuario(
   email: string,
   passwordHash: string,
-  rolId: number
+  rolId: number = 4 // 4 = ESTUDIANTE por defecto
 ): Promise<Usuario> {
   try {
     const { data, error } = await supabase
@@ -117,22 +117,29 @@ export async function createUsuario(
 }
 
 /**
- * Actualiza la contraseña de un usuario
+ * Actualiza la contraseña de un usuario,
+ * guardando la anterior en usr_ant_pass_vac.
  */
-export async function updateUsuarioPassword(id: number, newPasswordHash: string) {
+export async function updateUsuarioPassword(
+  id: number,
+  newPasswordHash: string,
+  oldPasswordHash?: string
+) {
   try {
     const { error } = await supabase
       .from('usuarios')
       .update({
         usr_pass_vac: newPasswordHash,
+        ...(oldPasswordHash ? { usr_ant_pass_vac: oldPasswordHash } : {}),
+        usr_upd_tmp: new Date().toISOString(),
       })
-      .eq('usr_id_int', id);
+      .eq('usr_id_int', id)
 
     if (error) {
-      throw error;
+      throw error
     }
   } catch (error) {
-    throw error;
+    throw error
   }
 }
 

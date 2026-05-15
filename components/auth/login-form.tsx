@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { loginAction } from "@/actions/auth.actions";
 import { UserSessionDto } from "@/dto/auth.dto";
 import { Button } from "@/components/ui/button";
@@ -117,11 +118,21 @@ export function LoginForm({
           )}
         </form>
 
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          ¿No tienes cuenta?{" "}
-          <a href="#" className="text-accent hover:underline">
-            Regístrate
-          </a>
+        <div className="mt-4 space-y-2 text-center text-sm">
+          <div className="text-muted-foreground">
+            <Link
+              href="/recuperar-password"
+              className="text-accent/80 hover:text-accent hover:underline transition-colors"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+          <div className="text-muted-foreground">
+            ¿No tienes cuenta?{" "}
+            <Link href="/registro" className="text-accent hover:underline font-medium">
+              Regístrate gratis
+            </Link>
+          </div>
         </div>
       </CardContent>
     </Card>

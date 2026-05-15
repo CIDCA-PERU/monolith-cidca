@@ -72,6 +72,15 @@ export type AulaCertificado = {
   curso?: Pick<AulaCurso, 'cur_id_int' | 'cur_nomb_vac'> | null
 }
 
+function normalizeCurso(
+  curso: AulaPago['curso'] | AulaCertificado['curso'] | any
+): AulaPago['curso'] | AulaCertificado['curso'] | null {
+  if (!curso) {
+    return null
+  }
+  return Array.isArray(curso) ? (curso[0] || null) : curso
+}
+
 export type TipoDocumento = {
   doc_id_int: number
   doc_tipo_vac: string | null
@@ -342,7 +351,7 @@ export async function getPagosByEstudiante(estuId: number): Promise<AulaPago[]> 
   if (error) throw error
   return ((data || []) as any[]).map((row: any) => ({
     ...row,
-    curso: row.curso?.[0] || null
+    curso: normalizeCurso(row.curso)
   })) as AulaPago[]
 }
 
@@ -379,7 +388,7 @@ export async function getPagoById(pagoId: number): Promise<AulaPago | null> {
 
   return {
     ...(data as any),
-    curso: (data as any)?.curso?.[0] || null
+    curso: normalizeCurso((data as any)?.curso)
   } as AulaPago
 }
 
@@ -420,7 +429,7 @@ export async function getPagoByUuid(pagoUuid: string): Promise<AulaPago | null> 
 
   return {
     ...(data as any),
-    curso: (data as any)?.curso?.[0] || null
+    curso: normalizeCurso((data as any)?.curso)
   } as AulaPago
 }
 
@@ -449,7 +458,7 @@ export async function getCertificadosByEstudiante(
   if (error) throw error
   return ((data || []) as any[]).map((row: any) => ({
     ...row,
-    curso: row.curso?.[0] || null
+    curso: normalizeCurso(row.curso)
   })) as AulaCertificado[]
 }
 

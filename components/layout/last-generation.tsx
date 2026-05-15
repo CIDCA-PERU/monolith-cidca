@@ -7,8 +7,8 @@ import Link from "next/link"
 
 export default function LastGenerationSection() {
   return (
-    <section className="py-16 md:py-24 relative overflow-hidden flex justify-center bg-slate-950 border-t border-slate-800">
-      {/* Background gradients (Estilo CIDCA) */}
+    <section className="py-16 md:py-24 relative overflow-hidden flex justify-center bg-slate-950 border-t border-slate-800 flex justify-center">
+      {/* Background gradients */}
       <div className="absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-blue-900/20 blur-[120px]" />
       <div className="absolute -bottom-40 -left-40 h-[600px] w-[600px] rounded-full bg-yellow-500/10 blur-[120px]" />
 

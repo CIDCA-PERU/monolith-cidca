@@ -19,7 +19,6 @@ export async function loginAction(
   credentials: LoginRequestDto
 ): Promise<AuthResponseDto> {
   try {
-    console.log('[v0] loginAction - Iniciando login');
 
     // Validar entrada
     if (!credentials.email || !credentials.password) {
@@ -37,8 +36,6 @@ export async function loginAction(
     if (rolNombre) {
       userSession.rol_nam_vc = rolNombre;
     }
-
-    console.log('[v0] loginAction - Login exitoso para:', credentials.email);
 
     // Guardar ID de usuario en cookies para sesión servidor
     const cookieStore = await cookies();
@@ -71,7 +68,6 @@ export async function registerAction(
   data: RegisterRequestDto
 ): Promise<AuthResponseDto> {
   try {
-    console.log('[v0] registerAction - Registrando nuevo usuario');
 
     // Validar entrada
     if (!data.email || !data.password || !data.passwordConfirm) {
@@ -95,15 +91,12 @@ export async function registerAction(
       userSession.rol_nam_vc = rolNombre;
     }
 
-    console.log('[v0] registerAction - Usuario registrado:', data.email);
-
     return {
       success: true,
       message: 'Usuario registrado exitosamente',
       user: userSession,
     };
   } catch (error) {
-    console.error('[v0] registerAction - Error:', error);
     const errorResponse = handleServiceError(error);
     return {
       success: false,
@@ -119,7 +112,6 @@ export async function getCurrentUserAction(
   usuarioId: number
 ): Promise<AuthResponseDto> {
   try {
-    console.log('[v0] getCurrentUserAction - Obteniendo usuario:', usuarioId);
 
     const userSession = await getUsuarioCompleteService(usuarioId);
     if (!userSession) {
@@ -135,7 +127,6 @@ export async function getCurrentUserAction(
       user: userSession,
     };
   } catch (error) {
-    console.error('[v0] getCurrentUserAction - Error:', error);
     const errorResponse = handleServiceError(error);
     return {
       success: false,
@@ -154,20 +145,17 @@ export async function getCurrentUser(): Promise<UserSessionDto | null> {
     const userIdCookie = cookieStore.get('userId');
 
     if (!userIdCookie?.value) {
-      console.log('[v0] getCurrentUser - No hay sesión activa');
       return null;
     }
 
     const usuarioId = parseInt(userIdCookie.value, 10);
     if (isNaN(usuarioId)) {
-      console.log('[v0] getCurrentUser - ID de usuario inválido');
       return null;
     }
 
     const userSession = await getUsuarioCompleteService(usuarioId);
     return userSession;
   } catch (error) {
-    console.error('[v0] getCurrentUser - Error:', error);
     return null;
   }
 }
@@ -179,13 +167,11 @@ export async function logoutUser(): Promise<{ success: boolean; message: string 
   try {
     const cookieStore = await cookies();
     cookieStore.delete('userId');
-    console.log('[v0] logoutUser - Usuario desconectado');
     return {
       success: true,
       message: 'Sesión cerrada',
     };
   } catch (error) {
-    console.error('[v0] logoutUser - Error:', error);
     return {
       success: false,
       message: 'Error al cerrar sesión',

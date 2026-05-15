@@ -73,7 +73,7 @@ export async function registerService(
   email: string,
   password: string,
   passwordConfirm: string,
-  rolId: number = 3 // Por defecto ESTUDIANTE
+  rolId: number = 4 // 4 = ESTUDIANTE
 ): Promise<UserSessionDto> {
 
   // Validar email

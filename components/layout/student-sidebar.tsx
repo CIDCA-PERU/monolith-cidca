@@ -9,6 +9,7 @@ import {
   User,
   LogOut,
   Award,
+  LifeBuoy,
 } from "lucide-react";
 
 import {
@@ -51,6 +52,12 @@ const navItems = [
     href: "/aula/perfil",
     icon: User,
     description: "Datos personales",
+  },
+  {
+    title: "Soporte",
+    href: "/aula/soporte",
+    icon: LifeBuoy,
+    description: "Ayuda y consultas",
   },
 ];
 
