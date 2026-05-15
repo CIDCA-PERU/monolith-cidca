@@ -1,17 +1,21 @@
 'use server'
 
 import { supabase } from '@/lib/supabase'
-import { getCurrentUser } from './auth.actions'
+import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { revalidatePath } from 'next/cache'
 
+/**
+ * Crea un comentario en un apartado del aula.
+ * Solo ESTUDIANTE puede comentar (los comentarios son parte de la experiencia del aula).
+ */
 export async function crearComentario(formData: FormData): Promise<{
   success: boolean
   message?: string
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) return { success: false, error: 'No estás autenticado' }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const texto = (formData.get('texto') as string | null)?.trim()
     const aparIdRaw = formData.get('apar_id_int') as string | null
@@ -48,6 +52,6 @@ export async function crearComentario(formData: FormData): Promise<{
     return { success: true, message: 'Comentario publicado' }
   } catch (err) {
     console.error('[comentario.actions] crearComentario - Exception:', err)
-    return { success: false, error: 'Error de conexión' }
+    return { success: false, error: err instanceof Error ? err.message : 'Error de conexión' }
   }
 }

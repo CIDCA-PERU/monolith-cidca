@@ -17,23 +17,13 @@ export async function validatePermission(
   usuarioId: number,
   permisoCodigo: PermissionCode
 ): Promise<void> {
-  console.log('[v0] validatePermission - Usuario:', usuarioId, 'Permiso:', permisoCodigo);
-
   const tienePermiso = await usuarioTienePermiso(usuarioId, permisoCodigo);
 
   if (!tienePermiso) {
-    console.log(
-      '[v0] validatePermission - DENEGADO para usuario:',
-      usuarioId,
-      'Permiso:',
-      permisoCodigo
-    );
     throw new AuthorizationError(
       `No tiene permiso para: ${permisoCodigo}`
     );
   }
-
-  console.log('[v0] validatePermission - APROBADO');
 }
 
 /**
@@ -45,23 +35,12 @@ export async function validateOwnership(
   propietarioId: number,
   recurso: string = 'recurso'
 ): Promise<void> {
-  console.log(
-    '[v0] validateOwnership - Usuario:',
-    usuarioId,
-    'Propietario:',
-    propietarioId,
-    'Recurso:',
-    recurso
-  );
 
   if (usuarioId !== propietarioId) {
-    console.log('[v0] validateOwnership - NO ES PROPIETARIO');
     throw new AuthorizationError(
       `No es propietario del ${recurso}`
     );
   }
-
-  console.log('[v0] validateOwnership - APROBADO');
 }
 
 /**
@@ -74,29 +53,18 @@ export async function validatePermissionAndOwnership(
   propietarioId: number,
   recurso: string = 'recurso'
 ): Promise<void> {
-  console.log(
-    '[v0] validatePermissionAndOwnership - Usuario:',
-    usuarioId,
-    'Permiso:',
-    permisoCodigo,
-    'Propietario:',
-    propietarioId
-  );
-
   // Primero valida permiso
   await validatePermission(usuarioId, permisoCodigo);
 
   // Luego valida ownership
   await validateOwnership(usuarioId, propietarioId, recurso);
-
-  console.log('[v0] validatePermissionAndOwnership - APROBADO');
 }
 
 /**
- * Valida si es ADMIN (acceso total)
+ * Valida si es SISTEMAS (acceso total de administrador del sistema)
  */
 export function isAdmin(rolNombre: string): boolean {
-  return rolNombre === ROLE_NAMES.ADMIN;
+  return rolNombre === ROLE_NAMES.SISTEMAS;
 }
 
 /**
@@ -114,10 +82,10 @@ export function isEstudiante(rolNombre: string): boolean {
 }
 
 /**
- * Valida si es COORDINADOR
+ * Valida si es ADMINISTRADOR
  */
 export function isCoordinador(rolNombre: string): boolean {
-  return rolNombre === ROLE_NAMES.COORDINADOR;
+  return rolNombre === ROLE_NAMES.ADMINISTRADOR;
 }
 
 // Compat: wrapper class usado en servicios antiguos
@@ -129,8 +97,7 @@ export class PermisoService {
   ): Promise<boolean> {
     try {
       return await usuarioTienePermiso(usuarioId, permisoCodigo);
-    } catch (error) {
-      console.error('[v0] PermisoService.hasPermiso - Error:', error);
+    } catch (error) { 
       return false;
     }
   }

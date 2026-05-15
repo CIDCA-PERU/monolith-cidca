@@ -1,20 +1,23 @@
 'use server'
 
 import { ModuloService } from '@/service/modulo.service'
-import { getCurrentUser } from '@/actions/auth.actions'
+import { assertAuthenticated, assertDashboard } from '@/lib/auth-guards'
 import { ModuloDTO, ApartadoDTO, CreateModuloRequest, CreateApartadoRequest } from '@/dto/modulo.dto'
 import { AppError } from '@/lib/errors'
 
+// ─── Módulos ──────────────────────────────────────────────────────────────────
+
+/**
+ * Obtiene los módulos de un curso.
+ * Cualquier usuario autenticado puede consultar (estudiantes lo necesitan en el aula).
+ */
 export async function getModulosByCurso(cursoId: string): Promise<{
   success: boolean
   data?: ModuloDTO[]
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
 
     const modulos = await ModuloService.getModulosByCurso(
       cursoId,
@@ -27,16 +30,17 @@ export async function getModulosByCurso(cursoId: string): Promise<{
   }
 }
 
+/**
+ * Obtiene un módulo por ID.
+ * Cualquier usuario autenticado puede consultar.
+ */
 export async function getModuloById(moduloId: string): Promise<{
   success: boolean
   data?: ModuloDTO
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
 
     const modulo = await ModuloService.getModuloById(
       moduloId,
@@ -49,6 +53,10 @@ export async function getModuloById(moduloId: string): Promise<{
   }
 }
 
+/**
+ * Crea un nuevo módulo.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function createModulo(
   cursoId: string,
   request: CreateModuloRequest
@@ -58,10 +66,8 @@ export async function createModulo(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const modulo = await ModuloService.createModulo(
       cursoId,
@@ -75,6 +81,10 @@ export async function createModulo(
   }
 }
 
+/**
+ * Actualiza un módulo.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function updateModulo(
   moduloId: string,
   updates: Partial<ModuloDTO>
@@ -84,10 +94,8 @@ export async function updateModulo(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const modulo = await ModuloService.updateModulo(
       moduloId,
@@ -101,15 +109,17 @@ export async function updateModulo(
   }
 }
 
+/**
+ * Elimina un módulo.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function deleteModulo(moduloId: string): Promise<{
   success: boolean
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     await ModuloService.deleteModulo(moduloId, user.usr_id_int.toString())
     return { success: true }
@@ -119,17 +129,19 @@ export async function deleteModulo(moduloId: string): Promise<{
   }
 }
 
-// Apartados
+// ─── Apartados ────────────────────────────────────────────────────────────────
+
+/**
+ * Obtiene los apartados de un módulo.
+ * Cualquier usuario autenticado puede consultar (estudiantes lo usan en el aula).
+ */
 export async function getApartadosByModulo(moduloId: string): Promise<{
   success: boolean
   data?: ApartadoDTO[]
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
 
     const apartados = await ModuloService.getApartadosByModulo(
       moduloId,
@@ -142,16 +154,17 @@ export async function getApartadosByModulo(moduloId: string): Promise<{
   }
 }
 
+/**
+ * Obtiene un apartado por ID.
+ * Cualquier usuario autenticado puede consultar.
+ */
 export async function getApartadoById(apartadoId: string): Promise<{
   success: boolean
   data?: ApartadoDTO
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
 
     const apartado = await ModuloService.getApartadoById(
       apartadoId,
@@ -164,6 +177,10 @@ export async function getApartadoById(apartadoId: string): Promise<{
   }
 }
 
+/**
+ * Crea un apartado dentro de un módulo.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function createApartado(
   moduloId: string,
   request: CreateApartadoRequest
@@ -173,10 +190,8 @@ export async function createApartado(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const apartado = await ModuloService.createApartado(
       moduloId,
@@ -190,6 +205,10 @@ export async function createApartado(
   }
 }
 
+/**
+ * Actualiza un apartado.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function updateApartado(
   apartadoId: string,
   updates: Partial<ApartadoDTO>
@@ -199,10 +218,8 @@ export async function updateApartado(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const apartado = await ModuloService.updateApartado(
       apartadoId,
@@ -216,15 +233,17 @@ export async function updateApartado(
   }
 }
 
+/**
+ * Elimina un apartado.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function deleteApartado(apartadoId: string): Promise<{
   success: boolean
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     await ModuloService.deleteApartado(apartadoId, user.usr_id_int.toString())
     return { success: true }

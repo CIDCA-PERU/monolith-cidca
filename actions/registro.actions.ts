@@ -5,9 +5,11 @@ import { registerService } from '@/service/auth.service'
 import { getUsuarioRol, getUsuarioByEmail, getUsuarioById, updateUsuarioPassword } from '@/repository/usuario.repository'
 import { createRecuperacionToken, findValidToken, markTokenAsUsed } from '@/repository/recuperacion.repository'
 import { existeDocumento, crearDetalleDocumento } from '@/repository/documento.repository'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import bcrypt from 'bcrypt'
 import { sendEmail, buildRecuperacionEmail, buildBienvenidaEmail } from '@/lib/email'
+import { generateSessionToken, signTokenForCookie, hashTokenForDB } from '@/lib/session'
+import { createSesion } from '@/repository/sesion.repository'
 
 // ── Registro de estudiante ────────────────────────────────────────────────────
 
@@ -39,8 +41,8 @@ export async function registrarEstudiante(formData: FormData): Promise<{
       return { success: false, error: 'Selecciona un tipo de documento' }
     if (!docNumero || docNumero.length < 4)
       return { success: false, error: 'Ingresa un número de documento válido' }
-    if (password.length < 6)
-      return { success: false, error: 'La contraseña debe tener al menos 6 caracteres' }
+    if (password.length < 8)
+      return { success: false, error: 'La contraseña debe tener al menos 8 caracteres' }
     if (password !== confirm)
       return { success: false, error: 'Las contraseñas no coinciden' }
 
@@ -82,10 +84,22 @@ export async function registrarEstudiante(formData: FormData): Promise<{
       )
     }
 
-    // 4. Guardar sesión en cookie
+    // 4. Crear sesión en BD y establecer cookie firmada
     await getUsuarioRol(userSession.usr_id_int)
+
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 'desconocida'
+    const userAgent = headersList.get('user-agent') || 'desconocido'
+
+    const rawToken = generateSessionToken()
+    const signedCookieValue = await signTokenForCookie(rawToken)
+    const tokenHash = await hashTokenForDB(rawToken)
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    await createSesion({ tokenHash, userId: userSession.usr_id_int, ip, userAgent, expiresAt })
+
     const cookieStore = await cookies()
-    cookieStore.set('userId', userSession.usr_id_int.toString(), {
+    cookieStore.set('session_token', signedCookieValue, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',

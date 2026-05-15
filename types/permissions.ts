@@ -41,10 +41,10 @@ export const PERMISSION_CODES = {
 } as const;
 
 export const ROLE_NAMES = {
-  ADMIN: 'ADMIN',
+  SISTEMAS: 'SISTEMAS',
   DOCENTE: 'DOCENTE',
   ESTUDIANTE: 'ESTUDIANTE',
-  COORDINADOR: 'COORDINADOR',
+  ADMINISTRADOR: 'ADMINISTRADOR',
 } as const;
 
 export type PermissionCode = typeof PERMISSION_CODES[keyof typeof PERMISSION_CODES];

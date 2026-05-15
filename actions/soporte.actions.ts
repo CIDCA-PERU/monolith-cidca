@@ -1,13 +1,9 @@
 'use server'
 
 import { supabase } from '@/lib/supabase'
-import { getCurrentUser } from './auth.actions'
+import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { createSoporte } from '@/repository/soporte.repository'
 import { revalidatePath } from 'next/cache'
-
-// ──────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────
 
 function generateSoporteFilename(userId: number, ext: string): string {
   const now = new Date()
@@ -16,19 +12,19 @@ function generateSoporteFilename(userId: number, ext: string): string {
   return `USR-${userId}-${ts}.${ext}`
 }
 
-// ──────────────────────────────────────────────────
-// Crear ticket de soporte
-// ──────────────────────────────────────────────────
-
+/**
+ * Crea un ticket de soporte.
+ * Solo ESTUDIANTE puede abrir tickets desde el aula.
+ */
 export async function crearTicketSoporte(formData: FormData): Promise<{
   success: boolean
   message?: string
   error?: string
 }> {
   try {
-    // 1. Autenticación
-    const user = await getCurrentUser()
-    if (!user) return { success: false, error: 'No estás autenticado' }
+    // 1. Solo estudiantes crean tickets de soporte
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     // 2. Extraer y validar campos
     const titulo = (formData.get('titulo') as string | null)?.trim()
@@ -52,7 +48,7 @@ export async function crearTicketSoporte(formData: FormData): Promise<{
     let sop_url_vac: string | null = null
 
     if (file && file.size > 0) {
-      // --- Validación de tipo MIME (capa 1) ---
+      // Validación de tipo MIME (capa 1)
       const allowedTypes = ['image/jpeg', 'image/png']
       if (!allowedTypes.includes(file.type)) {
         return { success: false, error: 'Solo se permiten imágenes JPG o PNG' }
@@ -61,7 +57,7 @@ export async function crearTicketSoporte(formData: FormData): Promise<{
         return { success: false, error: 'La imagen no debe exceder 5MB' }
       }
 
-      // --- Validación de magic bytes (capa 2, anti-spoofing) ---
+      // Validación de magic bytes (capa 2, anti-spoofing)
       const buffer = await file.slice(0, 8).arrayBuffer()
       const bytes = new Uint8Array(buffer)
       const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF

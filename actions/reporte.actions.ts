@@ -1,7 +1,7 @@
 'use server'
 
 import { ReporteService } from '@/service/reporte.service'
-import { getCurrentUser } from '@/actions/auth.actions'
+import { assertAuthenticated, assertDashboard, assertEstudiante } from '@/lib/auth-guards'
 import {
   CalificacionesReporteDTO,
   DesempenoEstudianteDTO,
@@ -11,16 +11,18 @@ import {
 } from '@/dto/reporte.dto'
 import { AppError } from '@/lib/errors'
 
+/**
+ * Calificaciones de un curso.
+ * Solo ADMIN, DOCENTE, COORDINADOR (vista del dashboard).
+ */
 export async function getCalificacionesByCurso(cursoId: string): Promise<{
   success: boolean
   data?: CalificacionesReporteDTO[]
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const calificaciones = await ReporteService.getCalificacionesByCurso(
       cursoId,
@@ -33,6 +35,10 @@ export async function getCalificacionesByCurso(cursoId: string): Promise<{
   }
 }
 
+/**
+ * Desempeño de un estudiante específico.
+ * Solo ESTUDIANTE puede ver su propio desempeño.
+ */
 export async function getDesempenoEstudiante(
   estudianteId: string,
   cursoId: string
@@ -42,10 +48,8 @@ export async function getDesempenoEstudiante(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const desempen = await ReporteService.getDesempenoEstudiante(
       estudianteId,
@@ -59,16 +63,18 @@ export async function getDesempenoEstudiante(
   }
 }
 
+/**
+ * Reporte general de un curso.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function getReporteCurso(cursoId: string): Promise<{
   success: boolean
   data?: ReporteCursoDTO | null
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const reporte = await ReporteService.getReporteCurso(
       cursoId,
@@ -81,16 +87,18 @@ export async function getReporteCurso(cursoId: string): Promise<{
   }
 }
 
+/**
+ * Crea un certificado para un estudiante.
+ * Solo ADMIN, DOCENTE, COORDINADOR (el staff emite certificados).
+ */
 export async function crearCertificado(request: CreateCertificadoRequest): Promise<{
   success: boolean
   data?: CertificadoDTO
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const certificado = await ReporteService.crearCertificado(
       request,
@@ -103,6 +111,10 @@ export async function crearCertificado(request: CreateCertificadoRequest): Promi
   }
 }
 
+/**
+ * Obtiene el certificado de un estudiante para un curso.
+ * Solo ESTUDIANTE puede ver su propio certificado desde el aula.
+ */
 export async function getCertificadoEstudiante(
   estudianteId: string,
   cursoId: string
@@ -112,10 +124,8 @@ export async function getCertificadoEstudiante(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const certificado = await ReporteService.getCertificadoEstudiante(
       estudianteId,
@@ -129,6 +139,10 @@ export async function getCertificadoEstudiante(
   }
 }
 
+/**
+ * Verifica un certificado por código.
+ * Público — cualquier persona puede verificar la autenticidad de un certificado.
+ */
 export async function verificarCertificado(codigo: string): Promise<{
   success: boolean
   data?: CertificadoDTO | null
@@ -143,16 +157,18 @@ export async function verificarCertificado(codigo: string): Promise<{
   }
 }
 
+/**
+ * Obtiene todos los certificados emitidos por un docente.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function getCertificadosByDocente(): Promise<{
   success: boolean
   data?: CertificadoDTO[]
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const certificados = await ReporteService.getCertificadosByDocente(
       user.usr_id_int.toString()
@@ -164,6 +180,10 @@ export async function getCertificadosByDocente(): Promise<{
   }
 }
 
+/**
+ * Estadísticas de actividad del sistema.
+ * Solo ADMIN, DOCENTE, COORDINADOR.
+ */
 export async function getEstadisticasActividad(
   fechaInicio: string,
   fechaFin: string
@@ -173,10 +193,8 @@ export async function getEstadisticasActividad(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertDashboard(user)
 
     const estadisticas = await ReporteService.getEstadisticasActividad(
       user.usr_id_int.toString(),

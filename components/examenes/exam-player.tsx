@@ -31,7 +31,6 @@ export function ExamPlayer({
       intentoId,
       duracionMinutos,
       onInfraction: async (type) => {
-        console.log('[v0] Infracción registrada:', type)
         const result = await registrarInfraccion(intentoId, type)
         if (!result.success) {
           toast.error('Error al registrar infracción')
@@ -41,7 +40,6 @@ export function ExamPlayer({
     })
 
   async function handleTimeUp() {
-    console.log('[v0] Tiempo agotado, enviando respuestas...')
     await handleSubmit()
   }
 

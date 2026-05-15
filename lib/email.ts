@@ -45,12 +45,27 @@ export async function sendEmail(opts: EmailOptions): Promise<void> {
 
 // ── Templates ─────────────────────────────────────────────────────────────────
 
+/**
+ * Escapa caracteres HTML peligrosos para prevenir XSS en templates de email.
+ * Los clientes de correo con soporte HTML pueden ejecutar scripts si no se sanitiza.
+ */
+function escapeHtml(str: string): string {
+  if (!str) return ''
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 export function buildRecuperacionEmail(nombre: string, resetUrl: string): {
   subject: string
   html: string
   text: string
 } {
   const subject = 'Recupera tu contraseña — CIDCA'
+  const nombreSafe = escapeHtml(nombre)
 
   const html = `
 <!DOCTYPE html>
@@ -83,7 +98,7 @@ export function buildRecuperacionEmail(nombre: string, resetUrl: string): {
                       Restablecer contraseña
                     </h2>
                     <p style="margin:0 0 8px;color:#ffffff;font-size:14px;line-height:1.6;">
-                      Hola${nombre ? ` <strong style="color:#ffffff;">${nombre}</strong>` : ''},
+                      Hola${nombreSafe ? ` <strong style="color:#ffffff;">${nombreSafe}</strong>` : ''},
                     </p>
                     <p style="margin:0 0 28px;color:#ffffff;font-size:14px;line-height:1.6;">
                       Recibimos una solicitud para restablecer la contraseña de tu cuenta.
@@ -134,7 +149,7 @@ export function buildRecuperacionEmail(nombre: string, resetUrl: string): {
   const text = `
 Restablecer contraseña — CIDCA
 
-Hola${nombre ? ` ${nombre}` : ''},
+Hola${nombreSafe ? ` ${nombreSafe}` : ''},
 
 Recibimos una solicitud para restablecer tu contraseña.
 Usa el siguiente enlace (expira en 1 hora):
@@ -156,6 +171,8 @@ export function buildBienvenidaEmail(nombre: string, email: string): {
 } {
   const subject = '¡Bienvenido/a a CIDCA! 🎓'
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const nombreSafe = escapeHtml(nombre)
+  const emailSafe = escapeHtml(email)
 
   const html = `
 <!DOCTYPE html>
@@ -184,11 +201,11 @@ export function buildBienvenidaEmail(nombre: string, email: string): {
                 <tr>
                   <td style="padding:36px 40px;">
                     <h2 style="margin:0 0 16px;color:#ffffff;font-size:20px;font-weight:700;">
-                      ¡Bienvenido/a, ${nombre}! 🎓
+                      ¡Bienvenido/a, ${nombreSafe}! 🎓
                     </h2>
                     <p style="margin:0 0 20px;color:#ffffff;font-size:14px;line-height:1.6;">
                       Tu cuenta ha sido creada exitosamente con el correo
-                      <strong style="color:#ffffff;text-decoration:none;">${email}</strong>.
+                      <strong style="color:#ffffff;text-decoration:none;">${emailSafe}</strong>.
                       Ya puedes acceder al aula virtual y comenzar tu aprendizaje.
                     </p>
 

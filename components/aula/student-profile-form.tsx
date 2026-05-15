@@ -154,8 +154,6 @@ export function StudentProfileForm({
     try {
       const result = await updateStudentProfile(formData, passwords)
 
-      console.log('Profile update result:', result)
-
       setSuccessMessage(result.message || 'Cambios guardados exitosamente')
       setIsEditing(false)
       setPasswords({

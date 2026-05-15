@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import {
   ExamenListDto,
   ExamenDetailDto,
@@ -10,11 +10,6 @@ import {
   InfraccionExamenDto,
 } from '@/dto/examen.dto'
 import { Database } from '@/types/db'
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export class ExamenRepository {
   static async getExamenesByCurso(cursoId: string): Promise<ExamenListDto[]> {
@@ -212,8 +207,9 @@ export class ExamenRepository {
 
     if (respuestasError) throw respuestasError
 
-    // Guardar infracciones
-    for (const infraccion of infracciones) {
+    // Guardar infracciones (máx 50 para prevenir DoS)
+    const infraccionesLimitadas = infracciones.slice(0, 50)
+    for (const infraccion of infraccionesLimitadas) {
       const { error } = await supabase
         .from('infraccion_examen')
         .insert({

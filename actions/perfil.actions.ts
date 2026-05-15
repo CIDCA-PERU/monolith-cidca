@@ -1,6 +1,6 @@
 'use server'
 
-import { getCurrentUser } from './auth.actions'
+import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { supabase } from '@/lib/supabase'
 import { compare, hash } from 'bcrypt'
 
@@ -22,94 +22,63 @@ export interface UpdatePasswordData {
 }
 
 /**
- * Update student profile information
- * Saves changes to estudiante table
+ * Actualiza el perfil del estudiante autenticado.
+ * Solo ESTUDIANTE puede editar su propio perfil de estudiante.
  */
 export async function updateStudentProfile(
   profileData: UpdateProfileData,
   passwordData: UpdatePasswordData
 ) {
   try {
-    const user = await getCurrentUser()
-    
-    if (!user) {
-      throw new Error('User not authenticated')
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
-    // Validate input
-    if (!profileData.nombre?.trim()) {
-      throw new Error('Nombre is required')
-    }
+    // Validar campos obligatorios
+    if (!profileData.nombre?.trim()) throw new Error('Nombre es requerido')
+    if (!profileData.email?.trim()) throw new Error('Email es requerido')
+    if (!profileData.tipoDocumento) throw new Error('Tipo de documento es requerido')
+    if (!profileData.numeroDocumento?.trim()) throw new Error('Número de documento es requerido')
 
-    if (!profileData.email?.trim()) {
-      throw new Error('Email is required')
-    }
-
-    if (!profileData.tipoDocumento) {
-      throw new Error('Tipo de documento is required')
-    }
-
-    if (!profileData.numeroDocumento?.trim()) {
-      throw new Error('Número de documento is required')
-    }
-
-    // Validate email format
+    // Normalizar email a minúsculas y validar formato
+    const emailNormalizado = profileData.email.trim().toLowerCase()
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(profileData.email)) {
-      throw new Error('Invalid email format')
-    }
+    if (!emailRegex.test(emailNormalizado)) throw new Error('Formato de email inválido')
 
-    // Validate password match if new password is provided
+    // Validar coincidencia de contraseñas
     if (passwordData.new && passwordData.new !== passwordData.repeat) {
-      throw new Error('Passwords do not match')
+      throw new Error('Las contraseñas no coinciden')
     }
 
-    // Get current student data
+    // Obtener datos actuales del estudiante
     const { data: estudiante, error: estuError } = await supabase
       .from('estudiante')
       .select('estu_id_int')
       .eq('usr_id_int', user.usr_id_int)
       .single()
 
-    if (estuError || !estudiante) {
-      throw new Error('Student profile not found')
-    }
+    if (estuError || !estudiante) throw new Error('Perfil de estudiante no encontrado')
 
     const estudianteId = estudiante.estu_id_int
 
-    // Get current user password data for verification
+    // Obtener datos del usuario para verificación de contraseña
     const { data: userData, error: userError } = await supabase
       .from('usuarios')
       .select('usr_pass_vac, usr_email_vac')
       .eq('usr_id_int', user.usr_id_int)
       .single()
 
-    if (userError || !userData) {
-      throw new Error('User data not found')
-    }
+    if (userError || !userData) throw new Error('Datos de usuario no encontrados')
 
-    // Verify current password if new password is provided
+    // Verificar contraseña actual si se va a cambiar
     if (passwordData.new) {
-      if (!passwordData.current) {
-        throw new Error('Current password is required to set a new password')
-      }
+      if (!passwordData.current) throw new Error('Se requiere la contraseña actual')
+      if (passwordData.new.length < 8) throw new Error('La nueva contraseña debe tener al menos 8 caracteres')
 
-      if (passwordData.new.length < 8) {
-        throw new Error('New password must be at least 8 characters long')
-      }
-
-      // Compare current password with stored hash
-      const passwordMatch = await compare(
-        passwordData.current,
-        userData.usr_pass_vac || ''
-      )
-
-      if (!passwordMatch) {
-        throw new Error('Current password is incorrect')
-      }
+      const passwordMatch = await compare(passwordData.current, userData.usr_pass_vac || '')
+      if (!passwordMatch) throw new Error('La contraseña actual es incorrecta')
     }
 
-    // Update student profile data
+    // Actualizar datos del estudiante
     const { error: updateError } = await supabase
       .from('estudiante')
       .update({
@@ -121,45 +90,52 @@ export async function updateStudentProfile(
       })
       .eq('usr_id_int', user.usr_id_int)
 
-    if (updateError) {
-      throw new Error(`Error updating student profile: ${updateError.message}`)
-    }
+    if (updateError) throw new Error(`Error al actualizar perfil: ${updateError.message}`)
 
-    // Update password if new password provided
+    // Actualizar contraseña si se proporcionó una nueva
     if (passwordData.new) {
       const hashedPassword = await hash(passwordData.new, 10)
 
       const { error: passUpdateError } = await supabase
         .from('usuarios')
         .update({
-          usr_ant_pass_vac: userData.usr_pass_vac, // Save current as old
-          usr_pass_vac: hashedPassword, // Set new hashed password
+          usr_ant_pass_vac: userData.usr_pass_vac,
+          usr_pass_vac: hashedPassword,
           usr_upd_tmp: new Date().toISOString(),
         })
         .eq('usr_id_int', user.usr_id_int)
 
-      if (passUpdateError) {
-        throw new Error(`Error updating password: ${passUpdateError.message}`)
-      }
+      if (passUpdateError) throw new Error(`Error al actualizar contraseña: ${passUpdateError.message}`)
     }
 
-    // Update email if changed
-    if (profileData.email && profileData.email !== userData.usr_email_vac) {
+    // Actualizar email si cambió
+    if (emailNormalizado !== userData.usr_email_vac?.toLowerCase()) {
+
+      // Verificar que el nuevo email no esté en uso por OTRO usuario
+      const { data: emailExistente } = await supabase
+        .from('usuarios')
+        .select('usr_id_int')
+        .ilike('usr_email_vac', emailNormalizado)  // comparación case-insensitive
+        .neq('usr_id_int', user.usr_id_int)         // excluir al usuario actual
+        .maybeSingle()
+
+      if (emailExistente) {
+        throw new Error('Este correo ya está registrado por otro usuario')
+      }
+
       const { error: emailUpdateError } = await supabase
         .from('usuarios')
         .update({
-          usr_ant_email_vac: userData.usr_email_vac, // Save current as old
-          usr_email_vac: profileData.email, // Set new email
+          usr_ant_email_vac: userData.usr_email_vac,
+          usr_email_vac: emailNormalizado,           // guardar en minúsculas
           usr_upd_tmp: new Date().toISOString(),
         })
         .eq('usr_id_int', user.usr_id_int)
 
-      if (emailUpdateError) {
-        throw new Error(`Error updating email: ${emailUpdateError.message}`)
-      }
+      if (emailUpdateError) throw new Error(`Error al actualizar email: ${emailUpdateError.message}`)
     }
 
-    // Update document number in detalle_documento
+    // Actualizar documento de identidad
     if (profileData.numeroDocumento) {
       const { data: existingDoc, error: docCheckError } = await supabase
         .from('detalle_documento')
@@ -167,12 +143,9 @@ export async function updateStudentProfile(
         .eq('estu_id_int', estudianteId)
         .single()
 
-      if (docCheckError && docCheckError.code !== 'PGRST116') {
-        throw docCheckError
-      }
+      if (docCheckError && docCheckError.code !== 'PGRST116') throw docCheckError
 
       if (existingDoc) {
-        // Update existing document record
         const { error: docUpdateError } = await supabase
           .from('detalle_documento')
           .update({
@@ -182,11 +155,8 @@ export async function updateStudentProfile(
           })
           .eq('det_doc_id_int', existingDoc.det_doc_id_int)
 
-        if (docUpdateError) {
-          throw new Error(`Error updating document: ${docUpdateError.message}`)
-        }
+        if (docUpdateError) throw new Error(`Error al actualizar documento: ${docUpdateError.message}`)
       } else {
-        // Create new document record
         const { error: docCreateError } = await supabase
           .from('detalle_documento')
           .insert({
@@ -196,13 +166,11 @@ export async function updateStudentProfile(
             dtdoc_cre_tmp: new Date().toISOString(),
           })
 
-        if (docCreateError) {
-          throw new Error(`Error creating document: ${docCreateError.message}`)
-        }
+        if (docCreateError) throw new Error(`Error al crear documento: ${docCreateError.message}`)
       }
     }
 
-    // Update phone number in telefono
+    // Actualizar teléfono
     if (profileData.telefono) {
       const { data: existingPhone, error: phoneCheckError } = await supabase
         .from('telefono')
@@ -210,17 +178,13 @@ export async function updateStudentProfile(
         .eq('estu_id_int', estudianteId)
         .single()
 
-      if (phoneCheckError && phoneCheckError.code !== 'PGRST116') {
-        throw phoneCheckError
-      }
+      if (phoneCheckError && phoneCheckError.code !== 'PGRST116') throw phoneCheckError
 
-      // Parse phone number (assuming format: +51999999999 or similar)
       const phoneStr = profileData.telefono.replace(/\D/g, '')
-      const countryCode = phoneStr.slice(0, 2) // First 2 digits as country code
-      const phoneNumber = phoneStr.slice(2) // Rest as phone number
+      const countryCode = phoneStr.slice(0, 2)
+      const phoneNumber = phoneStr.slice(2)
 
       if (existingPhone) {
-        // Update existing phone record
         const { error: phoneUpdateError } = await supabase
           .from('telefono')
           .update({
@@ -230,11 +194,8 @@ export async function updateStudentProfile(
           })
           .eq('tel_id_int', existingPhone.tel_id_int)
 
-        if (phoneUpdateError) {
-          throw new Error(`Error updating phone: ${phoneUpdateError.message}`)
-        }
+        if (phoneUpdateError) throw new Error(`Error al actualizar teléfono: ${phoneUpdateError.message}`)
       } else if (phoneNumber) {
-        // Create new phone record
         const { error: phoneCreateError } = await supabase
           .from('telefono')
           .insert({
@@ -244,34 +205,14 @@ export async function updateStudentProfile(
             doc_cre_tmp: new Date().toISOString(),
           })
 
-        if (phoneCreateError) {
-          throw new Error(`Error creating phone: ${phoneCreateError.message}`)
-        }
+        if (phoneCreateError) throw new Error(`Error al crear teléfono: ${phoneCreateError.message}`)
       }
     }
-
-    console.log('Profile updated successfully:', {
-      userId: user.usr_id_int,
-      estudianteId: estudianteId,
-      profileData: {
-        nombre: profileData.nombre,
-        apellidoPaterno: profileData.apellidoPaterno,
-        apellidoMaterno: profileData.apellidoMaterno,
-        genero: profileData.genero,
-        numeroDocumento: profileData.numeroDocumento,
-        tipoDocumento: profileData.tipoDocumento,
-        telefono: profileData.telefono,
-      },
-      passwordChanged: !!passwordData.new,
-      emailChanged: profileData.email !== userData.usr_email_vac,
-    })
 
     return {
       success: true,
       message: 'Perfil actualizado exitosamente',
-      data: {
-        ...profileData,
-      },
+      data: { ...profileData },
     }
   } catch (error) {
     console.error('Error updating profile:', error)

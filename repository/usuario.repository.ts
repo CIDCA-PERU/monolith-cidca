@@ -190,14 +190,12 @@ export async function getUsuarioRol(userId: number): Promise<string | null> {
       .single();
 
     if (error) {
-      console.log('[v0] getUsuarioRol - Error:', error.message);
       return null;
     }
 
     const roleData = Array.isArray(data?.role) ? data?.role?.[0] : data?.role;
     return roleData?.rol_nam_vc || null;
   } catch (error) {
-    console.error('[v0] getUsuarioRol - Error:', error);
     return null;
   }
 }

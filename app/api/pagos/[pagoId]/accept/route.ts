@@ -7,10 +7,11 @@ import { acceptPago } from '@/actions/pago.actions';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { pagoId: string } }
+  { params }: { params: Promise<{ pagoId: string }> }
 ) {
   try {
-    const pagoId = parseInt(params.pagoId);
+    const { pagoId: pagoIdStr } = await params;
+    const pagoId = parseInt(pagoIdStr);
 
     if (isNaN(pagoId)) {
       return NextResponse.json(

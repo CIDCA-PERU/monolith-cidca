@@ -37,10 +37,6 @@ export function useExamProctoring({
           { type: 'TAB_CHANGE', timestamp: Date.now() },
         ])
         onInfraction?.('TAB_CHANGE')
-        console.log(
-          '[v0] Detección de cambio de pestaña. Total:',
-          tabSwitchCountRef.current
-        )
       }
     }
 
@@ -58,12 +54,10 @@ export function useExamProctoring({
         { type: 'FOCUS_LOSS', timestamp: Date.now() },
       ])
       onInfraction?.('FOCUS_LOSS')
-      console.log('[v0] Detección de pérdida de foco')
     }
 
     const handleFocus = () => {
       // Opcional: registrar cuando vuelve el foco
-      console.log('[v0] Recuperado foco en ventana')
     }
 
     window.addEventListener('blur', handleBlur)
@@ -83,7 +77,6 @@ export function useExamProctoring({
         { type: 'PAGE_UNLOAD', timestamp: Date.now() },
       ])
       onInfraction?.('PAGE_UNLOAD')
-      console.log('[v0] Intento de descargar página detectado')
     }
 
     window.addEventListener('beforeunload', handleBeforeUnload)
@@ -98,7 +91,6 @@ export function useExamProctoring({
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           onTimeout?.()
-          console.log('[v0] Tiempo de examen agotado')
           return 0
         }
         return prev - 1

@@ -13,8 +13,14 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  if (user.rol_nam_vc && user.rol_nam_vc.toUpperCase() === 'ESTUDIANTE') {
-    redirect('/aula/cursos')
+  // Lista blanca: solo estos roles pueden usar el dashboard
+  const DASHBOARD_ROLES = ['SISTEMAS', 'DOCENTE', 'ADMINISTRADOR']
+  if (!user.rol_nam_vc || !DASHBOARD_ROLES.includes(user.rol_nam_vc.toUpperCase())) {
+    // Estudiantes → aula, cualquier otro rol no reconocido → login
+    if (user.rol_nam_vc?.toUpperCase() === 'ESTUDIANTE') {
+      redirect('/aula/cursos')
+    }
+    redirect('/login')
   }
 
   return (

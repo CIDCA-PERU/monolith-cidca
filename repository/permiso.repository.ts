@@ -42,13 +42,11 @@ export async function getPermisoByCodigo(codigo: string): Promise<Permiso | null
       .single();
 
     if (error) {
-      console.log('[v0] getPermisoByCodigo - No encontrado:', codigo);
       return null;
     }
 
     return data as Permiso;
   } catch (error) {
-    console.error('[v0] getPermisoByCodigo - Error:', error);
     return null;
   }
 }
@@ -102,17 +100,21 @@ export async function usuarioTienePermiso(
       .single();
 
     if (error) {
-      console.log('[v0] usuarioTienePermiso - Error:', error.message);
       return false;
     }
 
-    const permisos = data?.role?.rol_permiso?.map(
-      (rp: any) => rp.permiso?.perm_cod_vac
-    ) || [];
+    // Supabase puede retornar 'role' como objeto o como array según la relación.
+    // Normalizamos para manejar ambos casos sin error de TypeScript.
+    const roleData = Array.isArray(data?.role) ? data?.role?.[0] : data?.role
+    const rolPermisos: { permiso: { perm_cod_vac: string } | null }[] =
+      (roleData?.rol_permiso as any[]) ?? []
 
-    return permisos.includes(permisoCodigo);
-  } catch (error) {
-    console.error('[v0] usuarioTienePermiso - Error:', error);
+    const permisos = rolPermisos
+      .map(rp => rp?.permiso?.perm_cod_vac)
+      .filter((cod): cod is string => typeof cod === 'string')
+
+    return permisos.includes(permisoCodigo)
+  } catch {
     return false;
   }
 }

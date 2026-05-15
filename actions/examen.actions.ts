@@ -1,7 +1,7 @@
 'use server'
 
 import { ExamenService } from '@/service/examen.service'
-import { getCurrentUser } from '@/actions/auth.actions'
+import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { RespuestaEstudianteDto } from '@/dto/examen.dto'
 import { AppError } from '@/lib/errors'
 
@@ -11,10 +11,8 @@ export async function crearIntento(examenId: string): Promise<{
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const intento = await ExamenService.crearIntento(
       examenId,
@@ -33,10 +31,8 @@ export async function obtenerIntento(intentoId: string): Promise<{
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const intento = await ExamenService.obtenerIntento(
       intentoId,
@@ -57,10 +53,8 @@ export async function registrarInfraccion(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     await ExamenService.registrarInfraccion(intentoId, tipo, 0)
     return { success: true }
@@ -79,10 +73,8 @@ export async function enviarRespuestas(
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     await ExamenService.enviarRespuestas(intentoId, respuestas, infracciones)
     return { success: true }
@@ -98,10 +90,8 @@ export async function obtenerResultados(intentoId: string): Promise<{
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const resultados = await ExamenService.obtenerResultados(
       intentoId,
@@ -120,10 +110,8 @@ export async function validarTiempoExamen(intentoId: string): Promise<{
   error?: string
 }> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { success: false, error: 'Usuario no autenticado' }
-    }
+    const user = await assertAuthenticated()
+    assertEstudiante(user)
 
     const valid = await ExamenService.validarTiempoExamen(intentoId)
     return { success: true, valid }

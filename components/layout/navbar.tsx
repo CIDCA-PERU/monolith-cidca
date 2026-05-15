@@ -17,7 +17,7 @@ import {
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { HoverDropdownMenu } from "@/components/layout/hover-dropdown-menu"
 
 export const Navbar = function Navbar() {
@@ -195,15 +195,15 @@ export const Navbar = function Navbar() {
               </Link>
             </HoverDropdownMenu>
 
-            {/* Menú Contáctanos */}
-            <HoverDropdownMenu trigger="Contáctanos" isActive={pathname === "/planes"}>
+            {/* Menú ArbitraUNT */}
+            <HoverDropdownMenu trigger="ArbitraUNT" isActive={pathname === "/arbitraunt"}>
               <Link
-                href="/planes#gratuito"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/planes#gratuito" ? "bg-white/5" : ""}`}
+                href="/arbitraunt"
+                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/arbitraunt" ? "bg-white/5" : ""}`}
               >
                 <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
                 <div>
-                  <div className="font-medium">Plan Gratuito</div>
+                  <div className="font-medium">ArbitraUNT</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     Acceso limitado a cursos seleccionados
                   </div>
@@ -235,6 +235,54 @@ export const Navbar = function Navbar() {
                   </div>
                 </div>
               </Link>
+            </HoverDropdownMenu>
+
+            {/* Menú mootcourtUNT */}
+            <HoverDropdownMenu trigger="Moot Court UNT" isActive={pathname === "/mootcourtunt"}>
+              <Link
+                href="/mootcourtunt"
+                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/mootcourtunt" ? "bg-white/5" : ""}`}
+              >
+                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
+                <div>
+                  <div className="font-medium">Moot Court UNT</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Información sobre el Moot Court UNT
+                  </div>
+                </div>
+              </Link>
+            </HoverDropdownMenu> 
+
+            {/* Menú eventos */}
+            <HoverDropdownMenu trigger="Eventos" isActive={pathname === "/eventos"}>
+              <Link
+                href="/eventos"
+                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/eventos" ? "bg-white/5" : ""}`}
+              >
+                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
+                <div>
+                  <div className="font-medium">Eventos</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Información sobre eventos
+                  </div>
+                </div>
+              </Link>
+            </HoverDropdownMenu>
+
+            {/* Menú Alianzas */}
+            <HoverDropdownMenu trigger="Alianzas" isActive={pathname === "/alianzas"}>
+              <Link
+                href="/alianzas"
+                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/alianzas" ? "bg-white/5" : ""}`}
+              >
+                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
+                <div>
+                  <div className="font-medium">Alianzas</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Información sobre alianzas
+                  </div>
+                </div>
+              </Link>
             </HoverDropdownMenu> 
           </nav>
 
@@ -252,6 +300,7 @@ export const Navbar = function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="bg-background/90 backdrop-blur-sm border-white/10 w-[80vw] max-w-sm">
+              <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
               <div className="flex flex-col h-full py-6">
                 <div className="flex items-center mb-8">
                   <Image
