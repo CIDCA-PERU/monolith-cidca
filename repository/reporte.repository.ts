@@ -1,18 +1,12 @@
 import 'server-only'
 
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import {
   CalificacionesReporteDTO,
   DesempenoEstudianteDTO,
   ReporteCursoDTO,
   CertificadoDTO,
 } from '@/dto/reporte.dto'
-import { Database } from '@/types/db'
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export class ReporteRepository {
   static async getCalificacionesByCurso(

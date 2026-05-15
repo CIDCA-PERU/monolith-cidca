@@ -9,7 +9,6 @@ import {
   RespuestaEstudianteDto,
   InfraccionExamenDto,
 } from '@/dto/examen.dto'
-import { Database } from '@/types/db'
 
 export class ExamenRepository {
   static async getExamenesByCurso(cursoId: string): Promise<ExamenListDto[]> {

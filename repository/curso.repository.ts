@@ -1,12 +1,7 @@
 import 'server-only'
 
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import { CursoDTO } from '@/dto/curso.dto'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 export class CursoRepository {
   static async getCursosByDocente(docenteId: string): Promise<CursoDTO[]> {
