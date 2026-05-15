@@ -59,6 +59,7 @@ export class ModuloService {
     }
 
     return ModuloRepository.createModulo(cursoId, {
+      curso_id: cursoId,
       titulo: request.titulo,
       descripcion: request.descripcion,
       estado: 'borrador',
@@ -170,6 +171,7 @@ export class ModuloService {
     }
 
     return ModuloRepository.createApartado(moduloId, {
+      modulo_id: moduloId,
       titulo: request.titulo,
       contenido: request.contenido,
       tipo: request.tipo,

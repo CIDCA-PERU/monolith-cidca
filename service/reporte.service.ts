@@ -2,7 +2,7 @@ import 'server-only'
 
 import { ReporteRepository } from '@/repository/reporte.repository'
 import { CursoRepository } from '@/repository/curso.repository'
-import { UsuarioRepository } from '@/repository/usuario.repository'
+import { getUsuarioById } from '@/repository/usuario.repository'
 import {
   CalificacionesReporteDTO,
   DesempenoEstudianteDTO,
@@ -85,7 +85,7 @@ export class ReporteService {
     usuarioId: string
   ): Promise<CertificadoDTO> {
     // Obtener datos del estudiante y curso
-    const usuario = await UsuarioRepository.getUsuarioById(request.estudiante_id)
+    const usuario = await getUsuarioById(parseInt(request.estudiante_id))
 
     if (!usuario) {
       throw new BusinessError('Estudiante no encontrado', 404)
@@ -145,8 +145,9 @@ export class ReporteService {
 
     // Validar permisos
     if (certificado.estudiante_id !== usuarioId) {
-      const usuario = await UsuarioRepository.getUsuarioById(usuarioId)
-      if (usuario?.rol !== 'docente' && usuario?.rol !== 'admin') {
+      const usuario = await getUsuarioById(parseInt(usuarioId))
+      // rol_id 4 = ESTUDIANTE; cualquier otro rol puede ver certificados
+      if (!usuario || usuario.rol_id === 4) {
         throw new BusinessError('No tienes permiso para ver este certificado')
       }
     }
@@ -178,9 +179,9 @@ export class ReporteService {
     fechaInicio: string,
     fechaFin: string
   ): Promise<any> {
-    const usuario = await UsuarioRepository.getUsuarioById(usuarioId)
-
-    if (usuario?.rol !== 'admin') {
+    const usuario = await getUsuarioById(parseInt(usuarioId))
+    // rol_id 1=SISTEMAS, 2=ADMINISTRADOR; solo ellos acceden a estadísticas globales
+    if (!usuario || (usuario.rol_id !== 1 && usuario.rol_id !== 2)) {
       throw new BusinessError('Solo administradores pueden acceder a estadísticas generales')
     }
 
