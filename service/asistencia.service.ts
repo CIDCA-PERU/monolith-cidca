@@ -4,7 +4,7 @@ import { AsistenciaRepository } from '@/repository/asistencia.repository'
 import { CursoRepository } from '@/repository/curso.repository'
 import { SesionClaseDto, RegistrarAsistenciaResponseDto } from '@/dto/asistencia.dto'
 import { BusinessError } from '@/lib/errors'
-import { getHouraPeru } from '@/lib/timezone'
+import { getCurrentTimeInCIDCA } from '@/lib/timezone'
 
 export class AsistenciaService {
   static async getSesionesByCurso(
@@ -39,7 +39,7 @@ export class AsistenciaService {
    * - Después de 15 minutos de inicio = TARDÍO
    */
   private static calcularVentanaAsistencia(sesion: SesionClaseDto) {
-    const ahora = getHouraPeru()
+    const ahora = getCurrentTimeInCIDCA()
     const sesionFecha = new Date(sesion.ses_fecha_dat)
     const sesionInicio = new Date(`${sesion.ses_fecha_dat}T${sesion.ses_hora_inic_tmp}`)
     const sesionFin = new Date(`${sesion.ses_fecha_dat}T${sesion.ses_hora_fin_tmp}`)
@@ -110,6 +110,7 @@ export class AsistenciaService {
     if (!sesion) {
       return {
         success: false,
+        mensaje: 'Sesión no encontrada',
         razon_rechazo: 'Sesión no encontrada',
       }
     }
@@ -120,6 +121,7 @@ export class AsistenciaService {
     if (!ventana.puede_asistir) {
       return {
         success: false,
+        mensaje: this.obtenerRazonRechazo(ventana),
         razon_rechazo: this.obtenerRazonRechazo(ventana),
       }
     }
@@ -145,6 +147,7 @@ export class AsistenciaService {
     } catch (error) {
       return {
         success: false,
+        mensaje: 'Error al registrar asistencia',
         razon_rechazo: 'Error al registrar asistencia',
       }
     }
