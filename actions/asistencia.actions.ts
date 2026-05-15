@@ -46,8 +46,8 @@ export async function registrarAsistencia(
     )
     return resultado
   } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, razon_rechazo: message }
+    const message = error instanceof Error ? error.message : 'Error desconocido'
+    return { success: false, mensaje: message, razon_rechazo: message }
   }
 }
 
