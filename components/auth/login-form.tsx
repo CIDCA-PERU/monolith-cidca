@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { loginAction } from "@/actions/auth.actions";
-import { UserSessionDto } from "@/dto/auth.dto";
+import { PublicUserDto } from "@/dto/auth.dto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,7 +19,7 @@ import { Spinner } from "@/components/ui/spinner";
 export function LoginForm({
   onSuccess,
 }: {
-  onSuccess?: (user: UserSessionDto) => void;
+  onSuccess?: (user: PublicUserDto) => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

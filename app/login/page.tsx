@@ -1,7 +1,7 @@
 "use client";
 
 import { LoginForm } from "@/components/auth/login-form";
-import { UserSessionDto } from "@/dto/auth.dto";
+import { PublicUserDto } from "@/dto/auth.dto";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { Suspense } from "react";
@@ -11,8 +11,8 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get('registered') === '1';
 
-  const handleSuccess = (user: UserSessionDto) => {
-    const role = user.rol_nam_vc?.toUpperCase();
+  const handleSuccess = (user: PublicUserDto) => {
+    const role = user.rol?.toUpperCase();
     if (role === "ESTUDIANTE") {
       router.push("/aula/cursos");
       return;

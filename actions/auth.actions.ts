@@ -2,7 +2,7 @@
 
 import { cookies, headers } from 'next/headers';
 import { loginService, registerService, getUsuarioCompleteService } from '@/service/auth.service';
-import { LoginRequestDto, RegisterRequestDto, AuthResponseDto } from '@/dto/auth.dto';
+import { LoginRequestDto, RegisterRequestDto, AuthResponseDto, PublicUserDto } from '@/dto/auth.dto';
 import { handleServiceError } from '@/lib/errors';
 import { getUsuarioRol } from '@/repository/usuario.repository';
 import { UserSessionDto } from '@/dto/auth.dto';
@@ -25,10 +25,12 @@ import {
 async function getRequestMetadata(): Promise<{ ip: string; userAgent: string }> {
   try {
     const headersList = await headers();
-    const ip =
+    const rawIp =
       headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       headersList.get('x-real-ip') ||
       'desconocida';
+    // Normalizar IPv4-mapped IPv6: "::ffff:127.0.0.1" → "127.0.0.1"
+    const ip = rawIp.startsWith('::ffff:') ? rawIp.slice(7) : rawIp;
     const userAgent = headersList.get('user-agent') || 'desconocido';
     return { ip, userAgent };
   } catch {
@@ -43,18 +45,31 @@ const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 async function createAndSetSession(userId: number): Promise<void> {
   const { ip, userAgent } = await getRequestMetadata();
 
+  console.log('[SESSION] Iniciando creación de sesión para userId:', userId);
+
   // 1. Generar token aleatorio de 256 bits
   const rawToken = generateSessionToken();
+  console.log('[SESSION] Token generado OK, longitud:', rawToken.length);
 
   // 2. Firmar para la cookie (HMAC — verificable en middleware sin BD)
   const signedCookieValue = await signTokenForCookie(rawToken);
+  console.log('[SESSION] Cookie firmada OK');
 
   // 3. Hashear para BD (nunca guardar token plano)
   const tokenHash = await hashTokenForDB(rawToken);
+  console.log('[SESSION] Hash para BD OK:', tokenHash.slice(0, 16) + '...');
 
   // 4. Crear sesión en BD con metadatos de auditoría
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  await createSesion({ tokenHash, userId, ip, userAgent, expiresAt });
+  console.log('[SESSION] Intentando insertar en tabla sesiones...');
+  const sesion = await createSesion({ tokenHash, userId, ip, userAgent, expiresAt });
+
+  if (!sesion) {
+    console.error('[SESSION] ❌ createSesion retornó null — revisa error arriba');
+    throw new Error('[createAndSetSession] createSesion falló — verifica la tabla "sesiones" y SUPABASE_SERVICE_ROLE_KEY');
+  }
+
+  console.log('[SESSION] ✅ Sesión creada en BD:', sesion.ses_uuid);
 
   // 5. Establecer cookie httpOnly firmada
   const cookieStore = await cookies();
@@ -64,6 +79,7 @@ async function createAndSetSession(userId: number): Promise<void> {
     sameSite: 'lax',
     maxAge: SESSION_DURATION_MS / 1000, // en segundos
   });
+  console.log('[SESSION] ✅ Cookie session_token establecida');
 }
 
 // ─── Server Actions ───────────────────────────────────────────────────────────
@@ -75,11 +91,14 @@ export async function loginAction(
   credentials: LoginRequestDto
 ): Promise<AuthResponseDto> {
   try {
+    console.log('[LOGIN] loginAction llamado, email:', credentials?.email);
     if (!credentials.email || !credentials.password) {
       return { success: false, message: 'Email y contraseña son requeridos' };
     }
 
+    console.log('[LOGIN] Llamando loginService...');
     const userSession = await loginService(credentials.email, credentials.password);
+    console.log('[LOGIN] loginService OK, userId:', userSession.usr_id_int);
 
     const rolNombre = await getUsuarioRol(userSession.usr_id_int);
     if (rolNombre) userSession.rol_nam_vc = rolNombre;
@@ -87,7 +106,16 @@ export async function loginAction(
     // Crear sesión en BD + cookie firmada
     await createAndSetSession(userSession.usr_id_int);
 
-    return { success: true, message: 'Login exitoso', user: userSession };
+    // Mapear a PublicUserDto — nunca enviar usr_id_int al cliente
+    const publicUser: PublicUserDto = {
+      uuid: userSession.usr_uuid,
+      email: userSession.usr_email_vac,
+      nombre: userSession.usr_nomb_vac,
+      rol: userSession.rol_nam_vc,
+      permisos: userSession.permiso_cod_vac,
+    };
+
+    return { success: true, message: 'Login exitoso', user: publicUser };
   } catch (error) {
     console.error('[loginAction] Error:', error);
     const errorResponse = handleServiceError(error);
@@ -116,7 +144,15 @@ export async function registerAction(
     const rolNombre = await getUsuarioRol(userSession.usr_id_int);
     if (rolNombre) userSession.rol_nam_vc = rolNombre;
 
-    return { success: true, message: 'Usuario registrado exitosamente', user: userSession };
+    const publicUser: PublicUserDto = {
+      uuid: userSession.usr_uuid,
+      email: userSession.usr_email_vac,
+      nombre: userSession.usr_nomb_vac,
+      rol: userSession.rol_nam_vc,
+      permisos: userSession.permiso_cod_vac,
+    };
+
+    return { success: true, message: 'Usuario registrado exitosamente', user: publicUser };
   } catch (error) {
     const errorResponse = handleServiceError(error);
     return { success: false, message: errorResponse.message };
@@ -134,7 +170,14 @@ export async function getCurrentUserAction(
     if (!userSession) {
       return { success: false, message: 'Usuario no encontrado' };
     }
-    return { success: true, message: 'Usuario obtenido', user: userSession };
+    const publicUser: PublicUserDto = {
+      uuid: userSession.usr_uuid,
+      email: userSession.usr_email_vac,
+      nombre: userSession.usr_nomb_vac,
+      rol: userSession.rol_nam_vc,
+      permisos: userSession.permiso_cod_vac,
+    };
+    return { success: true, message: 'Usuario obtenido', user: publicUser };
   } catch (error) {
     const errorResponse = handleServiceError(error);
     return { success: false, message: errorResponse.message };

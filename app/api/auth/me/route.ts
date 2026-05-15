@@ -20,11 +20,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       authenticated: true,
       user: {
-        id: user.usr_id_int,
+        uuid: user.usr_uuid,        // identificador público (no el entero)
         email: user.usr_email_vac,
         nombre: user.usr_nomb_vac,
-        rol_id: user.rol_id,
-        rol_nombre: user.rol_nam_vc,
+        rol: user.rol_nam_vc,
         permisos: user.permiso_cod_vac,
       },
     })

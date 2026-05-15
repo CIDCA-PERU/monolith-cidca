@@ -11,7 +11,7 @@
  *
  * DB storage: SHA-256(token64hex) → nunca el token plano
  *
- * ⚠️ NO agregar 'server-only' — este archivo se usa en middleware (Edge Runtime)
+ * Este archivo se usa en middleware (Edge Runtime)
  */
 
 // ─── HMAC key ─────────────────────────────────────────────────────────────────
