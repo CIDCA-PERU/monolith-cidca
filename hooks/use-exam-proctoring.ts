@@ -21,8 +21,8 @@ export function useExamProctoring({
   }>>([])
 
   const [timeRemaining, setTimeRemaining] = useState(duracionMinutos * 60)
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout>()
-  const timerIntervalRef = useRef<NodeJS.Timeout>()
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const timerIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const tabSwitchCountRef = useRef(0)
   const lastHeartbeatRef = useRef(Date.now())
 
