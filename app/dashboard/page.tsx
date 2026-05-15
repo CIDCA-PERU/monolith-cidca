@@ -4,8 +4,13 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { BookOpen, Users, FileText, ClipboardList } from 'lucide-react'
 
+const DASHBOARD_ROLES = ['SISTEMAS', 'ADMINISTRADOR', 'DOCENTE']
+
 export default async function DashboardPage() {
   const user = await getCurrentUser()
+
+  const rol = user?.rol_nam_vc?.toUpperCase() ?? ''
+  const isStaff = DASHBOARD_ROLES.includes(rol)
 
   const modules = [
     {
@@ -14,7 +19,7 @@ export default async function DashboardPage() {
       description: 'Crear y administrar cursos',
       icon: BookOpen,
       href: '/dashboard/cursos',
-      available: user?.rol === 'docente' || user?.rol === 'admin',
+      available: isStaff,
     },
     {
       id: 'estudiantes',
@@ -22,7 +27,7 @@ export default async function DashboardPage() {
       description: 'Ver estudiantes inscritos',
       icon: Users,
       href: '/dashboard/estudiantes',
-      available: user?.rol === 'docente' || user?.rol === 'admin',
+      available: isStaff,
     },
     {
       id: 'examenes',
@@ -30,7 +35,7 @@ export default async function DashboardPage() {
       description: 'Crear y administrar exámenes',
       icon: FileText,
       href: '/dashboard/examenes',
-      available: user?.rol === 'docente' || user?.rol === 'admin',
+      available: isStaff,
     },
     {
       id: 'asistencia',
@@ -38,27 +43,30 @@ export default async function DashboardPage() {
       description: 'Registrar asistencia',
       icon: ClipboardList,
       href: '/dashboard/asistencia',
-      available: user?.rol === 'docente' || user?.rol === 'admin',
+      available: isStaff,
     },
   ]
+
+  const descripcionRol =
+    rol === 'SISTEMAS'
+      ? 'Panel de administración del sistema'
+      : rol === 'ADMINISTRADOR'
+      ? 'Panel de administración'
+      : rol === 'DOCENTE'
+      ? 'Panel de gestión para docentes'
+      : 'Panel de control'
 
   return (
     <div className="py-8 px-4">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          Bienvenido, {user?.nombre}
+          Bienvenido, {user?.usr_nomb_vac}
         </h1>
-        <p className="text-muted-foreground">
-          {user?.rol === 'docente'
-            ? 'Panel de gestión para docentes'
-            : user?.rol === 'admin'
-            ? 'Panel de administración'
-            : 'Portal de estudiante'}
-        </p>
+        <p className="text-muted-foreground">{descripcionRol}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {modules.map((module) => {
+        {modules.filter(m => m.available).map((module) => {
           const Icon = module.icon
           return (
             <Card
@@ -87,17 +95,6 @@ export default async function DashboardPage() {
           )
         })}
       </div>
-
-      {user?.rol === 'estudiante' && (
-        <div className="mt-8 p-6 bg-card border border-border rounded-lg">
-          <h2 className="text-xl font-semibold text-foreground mb-4">
-            Mis Cursos
-          </h2>
-          <p className="text-muted-foreground">
-            Los cursos inscritos aparecerán aquí
-          </p>
-        </div>
-      )}
     </div>
   )
 }
