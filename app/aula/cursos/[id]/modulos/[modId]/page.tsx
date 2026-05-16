@@ -16,6 +16,8 @@ import {
   ClipboardList,
   Play,
   CheckCircle,
+  FileArchive,
+  Sparkles,
 } from "lucide-react";
 import {
   getApartadosByModulo,
@@ -222,8 +224,21 @@ export default async function AulaModuloPage({
                       <ul className="space-y-1.5 ml-4">
                         {(itemsAllByApartado[apartado.apar_id_int] || []).map(
                           (item) => {
-                            if (isSeparator(item.item_apar_tipo_vac))
-                              return null;
+                            // SEPARADOR: render bonito como sección header
+                            if (isSeparator(item.item_apar_tipo_vac)) {
+                              return (
+                                <li key={item.item_apar_id_int} className="list-none">
+                                  <div className="flex items-center gap-2 py-2 mt-1">
+                                    <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
+                                    <span className="flex items-center gap-1 text-[10px] font-bold text-accent uppercase tracking-widest px-2.5 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
+                                      <Sparkles className="h-2.5 w-2.5" />
+                                      {item.item_apar_titulo_vac || item.item_apar_url_vac || 'Sección'}
+                                    </span>
+                                    <div className="h-px flex-1 bg-gradient-to-l from-accent/40 to-transparent" />
+                                  </div>
+                                </li>
+                              );
+                            }
                             if (
                               isVideo(item.item_apar_tipo_vac) &&
                               !getYouTubeEmbedUrl(item.item_apar_url_vac)
@@ -236,7 +251,9 @@ export default async function AulaModuloPage({
                                 ? FileText
                                 : isExam(item.item_apar_tipo_vac)
                                   ? ClipboardList
-                                  : LinkIcon;
+                                  : normalizeType(item.item_apar_tipo_vac) === 'ARCHIVO'
+                                    ? FileArchive
+                                    : LinkIcon;
 
                             return (
                               <li
@@ -346,8 +363,21 @@ export default async function AulaModuloPage({
                               {(
                                 itemsAllByApartado[apartado.apar_id_int] || []
                               ).map((item) => {
-                                if (isSeparator(item.item_apar_tipo_vac))
-                                  return null;
+                                // SEPARADOR: render bonito como sección header
+                                if (isSeparator(item.item_apar_tipo_vac)) {
+                                  return (
+                                    <li key={item.item_apar_id_int} className="list-none">
+                                      <div className="flex items-center gap-1.5 py-1.5 mt-0.5">
+                                        <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
+                                        <span className="flex items-center gap-1 text-[9px] font-bold text-accent uppercase tracking-widest px-2 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
+                                          <Sparkles className="h-2 w-2" />
+                                          {item.item_apar_titulo_vac || item.item_apar_url_vac || 'Sección'}
+                                        </span>
+                                        <div className="h-px flex-1 bg-gradient-to-l from-accent/40 to-transparent" />
+                                      </div>
+                                    </li>
+                                  );
+                                }
                                 if (
                                   isVideo(item.item_apar_tipo_vac) &&
                                   !getYouTubeEmbedUrl(item.item_apar_url_vac)
@@ -360,7 +390,9 @@ export default async function AulaModuloPage({
                                     ? FileText
                                     : isExam(item.item_apar_tipo_vac)
                                       ? ClipboardList
-                                      : LinkIcon;
+                                      : normalizeType(item.item_apar_tipo_vac) === 'ARCHIVO'
+                                        ? FileArchive
+                                        : LinkIcon;
 
                                 return (
                                   <li

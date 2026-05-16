@@ -269,6 +269,7 @@ export async function getItemsByApartados(
       'item_apar_id_int, item_apar_tipo_vac, item_apar_titulo_vac, item_apar_url_vac, item_apar_ordn_inte, apar_id_int'
     )
     .in('apar_id_int', apartadosIds)
+    .eq('item_apar_est_int', 1)
     .order('item_apar_ordn_inte', { ascending: true })
 
   if (error) throw error

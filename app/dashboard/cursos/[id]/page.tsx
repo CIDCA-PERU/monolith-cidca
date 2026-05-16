@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { getCursoById } from '@/actions/curso.actions'
 import { CursoDTO } from '@/dto/curso.dto'
 import { CursoForm } from '@/components/cursos/curso-form'
@@ -11,22 +11,23 @@ import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface CursoDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default function CursoDetailPage({ params }: CursoDetailPageProps) {
+  const { id } = use(params)
   const [curso, setCurso] = useState<CursoDTO | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadCurso()
-  }, [])
+  }, [id])
 
   const loadCurso = async () => {
     try {
-      const result = await getCursoById(params.id)
+      const result = await getCursoById(id)
       if (result.success && result.data) {
         setCurso(result.data)
       } else {

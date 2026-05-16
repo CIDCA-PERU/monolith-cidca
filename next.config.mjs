@@ -42,18 +42,19 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      // Scripts: solo origen propio + Next.js inline necesario
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      // Scripts: origen propio + Next.js inline + Vercel Live (preview feedback widget)
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
       // Estilos: origen propio + inline (requerido por Tailwind / shadcn)
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Fuentes: Google Fonts
       "font-src 'self' https://fonts.gstatic.com",
-      // Imágenes: origen propio + Supabase Storage + data URIs
-      `img-src 'self' data: blob: https://${supabaseHostname}`,
-      // API/Fetch: origen propio + Supabase
-      `connect-src 'self' https://${supabaseHostname} wss://${supabaseHostname}`,
-      // Frames: nadie
-      "frame-src 'none'",
+      // Imágenes: origen propio + Supabase Storage + Unsplash + data/blob URIs
+      // + thumbnails de YouTube para previews
+      `img-src 'self' data: blob: https://${supabaseHostname} https://*.supabase.co https://images.unsplash.com https://i.ytimg.com https://drive.google.com https://lh3.googleusercontent.com`,
+      // API/Fetch: origen propio + Supabase (REST + Realtime)
+      `connect-src 'self' https://${supabaseHostname} wss://${supabaseHostname} https://*.supabase.co`,
+      // Frames: permitir embeds de YouTube
+      "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
       // Objetos embebidos (Flash, etc.): nadie
       "object-src 'none'",
       // Base URL: solo origen propio

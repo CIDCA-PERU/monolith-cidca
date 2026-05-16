@@ -41,10 +41,24 @@ export async function getCursoById(cursoId: string): Promise<{
   try {
     const user = await assertAuthenticated()
 
-    const curso = await CursoService.getCursoById(
-      cursoId,
-      user.usr_id_int.toString()
-    )
+    const rol = user.rol_nam_vc?.toUpperCase()
+    const isStaffAdmin = rol === 'SISTEMAS' || rol === 'ADMINISTRADOR'
+
+    let curso: CursoDTO | null = null
+
+    if (isStaffAdmin) {
+      // Admin/Sistemas: bypass del check de ownership, acceso directo al repo
+      const { CursoRepository } = await import('@/repository/curso.repository')
+      curso = await CursoRepository.getCursoById(cursoId)
+    } else {
+      // Docente: pasa por el service con validación de permisos
+      curso = await CursoService.getCursoById(
+        cursoId,
+        user.usr_id_int.toString()
+      )
+    }
+
+    if (!curso) return { success: false, error: 'Curso no encontrado' }
     return { success: true, data: curso }
   } catch (error) {
     const message = error instanceof AppError ? error.message : 'Error desconocido'
@@ -92,11 +106,19 @@ export async function updateCurso(
     const user = await assertAuthenticated()
     assertDashboard(user)
 
-    const curso = await CursoService.updateCurso(
-      cursoId,
-      updates,
-      user.usr_id_int.toString()
-    )
+    const rol = user.rol_nam_vc?.toUpperCase()
+    const isStaffAdmin = rol === 'SISTEMAS' || rol === 'ADMINISTRADOR'
+
+    const curso = isStaffAdmin
+      ? await (await import('@/repository/curso.repository')).CursoRepository.updateCurso(
+          cursoId,
+          updates
+        )
+      : await CursoService.updateCurso(
+          cursoId,
+          updates,
+          user.usr_id_int.toString()
+        )
     return { success: true, data: curso }
   } catch (error) {
     const message = error instanceof AppError ? error.message : 'Error desconocido'
