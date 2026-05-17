@@ -12,7 +12,6 @@ export default async function AulaPerfilPage() {
   const estudiante = await getEstudianteByUserId(user.usr_id_int)
   const tiposDocumento = await getTiposDocumento()
 
-  // Extract document and phone data from relationships
   const numeroDocumento = (estudiante?.detalle_documento?.[0]?.dtdoc_num_vac as string) || ''
   const tipoDocumentoId = (estudiante?.detalle_documento?.[0]?.doc_id_int as number)?.toString() || ''
   const telefonoData = estudiante?.telefono?.[0]
@@ -29,9 +28,9 @@ export default async function AulaPerfilPage() {
     telefono: telefonoCompleto,
     tipoDocumento: tipoDocumentoId,
     numeroDocumento: numeroDocumento,
+    modoOscuro: user.usr_mod_bol ?? false,
   }
 
-  // Transform tipos de documento for component
   const tiposDocumentoFormateados = tiposDocumento.map((tipo) => ({
     id: tipo.doc_id_int.toString(),
     nombre: tipo.doc_tipo_vac || '',

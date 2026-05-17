@@ -33,7 +33,7 @@ export default async function AulaPagosPage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Ordenes de pago</h1>
-          <p className="text-sm text-white">
+          <p className="text-sm text-slate-600 dark:text-slate-200">
             Gestiona tus pagos pendientes.
           </p>
         </div>
@@ -61,15 +61,13 @@ export default async function AulaPagosPage({
             return (
               <Card key={pago.pago_id_int} className="p-4 space-y-4 flex flex-col h-full">
                 <div className="flex-1 space-y-3">
-                  {/* Encabezado */}
                   <div>
-                    <div className="text-xs text-white">Orden de pago</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-300">Orden de pago</div>
                     <div className="text-base font-semibold line-clamp-2">
                       {cursoNombre}
                     </div>
                   </div>
 
-                {/* Estado */}
                 <div className="text-sm">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                    estadoPago === 'ACEPTADO'
@@ -84,19 +82,17 @@ export default async function AulaPagosPage({
                   </span>
                 </div>
 
-                {/* Monto a pagar */}
                 <div className="border-t border-border pt-3">
-                  <p className="text-sm text-white">Total a pagar</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-sm text-slate-500 dark:text-slate-300">Total a pagar</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white">
                     S/ {Number(montoAMostrar).toFixed(2)}
                   </p>
                 </div>
               </div>
 
-              {/* Botón de acción */}
               <Link href={`/aula/pagos/${pago.pago_uuid || pago.pago_id_int}`}>
                 <Button 
-                    className="cursor-pointer w-full hover:text-white hover:bg-slate-800" 
+                    className="cursor-pointer w-full hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800" 
                     size="sm"
                     variant={estadoPago === 'ACEPTADO' ? 'outline' : estadoPago === 'OBSERVADO' ? 'secondary' : 'default'}
                   >

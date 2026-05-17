@@ -29,7 +29,6 @@ export default async function AulaPagoDetallePage({
   const isAceptado = pago.pago_estad_vac === "ACEPTADO";
   const isObservado = pago.pago_estad_vac === "OBSERVADO";
 
-  // Generar URL fresca si hay un archivo guardado
   let urlFrescaParaMostrar: string | null = null;
   if (pago.pago_url_vac) {
     const { data } = await supabase.storage
@@ -47,7 +46,7 @@ export default async function AulaPagoDetallePage({
               ? "Pago Verificado"
               : "Subir voucher de pago"}
           </h1>
-          <p className="text-md text-white">
+          <p className="text-md text-slate-600 dark:text-slate-200">
             Orden {pago.pago_nro_vac || pago.pago_id_int}
           </p>
         </div>
@@ -55,7 +54,7 @@ export default async function AulaPagoDetallePage({
           <Button
             variant="outline"
             size="sm"
-            className="border-slate-700 text-slate-100 hover:bg-slate-800 hover:text-white"
+            className="border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-white"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
@@ -63,13 +62,11 @@ export default async function AulaPagoDetallePage({
         </Link>
       </div>
 
-      {/* resumen + formulario en grid */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-        {/* Columna Izquierda */}
         <div className="space-y-4">
           <Card className="p-6 space-y-5">
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-200">
                 Resumen de la orden
               </h3>
               <div
@@ -90,7 +87,7 @@ export default async function AulaPagoDetallePage({
 
             <div className="space-y-3 text-sm border-t border-border pt-4">
               <div className="flex flex-col gap-1">
-                <span className="text-white font-bold">Curso</span>
+                <span className="text-slate-600 dark:text-slate-200 font-bold">Curso</span>
                 <span className="font-semibold text-base">
                   {(Array.isArray(pago.curso)
                     ? pago.curso[0]?.cur_nomb_vac
@@ -102,7 +99,7 @@ export default async function AulaPagoDetallePage({
                 ? pago.curso[0]?.cur_desc_vac
                 : (pago.curso as any)?.cur_desc_vac) && (
                 <div className="flex flex-col gap-1 pt-2 border-t border-gray-200">
-                  <span className="text-white font-bold">Descripción</span>
+                  <span className="text-slate-600 dark:text-slate-200 font-bold">Descripción</span>
                   <p className="text-sm text-foreground leading-relaxed">
                     {Array.isArray(pago.curso)
                       ? pago.curso[0]?.cur_desc_vac
@@ -112,13 +109,13 @@ export default async function AulaPagoDetallePage({
               )}
 
               <div className="flex flex-col gap-1 pt-2 border-t border-gray-200">
-                <span className="text-white font-bold">Período del curso</span>
+                <span className="text-slate-600 dark:text-slate-200 font-bold">Período del curso</span>
                 <div className="space-y-1">
                   {(Array.isArray(pago.curso)
                     ? pago.curso[0]?.cur_fec_inic_tmp
                     : (pago.curso as any)?.cur_fec_inic_tmp) && (
                     <p className="text-sm">
-                      <span className="text-white">Inicio: </span>
+                      <span className="text-slate-600 dark:text-slate-200">Inicio: </span>
                       <span className="font-medium">
                         {new Date(
                           Array.isArray(pago.curso)
@@ -136,7 +133,7 @@ export default async function AulaPagoDetallePage({
                     ? pago.curso[0]?.cur_fec_fin_tmp
                     : (pago.curso as any)?.cur_fec_fin_tmp) && (
                     <p className="text-sm">
-                      <span className="text-white">Fin: </span>
+                      <span className="text-slate-600 dark:text-slate-200">Fin: </span>
                       <span className="font-medium">
                         {new Date(
                           Array.isArray(pago.curso)
@@ -155,7 +152,7 @@ export default async function AulaPagoDetallePage({
             </div>
 
             <div className="pt-4 border-t border-border">
-              <div className="text-sm font-medium text-white mb-2">
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-200 mb-2">
                 Total a Pagar
               </div>
               <div className="text-4xl font-bold text-foreground">

@@ -36,7 +36,6 @@ export function NextModuleButton({ data }: { data: ModulesData }) {
     const currentModule = data.modules[currentModuleIndex];
     const nextVideoIndex = currentVideoIndex + 1;
 
-    // Si hay más videos en el módulo actual
     if (nextVideoIndex < currentModule.videos.length) {
       const params = new URLSearchParams(searchParams);
       params.set('video', nextVideoIndex.toString());
@@ -44,7 +43,6 @@ export function NextModuleButton({ data }: { data: ModulesData }) {
       return;
     }
 
-    // Si no hay más videos, ir al siguiente módulo
     if (currentModuleIndex < data.modules.length - 1) {
       const nextModule = data.modules[currentModuleIndex + 1];
       const nextModuleId = nextModule.mod_uuid || nextModule.mod_id_int;
@@ -67,7 +65,7 @@ export function NextModuleButton({ data }: { data: ModulesData }) {
       size="sm"
       onClick={handleNext}
       disabled={isLastVideoOfLastModule}
-      className="cursor-pointer gap-1 hover:text-white hover:bg-slate-800"
+      className="cursor-pointer gap-1 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800"
     >
       Siguiente
       <ChevronRight className="h-4 w-4" />
