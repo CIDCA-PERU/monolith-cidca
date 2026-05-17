@@ -49,7 +49,7 @@ export default async function AulaCertificadosPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Mis certificados</h1>
-        <p className="text-base text-white">
+        <p className="text-base text-slate-600 dark:text-slate-200">
           Descarga tus certificados cuando estén disponibles.
         </p>
       </div>
@@ -66,7 +66,6 @@ export default async function AulaCertificadosPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden shadow-lg">
-          {/* Gradiente decorativo */}
           <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
           
           <Table>
@@ -114,14 +113,14 @@ export default async function AulaCertificadosPage() {
                   </TableCell>
                   <TableCell className="py-5">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800">
-                      <span className="font-mono text-sm font-medium text-white dark:text-white">
+                      <span className="font-mono text-sm font-medium text-slate-700 dark:text-slate-100">
                         {cert.cert_cod_vac || '-'}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="py-5">
-                    <div className="flex items-center gap-2 text-white dark:text-white">
-                      <Clock className="w-4 h-4 text-white" />
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+                      <Clock className="w-4 h-4 text-slate-500 dark:text-slate-300" />
                       <span className="text-sm font-medium">
                         {formatearFechaBonita(cert.cert_fec_emi_tmp)}
                       </span>
@@ -154,8 +153,7 @@ export default async function AulaCertificadosPage() {
             </TableBody>
           </Table>
 
-          {/* Footer decorativo */}
-          <div className="px-6 py-4 border-t border-border/50 bg-gradient-to-r from-slate-50/30 to-slate-100/30 dark:from-slate-900/20 dark:to-slate-800/20 text-xs text-white">
+          <div className="px-6 py-4 border-t border-border/50 bg-gradient-to-r from-slate-50/30 to-slate-100/30 dark:from-slate-900/20 dark:to-slate-800/20 text-xs text-slate-600 dark:text-slate-300">
             Total de certificados: <span className="font-semibold text-slate-900 dark:text-slate-50">{certificados.length}</span>
           </div>
         </div>

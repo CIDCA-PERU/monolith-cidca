@@ -34,10 +34,8 @@ export function PagoUploadForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Verificar si puede editar
   const canEdit = pagoEstado !== 'PAGADO' && pagoEstado !== 'ACEPTADO';
 
-  // Detectar si es primer envío o cambio
   const isPrimerEnvio = !currentUrl || !showChangeOption;
   const isActualizacion = currentUrl && showChangeOption;
 
@@ -70,7 +68,6 @@ export function PagoUploadForm({
         setSelectedFile(null);
         setShowChangeOption(false);
         
-        // Simular actualización visual
         setIsRefreshing(true);
         setTimeout(() => {
           setIsRefreshing(false);
@@ -102,7 +99,6 @@ export function PagoUploadForm({
           </div>
         )}
 
-        {/* Imagen presentada bonito */}
         <div className="rounded-lg overflow-hidden shadow-md border border-gray-200">
           <img
             src={currentUrl}
@@ -111,7 +107,6 @@ export function PagoUploadForm({
           />
         </div>
 
-        {/* Botones de acciones */}
         <div className="space-y-2">
           <Button
             onClick={() => window.open(currentUrl, "_blank")}
@@ -125,7 +120,7 @@ export function PagoUploadForm({
             <Button
               onClick={() => setShowChangeOption(true)}
               variant="outline"
-              className="w-full hover:text-white"
+              className="w-full hover:text-slate-900 dark:hover:text-white"
             >
               <Upload className="h-4 w-4 mr-2" />
               Corregir comprobante
@@ -152,7 +147,6 @@ export function PagoUploadForm({
           isDisabled={isUploading}
         />
 
-        {/* Botones de acción */}
         <div className="space-y-2">
           {selectedFile && (
             <Button
@@ -177,7 +171,7 @@ export function PagoUploadForm({
                 setSelectedFile(null);
               }}
               variant="outline"
-              className="w-full hover:text-white"
+              className="w-full hover:text-slate-900 dark:hover:text-white"
               disabled={isUploading}
             >
               Cancelar cambio
@@ -195,7 +189,6 @@ export function PagoUploadForm({
         )}
       </Card>
 
-      {/* Dialog de confirmación */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

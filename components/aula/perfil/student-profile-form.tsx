@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTheme } from 'next-themes'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit } from 'lucide-react'
+import { Edit, Moon, Sun } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { updateStudentProfile } from '@/actions/perfil.actions'
 
@@ -26,6 +27,7 @@ interface StudentProfileFormProps {
     telefono?: string
     tipoDocumento?: string
     numeroDocumento?: string
+    modoOscuro?: boolean
   }
   tiposDocumento?: Array<{ id: string; nombre: string }>
 }
@@ -34,6 +36,7 @@ export function StudentProfileForm({
   initialData = {},
   tiposDocumento = [],
 }: StudentProfileFormProps) {
+  const { setTheme, resolvedTheme } = useTheme()
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     nombre: initialData.nombre || '',
@@ -44,6 +47,7 @@ export function StudentProfileForm({
     telefono: initialData.telefono || '',
     tipoDocumento: initialData.tipoDocumento || '',
     numeroDocumento: initialData.numeroDocumento || '',
+    modoOscuro: initialData.modoOscuro ?? false,
   })
 
   const [passwords, setPasswords] = useState({
@@ -96,7 +100,10 @@ export function StudentProfileForm({
       telefono: initialData.telefono || '',
       tipoDocumento: initialData.tipoDocumento || '',
       numeroDocumento: initialData.numeroDocumento || '',
+      modoOscuro: initialData.modoOscuro ?? false,
     })
+    // Revert theme to original preference
+    setTheme((initialData.modoOscuro ?? false) ? 'dark' : 'light')
     setPasswords({
       current: '',
       new: '',
@@ -106,12 +113,18 @@ export function StudentProfileForm({
     setSuccessMessage('')
   }
 
+  /** Toggle theme instantly and sync to form state */
+  const handleThemeToggle = () => {
+    const newValue = !formData.modoOscuro
+    setFormData((prev) => ({ ...prev, modoOscuro: newValue }))
+    setTheme(newValue ? 'dark' : 'light')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage('')
     setSuccessMessage('')
 
-    // Validations
     if (!formData.nombre.trim()) {
       setErrorMessage('El nombre es requerido')
       return
@@ -132,7 +145,6 @@ export function StudentProfileForm({
       return
     }
 
-    // Password validations
     if (passwords.new) {
       if (!passwords.current) {
         setErrorMessage('Debes ingresa tu contraseña actual para cambiar a una nueva')
@@ -175,7 +187,6 @@ export function StudentProfileForm({
 
   return (
     <div className="space-y-6">
-      {/* Header with Edit Button */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Mi Perfil</h1>
@@ -185,7 +196,7 @@ export function StudentProfileForm({
             type="button"
             onClick={handleEditClick}
             variant="outline"
-            className="cursor-pointer h-10 px-6 rounded-md border border-gray-300 hover:text-white hover:bg-slate-800"
+            className="cursor-pointer h-10 px-6 rounded-md border border-gray-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800"
           >
             <Edit className="h-4 w-4 mr-2" />
             Editar
@@ -196,14 +207,12 @@ export function StudentProfileForm({
       {/* Main Card */}
       <Card className="p-8">
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Error Message */}
           {errorMessage && (
             <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 border border-red-200">
               {errorMessage}
             </div>
           )}
 
-          {/* Success Message */}
           {successMessage && (
             <div className="rounded-md bg-green-50 p-4 text-sm text-green-800 border border-green-200">
               {successMessage}
@@ -215,7 +224,6 @@ export function StudentProfileForm({
             <h2 className="text-lg font-bold mb-6">Información Personal</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Nombre */}
               <div className="space-y-2">
                 <Label htmlFor="nombre" className="text-sm font-medium">
                   Nombre <span className="text-red-500">*</span>
@@ -232,7 +240,6 @@ export function StudentProfileForm({
                 />
               </div>
 
-              {/* Apellido Paterno */}
               <div className="space-y-2">
                 <Label
                   htmlFor="apellidoPaterno"
@@ -251,7 +258,6 @@ export function StudentProfileForm({
                 />
               </div>
 
-              {/* Apellido Materno */}
               <div className="space-y-2">
                 <Label
                   htmlFor="apellidoMaterno"
@@ -270,7 +276,6 @@ export function StudentProfileForm({
                 />
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
                   Email <span className="text-red-500">*</span>
@@ -288,7 +293,6 @@ export function StudentProfileForm({
                 />
               </div>
 
-              {/* Género */}
               <div className="space-y-2">
                 <Label htmlFor="genero" className="text-sm font-medium">
                   Género
@@ -315,7 +319,6 @@ export function StudentProfileForm({
                 </Select>
               </div>
 
-              {/* Número de Teléfono */}
               <div className="space-y-2">
                 <Label htmlFor="telefono" className="text-sm font-medium">
                   Número de Teléfono
@@ -331,7 +334,6 @@ export function StudentProfileForm({
                 />
               </div>
 
-              {/* Tipo de Documento */}
               <div className="space-y-2">
                 <Label htmlFor="tipoDocumento" className="text-sm font-medium">
                   Tipo de Documento <span className="text-red-500">*</span>
@@ -368,7 +370,6 @@ export function StudentProfileForm({
                 </Select>
               </div>
 
-              {/* Número de Documento */}
               <div className="space-y-2">
                 <Label
                   htmlFor="numeroDocumento"
@@ -393,20 +394,18 @@ export function StudentProfileForm({
           {/* Show password section only when editing */}
           {isEditing && (
             <>
-              {/* Separator */}
               <Separator />
 
               {/* Section 2: Actualizar Contraseña */}
               <section>
-                <h3 className="text-sm font-semibold text-white-foreground uppercase mb-2">
+                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase mb-2">
                   Actualizar Contraseña
                 </h3>
-                <p className="text-xs text-white-foreground mb-6">
+                <p className="text-xs text-slate-500 dark:text-slate-300 mb-6">
                   Opcional. Deja estos campos vacíos si no deseas cambiar tu contraseña.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Contraseña Actual */}
                   <div className="space-y-2">
                     <Label
                       htmlFor="passwordCurrent"
@@ -425,7 +424,6 @@ export function StudentProfileForm({
                     />
                   </div>
 
-                  {/* Nueva Contraseña y Repetir */}
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label
@@ -468,7 +466,58 @@ export function StudentProfileForm({
             </>
           )}
 
-          {/* Action Buttons */}
+          <Separator />
+
+          {/* Section 3: Apariencia */}
+          <section>
+            <h2 className="text-lg font-bold mb-1">Apariencia</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
+              El cambio se aplica de inmediato. Se guardará al presionar &ldquo;Guardar Cambios&rdquo;.
+            </p>
+
+            <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700">
+                  {formData.modoOscuro
+                    ? <Moon className="h-4 w-4 text-blue-400" />
+                    : <Sun className="h-4 w-4 text-amber-500" />}
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {formData.modoOscuro ? 'Modo Oscuro activo' : 'Modo Claro activo'}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {formData.modoOscuro
+                      ? 'Interfaz oscura para mayor comodidad visual'
+                      : 'Interfaz clara y brillante'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                id="tema-toggle"
+                type="button"
+                role="switch"
+                aria-checked={formData.modoOscuro}
+                aria-label="Alternar modo oscuro"
+                disabled={!isEditing}
+                onClick={handleThemeToggle}
+                className={[
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500',
+                  formData.modoOscuro ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600',
+                  !isEditing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                ].join(' ')}
+              >
+                <span
+                  className={[
+                    'inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200',
+                    formData.modoOscuro ? 'translate-x-6' : 'translate-x-1',
+                  ].join(' ')}
+                />
+              </button>
+            </div>
+          </section>
+
           {isEditing && (
             <div className="flex gap-3">
               <Button
@@ -483,7 +532,7 @@ export function StudentProfileForm({
                 onClick={handleCancel}
                 disabled={isLoading}
                 variant="outline"
-                className="flex-1 h-10 rounded-md border border-gray-300 hover:text-white"
+                className="flex-1 h-10 rounded-md border border-gray-300 hover:text-slate-900 dark:hover:text-white"
               >
                 Cancelar
               </Button>
@@ -492,7 +541,6 @@ export function StudentProfileForm({
         </form>
       </Card>
 
-      {/* Footer */}
       <footer className="text-center text-xs text-muted-foreground py-6">
         © 2026 Virtual Classroom. All rights reserved.
       </footer>

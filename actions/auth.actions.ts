@@ -21,7 +21,7 @@ import {
 
 // ─── Helpers internos ─────────────────────────────────────────────────────────
 
-/** Obtiene IP y User-Agent del request actual (para auditoría de sesión) */
+/** Obtiene IP y User-Agent del request actual */
 async function getRequestMetadata(): Promise<{ ip: string; userAgent: string }> {
   try {
     const headersList = await headers();
@@ -48,10 +48,10 @@ async function createAndSetSession(userId: number): Promise<void> {
   // 1. Generar token aleatorio de 256 bits
   const rawToken = generateSessionToken();
 
-  // 2. Firmar para la cookie (HMAC — verificable en middleware sin BD)
+  // 2. Firmar para la cookie
   const signedCookieValue = await signTokenForCookie(rawToken);
 
-  // 3. Hashear para BD (nunca guardar token plano)
+  // 3. Hashear para BD
   const tokenHash = await hashTokenForDB(rawToken);
 
   // 4. Crear sesión en BD con metadatos de auditoría
@@ -59,7 +59,7 @@ async function createAndSetSession(userId: number): Promise<void> {
   const sesion = await createSesion({ tokenHash, userId, ip, userAgent, expiresAt });
 
   if (!sesion) {
-    throw new Error('[createAndSetSession] createSesion falló — verifica la tabla "sesiones" y SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error('createSesion falló');
   }
 
   // 5. Establecer cookie httpOnly firmada
@@ -81,12 +81,10 @@ export async function loginAction(
   credentials: LoginRequestDto
 ): Promise<AuthResponseDto> {
   try {
-    console.log('[LOGIN] loginAction llamado, email:', credentials?.email);
     if (!credentials.email || !credentials.password) {
       return { success: false, message: 'Email y contraseña son requeridos' };
     }
 
-    console.log('[LOGIN] Llamando loginService...');
     const userSession = await loginService(credentials.email, credentials.password);
 
     const rolNombre = await getUsuarioRol(userSession.usr_id_int);
@@ -102,6 +100,7 @@ export async function loginAction(
       nombre: userSession.usr_nomb_vac,
       rol: userSession.rol_nam_vc,
       permisos: userSession.permiso_cod_vac,
+      modoOscuro: userSession.usr_mod_bol ?? false,
     };
 
     return { success: true, message: 'Login exitoso', user: publicUser };
@@ -138,6 +137,7 @@ export async function registerAction(
       nombre: userSession.usr_nomb_vac,
       rol: userSession.rol_nam_vc,
       permisos: userSession.permiso_cod_vac,
+      modoOscuro: userSession.usr_mod_bol ?? false,
     };
 
     return { success: true, message: 'Usuario registrado exitosamente', user: publicUser };
@@ -148,7 +148,7 @@ export async function registerAction(
 }
 
 /**
- * Obtiene datos del usuario por ID (para verificación puntual)
+ * Obtiene datos del usuario por ID
  */
 export async function getCurrentUserAction(
   usuarioId: number
@@ -164,6 +164,7 @@ export async function getCurrentUserAction(
       nombre: userSession.usr_nomb_vac,
       rol: userSession.rol_nam_vc,
       permisos: userSession.permiso_cod_vac,
+      modoOscuro: userSession.usr_mod_bol ?? false,
     };
     return { success: true, message: 'Usuario obtenido', user: publicUser };
   } catch (error) {
@@ -176,8 +177,8 @@ export async function getCurrentUserAction(
  * Obtiene el usuario autenticado actual.
  * Proceso:
  *  1. Lee la cookie session_token
- *  2. Verifica firma HMAC (previene cookies forjadas)
- *  3. Busca la sesión en BD (verifica que existe, está activa y no expiró)
+ *  2. Verifica firma HMAC
+ *  3. Busca la sesión en BD
  *  4. Actualiza última actividad
  *  5. Retorna los datos frescos del usuario desde BD
  */

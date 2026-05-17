@@ -64,31 +64,31 @@ export function PagoFilter() {
     <div ref={containerRef} className="relative inline-block w-full sm:w-fit">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2.5 rounded-lg border border-slate-700 bg-slate-900 text-sm font-medium text-white shadow-sm hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent transition-all duration-200 cursor-pointer flex items-center justify-between gap-3"
+        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:border-slate-600 dark:focus:ring-slate-500"
       >
         <span className="flex items-center gap-2">
-          {selectedOption && <span className="text-white">{selectedOption.svg}</span>}
+          {selectedOption && <span className="text-slate-500 dark:text-white">{selectedOption.svg}</span>}
           {selectedOption?.label}
         </span>
         <ChevronDown 
-          className={cn('w-4 h-4 text-white transition-transform duration-200', isOpen && 'rotate-180')} 
+          className={cn('w-4 h-4 text-slate-500 dark:text-white transition-transform duration-200', isOpen && 'rotate-180')} 
         />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden dark:bg-slate-900 dark:border-slate-700">
           {ESTADOS.map((est) => (
             <button
               key={est.value}
               onClick={() => handleSelect(est.value)}
               className={cn(
-                'w-full px-4 py-3 flex items-center gap-3 text-sm text-left transition-colors duration-150 border-b border-slate-700 last:border-b-0',
+                'w-full px-4 py-3 flex items-center gap-3 text-sm text-left transition-colors duration-150 border-b border-slate-200 last:border-b-0 dark:border-slate-700',
                 estado === est.value
-                  ? 'bg-slate-800 text-white font-medium'
-                  : 'text-white hover:bg-slate-800'
+                  ? 'bg-slate-100 text-slate-900 font-medium dark:bg-slate-800 dark:text-white'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-slate-800'
               )}
             >
-              <span className="text-white">{est.svg}</span>
+              <span className="text-slate-500 dark:text-white">{est.svg}</span>
               {est.label}
             </button>
           ))}

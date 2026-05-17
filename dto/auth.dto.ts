@@ -1,6 +1,6 @@
 /**
  * DTOs para autenticación
- * Siguiendo patrón LAK Security: Interfaces limpias sin exposición de datos sensibles
+ * Siguiendo patrón LAK Security
  */
 
 export interface LoginRequestDto {
@@ -22,18 +22,19 @@ export interface AuthResponseDto {
 }
 
 export interface UserSessionDto {
-  usr_id_int: number;      // USO INTERNO SERVIDOR — nunca enviar al cliente
+  usr_id_int: number;      // USO INTERNO SERVIDOR
   usr_uuid: string;
   usr_email_vac: string;
   usr_nomb_vac: string;
   rol_id: number;          // USO INTERNO SERVIDOR
   rol_nam_vc: string;
   permiso_cod_vac: string[];
+  usr_mod_bol?: boolean; // true = dark mode, false = light mode
 }
 
 /**
- * DTO público — lo único que llega al cliente.
- * Sin IDs enteros (evita enumeración/IDOR).
+ * DTO público
+ * Sin IDs enteros
  */
 export interface PublicUserDto {
   uuid: string;            // identificador público
@@ -41,6 +42,7 @@ export interface PublicUserDto {
   nombre: string;
   rol: string;
   permisos: string[];
+  modoOscuro?: boolean;
 }
 
 export interface PermissionCheckDto {

@@ -62,22 +62,19 @@ function ComentarioItem({ comentario }: { comentario: AulaComentario }) {
     <div className="flex gap-3 group">
       <Avatar name={autor} />
       <div className="flex-1 min-w-0 space-y-1">
-        {/* Autor + fecha */}
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-white">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
             {autor}
           </span>
-          <span className="text-[11px] text-white">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400">
             {formatRelativo(comentario.com_cur_cre_tmp)}
           </span>
         </div>
 
-        {/* Texto */}
         <p className={`text-sm text-slate-700 dark:text-white leading-relaxed [overflow-wrap:anywhere] ${!expanded && needsClamp ? 'line-clamp-3' : ''}`}>
           {texto}
         </p>
 
-        {/* Ver más / Ver menos */}
         {needsClamp && (
           <button
             onClick={() => setExpanded(!expanded)}
@@ -140,12 +137,12 @@ function NuevoComentarioForm({
           onFocus={() => setFocused(true)}
           placeholder="Añade un comentario…"
           maxLength={2000}
-          className="w-full resize-none bg-transparent border-0 border-b-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-white py-1.5 transition-all duration-200 leading-relaxed"
+          className="w-full resize-none bg-transparent border-0 border-b-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-400 outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 py-1.5 transition-all duration-200 leading-relaxed"
         />
 
         {focused && (
           <div className="flex items-center justify-between gap-2">
-            <span className={`text-xs ${texto.length > 1800 ? 'text-amber-500 font-medium' : 'text-white'}`}>
+            <span className={`text-xs ${texto.length > 1800 ? 'text-amber-500 font-medium' : 'text-slate-500 dark:text-slate-300'}`}>
               {texto.length}/2000
             </span>
             <div className="flex gap-2">
@@ -204,18 +201,16 @@ export function ComentariosSection({ comentarios, aparId, currentPath }: Comenta
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-white flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2">
           <ThumbsUp className="h-4 w-4 text-blue-500" />
           {comentarios.length} comentario{comentarios.length !== 1 ? 's' : ''}
         </h3>
 
-        {/* Filtro de orden */}
         {comentarios.length > 1 && (
           <button
             onClick={() => setOrden(o => o === 'reciente' ? 'antiguo' : 'reciente')}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-white dark:hover:text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200 transition-colors"
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
             {orden === 'reciente' ? 'Más recientes primero' : 'Más antiguos primero'}
@@ -223,15 +218,12 @@ export function ComentariosSection({ comentarios, aparId, currentPath }: Comenta
         )}
       </div>
 
-      {/* Formulario de nuevo comentario */}
       <NuevoComentarioForm aparId={aparId} currentPath={currentPath} />
 
-      {/* Divisor */}
       {comentarios.length > 0 && (
         <div className="border-t border-slate-100 dark:border-slate-800" />
       )}
 
-      {/* Lista de comentarios */}
       {comentarios.length === 0 ? (
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">
           Sé el primero en comentar en este módulo.
@@ -242,7 +234,6 @@ export function ComentariosSection({ comentarios, aparId, currentPath }: Comenta
             <ComentarioItem key={c.com_cur_id_int} comentario={c} />
           ))}
 
-          {/* Botones de paginación */}
           <div className="flex flex-col items-start gap-1">
             {hasMore && (
               <button

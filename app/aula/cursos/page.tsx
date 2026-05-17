@@ -64,19 +64,19 @@ export default async function AulaCursosPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8 border-b border-slate-800 pb-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm font-medium mb-3">
-            <span className="text-yellow-500">
+            <span className="text-yellow-600 dark:text-yellow-500">
               ¡Hola de nuevo, {primerNombre}!
             </span>
-            <span className="hidden sm:inline-block text-white">•</span>
-            <span className="hidden sm:inline-block text-white">
+            <span className="hidden sm:inline-block text-slate-400 dark:text-slate-500">•</span>
+            <span className="hidden sm:inline-block text-slate-600 dark:text-slate-300">
               {fechaActual}
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Mis Cursos
           </h1>
-          <p className="text-sm text-white max-w-xl">
+          <p className="text-sm text-slate-600 dark:text-slate-200 max-w-xl">
             Accede a tus cursos activos, revisa tus módulos y continúa con tu
             aprendizaje donde lo dejaste.
           </p>

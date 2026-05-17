@@ -21,7 +21,6 @@ export function ModuleVideoPlayer({ items }: { items: ProcessedItem[] }) {
   const searchParams = useSearchParams();
   const currentVideoIndex = Number(searchParams.get('video') || 0);
 
-  // Filtrar solo videos
   const videos = items.filter((item) => item.tipo.isVideo && item.embedUrl);
 
   if (videos.length === 0) {
@@ -37,7 +36,7 @@ export function ModuleVideoPlayer({ items }: { items: ProcessedItem[] }) {
         <h3 className="text-sm font-semibold">
           {currentVideo?.item_apar_titulo_vac || 'Video de la clase'}
         </h3>
-        <span className="text-sm text-white ml-auto">
+        <span className="text-sm text-slate-500 dark:text-slate-300 ml-auto">
           {currentVideoIndex + 1} / {videos.length}
         </span>
       </div>
