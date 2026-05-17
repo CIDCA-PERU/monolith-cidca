@@ -27,7 +27,7 @@ import {
 import { UserSessionDto } from '@/dto/auth.dto';
 
 const BCRYPT_ROUNDS = 10;
-const ADMIN_ROLE_ID = 1; // Ajusta según tu BD
+const ADMIN_ROLE_ID = 1; // Ajusta según BD
 
 /**
  * Servicio de login
@@ -63,6 +63,7 @@ export async function loginService(
     rol_id: usuario.rol_id,
     rol_nam_vc: '', // Se completa en el action
     permiso_cod_vac: permisos,
+    usr_mod_bol: (usuario as any).usr_mod_bol ?? false,
   };
 }
 
@@ -75,27 +76,17 @@ export async function registerService(
   passwordConfirm: string,
   rolId: number = 4 // 4 = ESTUDIANTE
 ): Promise<UserSessionDto> {
-
-  // Validar email
   validateEmail(email);
-
-  // Validar contraseña
   validatePassword(password);
   validatePasswordMatch(password, passwordConfirm);
 
-  // Verificar que no exista
   const existe = await getUsuarioByEmail(email);
   if (existe) {
     throw new ValidationError('El email ya está registrado');
   }
 
-  // Hash de contraseña
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-
-  // Crear usuario
   const nuevoUsuario = await createUsuario(email, passwordHash, rolId);
-
-  // Obtener permisos
   const permisos = await getPermisosByRolId(rolId);
 
   return {
@@ -106,11 +97,12 @@ export async function registerService(
     rol_id: nuevoUsuario.rol_id,
     rol_nam_vc: '', // Se completa en el action
     permiso_cod_vac: permisos,
+    usr_mod_bol: (nuevoUsuario as any).usr_mod_bol ?? false,
   };
 }
 
 /**
- * Obtiene los datos completos de un usuario (con permisos)
+ * Obtiene los datos completos de un usuario con permisos
  */
 export async function getUsuarioCompleteService(
   usuarioId: number
@@ -131,6 +123,7 @@ export async function getUsuarioCompleteService(
     rol_id: usuarioConPermisos.rol_id,
     rol_nam_vc: usuarioConPermisos.role?.rol_nam_vc || '',
     permiso_cod_vac: permisos,
+    usr_mod_bol: (usuarioConPermisos as any).usr_mod_bol ?? false,
   };
 }
 
@@ -142,13 +135,4 @@ export async function assertIsAdmin(usuarioId: number): Promise<void> {
   if (!usuario || usuario.rol_id !== ADMIN_ROLE_ID) {
     throw new AuthorizationError('Se requieren permisos de administrador');
   }
-}
-
-/**
- * Extrae el usuario del header o contexto (implementar según tu setup)
- */
-export async function getCurrentUserFromContext(): Promise<number | null> {
-  // Esto se implementará después con Next.js middleware
-  // Por ahora retorna null
-  return null;
 }

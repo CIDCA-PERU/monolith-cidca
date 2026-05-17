@@ -60,7 +60,6 @@ export function OrdenCard({
   return (
     <Card className="p-5 h-full flex flex-col">
       <div className="space-y-3 flex-1">
-        {/* Encabezado */}
         <div>
           <h3 className="font-semibold text-base line-clamp-2">
             {cursoNomb}
@@ -70,7 +69,6 @@ export function OrdenCard({
           )}
         </div>
 
-        {/* Estado */}
         <div>
           <Badge
             variant="outline"
@@ -80,16 +78,14 @@ export function OrdenCard({
           </Badge>
         </div>
 
-        {/* Monto */}
         <div className="border-t border-border pt-3">
-          <p className="text-sm text-white">Total a pagar</p>
-          <p className="text-2xl font-bold text-white">
+          <p className="text-sm text-slate-500 dark:text-slate-300">Total a pagar</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">
             S/ {monto.toFixed(2)}
           </p>
         </div>
       </div>
 
-      {/* Botón de acción */}
       <Button
         asChild
         variant={getButtonVariant() as any}

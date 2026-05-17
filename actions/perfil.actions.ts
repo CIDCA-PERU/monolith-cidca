@@ -13,6 +13,8 @@ export interface UpdateProfileData {
   telefono: string
   tipoDocumento: string
   numeroDocumento: string
+  //true = dark mode, false = light mode
+  modoOscuro?: boolean
 }
 
 export interface UpdatePasswordData {
@@ -207,6 +209,19 @@ export async function updateStudentProfile(
 
         if (phoneCreateError) throw new Error(`Error al crear teléfono: ${phoneCreateError.message}`)
       }
+    }
+
+    // Persistir preferencia de tema del usuario
+    if (typeof profileData.modoOscuro === 'boolean') {
+      const { error: themeUpdateError } = await supabase
+        .from('usuarios')
+        .update({
+          usr_mod_bol: profileData.modoOscuro,
+          usr_upd_tmp: new Date().toISOString(),
+        })
+        .eq('usr_id_int', user.usr_id_int)
+
+      if (themeUpdateError) throw new Error(`Error al actualizar preferencia de tema: ${themeUpdateError.message}`)
     }
 
     return {

@@ -195,20 +195,20 @@ export default async function AulaModuloPage({
         {/* <ItemViewer items={allNavigableItems} />*/}
 
         <Tabs defaultValue="descripcion">
-          <TabsList className="py-6 px-2 border-b border-border bg-slate-900/40">
+          <TabsList className="py-6 px-2 border-b border-border bg-slate-50 dark:bg-slate-900/30">
             <TabsTrigger value="descripcion" className="p-4">Descripcion</TabsTrigger>
             <TabsTrigger value="materiales" className="p-4">Materiales</TabsTrigger>
             <TabsTrigger value="comentarios" className="p-4">Comentarios</TabsTrigger>
           </TabsList>
           <TabsContent value="descripcion">
             <Card className="p-4 overflow-hidden">
-              <p className="text-sm text-white [overflow-wrap:anywhere] whitespace-pre-line">
+              <p className="text-sm text-slate-600 dark:text-slate-200 [overflow-wrap:anywhere] whitespace-pre-line">
                 {modulo.mod_desc_vac || "Descripcion del modulo."}
               </p>
             </Card>
           </TabsContent>
           <TabsContent value="materiales">
-            <Card className="p-4 text-sm text-white">
+            <Card className="p-4 text-sm text-slate-600 dark:text-slate-200">
               {apartados.length === 0 ? (
                 "No hay materiales registrados."
               ) : (
@@ -230,7 +230,7 @@ export default async function AulaModuloPage({
                                 <li key={item.item_apar_id_int} className="list-none">
                                   <div className="flex items-center gap-2 py-2 mt-1">
                                     <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-white uppercase tracking-widest px-2.5 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
+                                    <span className="flex items-center gap-1 text-[10px] font-bold text-slate-700 dark:text-white uppercase tracking-widest px-2.5 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
                                       <Sparkles className="h-2.5 w-2.5" />
                                       {item.item_apar_titulo_vac || item.item_apar_url_vac || 'Sección'}
                                     </span>
@@ -260,17 +260,17 @@ export default async function AulaModuloPage({
                                 key={item.item_apar_id_int}
                                 className="flex items-center gap-1.5"
                               >
-                                <Icon className="h-3.5 w-3.5 text-white flex-shrink-0" />
+                                <Icon className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300 flex-shrink-0" />
                                 {item.item_apar_url_vac ? (
                                   <Link
                                     href={item.item_apar_url_vac}
                                     target="_blank"
-                                    className="text-sm text-yellow-300 hover:underline truncate"
+                                    className="text-sm text-yellow-600 dark:text-yellow-300 hover:underline truncate"
                                   >
                                     {item.item_apar_titulo_vac || "Material"}
                                   </Link>
                                 ) : (
-                                  <span className="text-sm text-white truncate">
+                                  <span className="text-sm text-slate-600 dark:text-slate-200 truncate">
                                     {item.item_apar_titulo_vac || "Material"}
                                   </span>
                                 )}
@@ -326,12 +326,12 @@ export default async function AulaModuloPage({
                       href={href}
                       className="flex-1 px-3 py-3 transition-colors"
                     >
-                      <div className="text-[11px] text-white font-medium uppercase tracking-wide">
+                      <div className="text-[11px] text-slate-500 dark:text-slate-300 font-medium uppercase tracking-wide">
                         Módulo {idx + 1}
                       </div>
                       <div
                         className={`text-sm font-bold leading-snug ${
-                          isCurrentModule ? "text-white" : "text-foreground"
+                          isCurrentModule ? "text-slate-900 dark:text-white" : "text-foreground"
                         }`}
                       >
                         {mod.mod_nomb_vac || `Módulo ${mod.mod_id_int}`}
@@ -369,7 +369,7 @@ export default async function AulaModuloPage({
                                     <li key={item.item_apar_id_int} className="list-none">
                                       <div className="flex items-center gap-1.5 py-1.5 mt-0.5">
                                         <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
-                                        <span className="flex items-center gap-1 text-[10px] font-bold text-white uppercase tracking-widest px-2 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
+                                        <span className="flex items-center gap-1 text-[10px] font-bold text-slate-700 dark:text-white uppercase tracking-widest px-2 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
                                           <Sparkles className="h-2 w-2" />
                                           {item.item_apar_titulo_vac || item.item_apar_url_vac || 'Sección'}
                                         </span>
@@ -399,18 +399,18 @@ export default async function AulaModuloPage({
                                     key={item.item_apar_id_int}
                                     className="flex items-center gap-1.5"
                                   >
-                                    <Icon className="h-3.5 w-3.5 text-white flex-shrink-0" />
+                                    <Icon className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300 flex-shrink-0" />
                                     {item.item_apar_url_vac ? (
                                       <Link
                                         href={item.item_apar_url_vac}
                                         target="_blank"
-                                        className="text-sm text-yellow-300 hover:underline truncate"
+                                        className="text-sm text-yellow-600 dark:text-yellow-300 hover:underline truncate"
                                       >
                                         {item.item_apar_titulo_vac ||
                                           "Material"}
                                       </Link>
                                     ) : (
-                                      <span className="text-sm text-white truncate">
+                                      <span className="text-sm text-slate-600 dark:text-slate-200 truncate">
                                         {item.item_apar_titulo_vac ||
                                           "Material"}
                                       </span>
@@ -437,7 +437,7 @@ export default async function AulaModuloPage({
           </Button>
           <Button
             variant="outline"
-            className="w-full h-12 gap-2 border-accent/30 hover:bg-accent/5 hover:border-accent text-white font-semibold hover:text-white"
+            className="w-full h-12 gap-2 border-accent/30 hover:bg-accent/5 hover:border-accent text-slate-900 dark:text-white font-semibold hover:text-slate-900 dark:hover:text-white"
           >
             <CheckCircle className="h-5 w-5" />
             Marcar Asistencia
@@ -445,7 +445,7 @@ export default async function AulaModuloPage({
         </div>
 
         <Card className="p-4 bg-muted/50 border-muted-foreground/20">
-          <p className="text-sm text-white text-center leading-relaxed">
+          <p className="text-sm text-slate-600 dark:text-slate-300 text-center leading-relaxed">
             💡 <span className="font-semibold">Tip:</span> Para marcar asistencia, es necesario primero ingresar a la reunión vía Zoom
           </p>
         </Card>

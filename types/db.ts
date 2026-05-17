@@ -1,8 +1,3 @@
-/**
- * Tipos base para las entidades de la base de datos
- * Reflejan el esquema SQL exacto de CIDCA
- */
-
 export interface Usuario {
   usr_id_int: number;
   usr_uuid: string;
@@ -12,6 +7,7 @@ export interface Usuario {
   usr_pass_vac: string;
   usr_ant_pass_vac: string | null;
   usr_est_int: number;
+  usr_mod_bol?: boolean | null;
   usr_cre_tmp: string;
   usr_upd_tmp: string;
   rol_id: number;

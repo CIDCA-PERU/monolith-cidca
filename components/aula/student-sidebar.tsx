@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   CreditCard,
-  FileCheck,
   User,
   LogOut,
   Award,
@@ -75,7 +74,7 @@ export function StudentSidebar() {
           <div className="w-8 h-8 rounded bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
             <BookOpen size={18} className="text-slate-950" />
           </div>
-          <h1 className="text-xl font-bold text-white">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
             CIDCA{" "}
             <span className="text-yellow-500 text-sm font-medium">
               Aula Virtual
@@ -122,7 +121,7 @@ export function StudentSidebar() {
                         `}
                         >
                           <Icon
-                            className={`h-4 w-4 ${isActive ? "text-yellow-700 dark:text-yellow-400" : "text-slate-600 dark:text-white"}`}
+                            className={`h-4 w-4 ${isActive ? "text-yellow-700 dark:text-yellow-400" : "text-slate-600 dark:text-slate-300"}`}
                           />
                         </div>
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
@@ -130,7 +129,7 @@ export function StudentSidebar() {
                             {item.title}
                           </span>
                           <span
-                            className={`text-xs leading-none ${isActive ? "text-yellow-700/70 dark:text-yellow-400/70" : "text-slate-600 dark:text-white"}`}
+                            className={`text-xs leading-none ${isActive ? "text-white dark:text-white" : "text-slate-600 dark:text-white"}`}
                           >
                             {item.description}
                           </span>
@@ -149,7 +148,7 @@ export function StudentSidebar() {
           onClick={() => logoutUser()}
           variant="ghost"
           size="sm"
-          className="cursor-pointer w-full justify-center gap-3 px-3 py-2.5 h-auto text-white dark:text-white hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
+          className="cursor-pointer w-full justify-center gap-3 px-3 py-2.5 h-auto text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
           <span className="font-medium">Salir</span>

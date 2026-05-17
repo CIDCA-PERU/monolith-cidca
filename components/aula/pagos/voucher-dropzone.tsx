@@ -113,10 +113,10 @@ export function VoucherDropzone({
             </div>
             <div>
               <p className="text-sm font-semibold">Arrastra tu foto del comprobante aquí</p>
-              <p className="text-xs text-white mt-2">
+              <p className="text-xs text-slate-500 dark:text-slate-300 mt-2">
                 o haz clic para seleccionar
               </p>
-              <p className="text-xs text-white mt-1 font-medium">
+              <p className="text-xs text-slate-500 dark:text-slate-300 mt-1 font-medium">
                 Solo imágenes JPG o PNG (máx. 5MB)
               </p>
             </div>
@@ -124,7 +124,6 @@ export function VoucherDropzone({
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Preview de la imagen */}
           {previewUrl && (
             <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
               <img
@@ -135,7 +134,6 @@ export function VoucherDropzone({
             </div>
           )}
           
-          {/* Info del archivo */}
           <Card className="p-4 space-y-3 bg-green-50 border-green-200">
             <div className="flex items-center gap-3 justify-between">
               <div className="flex items-center gap-3 flex-1">
