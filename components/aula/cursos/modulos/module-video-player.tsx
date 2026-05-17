@@ -37,7 +37,7 @@ export function ModuleVideoPlayer({ items }: { items: ProcessedItem[] }) {
         <h3 className="text-sm font-semibold">
           {currentVideo?.item_apar_titulo_vac || 'Video de la clase'}
         </h3>
-        <span className="text-xs text-muted-foreground ml-auto">
+        <span className="text-sm text-white ml-auto">
           {currentVideoIndex + 1} / {videos.length}
         </span>
       </div>

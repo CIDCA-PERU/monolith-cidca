@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react'
 import { getCursoById } from '@/actions/curso.actions'
 import { CursoDTO } from '@/dto/curso.dto'
-import { CursoForm } from '@/components/cursos/curso-form'
+import { CursoForm } from '@/components/dashboard/cursos/nuevo/curso-form'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'

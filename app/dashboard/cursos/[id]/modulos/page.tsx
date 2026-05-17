@@ -1,6 +1,6 @@
 import { getModulosByCursoAdmin } from '@/actions/admin.actions'
 import { getCursoById } from '@/actions/curso.actions'
-import { ModulosManager } from '@/components/admin/modulos-manager'
+import { ModulosManager } from '@/components/dashboard/cursos/modulos/modulos-manager'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 

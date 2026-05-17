@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/actions/auth.actions'
 import { getEstudianteByUserId, getTiposDocumento } from '@/repository/aula.repository'
-import { StudentProfileForm } from '@/components/aula/student-profile-form'
+import { StudentProfileForm } from '@/components/aula/perfil/student-profile-form'
 
 export default async function AulaPerfilPage() {
   const user = await getCurrentUser()

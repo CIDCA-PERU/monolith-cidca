@@ -15,9 +15,9 @@ export function ObservacionesAlert({ observacion }: ObservacionesAlertProps) {
     <Alert variant="destructive" className="bg-amber-50 border-amber-200">
       <AlertCircle className="h-4 w-4 text-amber-600" />
       <AlertTitle className="text-amber-900">
-        Observación del Administrador
+        Observación:
       </AlertTitle>
-      <AlertDescription className="text-amber-800 mt-2">
+      <AlertDescription className="text-amber-800 mt-2 font-bold">
         {observacion}
       </AlertDescription>
     </Alert>

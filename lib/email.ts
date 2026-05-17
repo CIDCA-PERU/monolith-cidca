@@ -10,7 +10,7 @@ function getTransporter() {
   const pass = process.env.GMAIL_APP_PASSWORD
 
   if (!user || !pass) {
-    throw new Error('Faltan variables de entorno GMAIL_USER o GMAIL_APP_PASSWORD')
+    throw new Error('Faltan variables de entorno')
   }
 
   _transporter = nodemailer.createTransport({

@@ -1,5 +1,5 @@
 import { getPagosAdmin } from '@/actions/admin.actions'
-import { PagosTable } from '@/components/admin/pagos-table'
+import { PagosTable } from '@/components/dashboard/pagos/pagos-table'
 
 export default async function PagosPage() {
   const res = await getPagosAdmin()

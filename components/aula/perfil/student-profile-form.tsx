@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Edit } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { updateStudentProfile } from '@/actions/perfil.actions'
 
@@ -184,8 +185,9 @@ export function StudentProfileForm({
             type="button"
             onClick={handleEditClick}
             variant="outline"
-            className="h-10 px-6 rounded-md border border-gray-300 hover:bg-gray-50"
+            className="cursor-pointer h-10 px-6 rounded-md border border-gray-300 hover:text-white hover:bg-slate-800"
           >
+            <Edit className="h-4 w-4 mr-2" />
             Editar
           </Button>
         )}
@@ -226,7 +228,7 @@ export function StudentProfileForm({
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   required
-                  className="rounded-md"
+                  className="rounded-md disabled:opacity-100"
                 />
               </div>
 
@@ -245,7 +247,7 @@ export function StudentProfileForm({
                   value={formData.apellidoPaterno}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="rounded-md"
+                  className="rounded-md disabled:opacity-100"
                 />
               </div>
 
@@ -264,7 +266,7 @@ export function StudentProfileForm({
                   value={formData.apellidoMaterno}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="rounded-md"
+                  className="rounded-md disabled:opacity-100"
                 />
               </div>
 
@@ -282,7 +284,7 @@ export function StudentProfileForm({
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   required
-                  className="rounded-md"
+                  className="rounded-md disabled:opacity-100"
                 />
               </div>
 
@@ -298,7 +300,7 @@ export function StudentProfileForm({
                 >
                   <SelectTrigger
                     id="genero"
-                    className="rounded-md"
+                    className="rounded-md disabled:opacity-100"
                     disabled={!isEditing}
                   >
                     <SelectValue placeholder="Selecciona tu género" />
@@ -325,7 +327,7 @@ export function StudentProfileForm({
                   value={formData.telefono}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="rounded-md"
+                  className="rounded-md disabled:opacity-100"
                 />
               </div>
 
@@ -343,7 +345,7 @@ export function StudentProfileForm({
                 >
                   <SelectTrigger
                     id="tipoDocumento"
-                    className="rounded-md"
+                    className="rounded-md disabled:opacity-100"
                     disabled={!isEditing}
                   >
                     <SelectValue placeholder="Selecciona tipo de documento" />
@@ -382,7 +384,7 @@ export function StudentProfileForm({
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   required
-                  className="rounded-md"
+                  className="rounded-md disabled:opacity-100"
                 />
               </div>
             </div>
@@ -396,10 +398,10 @@ export function StudentProfileForm({
 
               {/* Section 2: Actualizar Contraseña */}
               <section>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-2">
+                <h3 className="text-sm font-semibold text-white-foreground uppercase mb-2">
                   Actualizar Contraseña
                 </h3>
-                <p className="text-xs text-muted-foreground mb-6">
+                <p className="text-xs text-white-foreground mb-6">
                   Opcional. Deja estos campos vacíos si no deseas cambiar tu contraseña.
                 </p>
 
@@ -481,7 +483,7 @@ export function StudentProfileForm({
                 onClick={handleCancel}
                 disabled={isLoading}
                 variant="outline"
-                className="flex-1 h-10 rounded-md border border-gray-300 hover:bg-gray-50"
+                className="flex-1 h-10 rounded-md border border-gray-300 hover:text-white"
               >
                 Cancelar
               </Button>

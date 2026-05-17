@@ -59,6 +59,7 @@ export const Navbar = function Navbar() {
               alt="Aula Virtual Logo"
               width={50}
               height={50}
+              priority
               className={`transition-all duration-300 ${scrolled ? "w-5 h-5" : "w-6 h-6"}`}
             />
             <span className={`transition-all duration-300 ${scrolled ? "text-lg" : "text-xl"}`}>

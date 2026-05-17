@@ -122,7 +122,7 @@ export function StudentSidebar() {
                         `}
                         >
                           <Icon
-                            className={`h-4 w-4 ${isActive ? "text-yellow-700 dark:text-yellow-400" : "text-slate-600 dark:text-slate-400"}`}
+                            className={`h-4 w-4 ${isActive ? "text-yellow-700 dark:text-yellow-400" : "text-slate-600 dark:text-white"}`}
                           />
                         </div>
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
@@ -130,7 +130,7 @@ export function StudentSidebar() {
                             {item.title}
                           </span>
                           <span
-                            className={`text-xs leading-none ${isActive ? "text-yellow-700/70 dark:text-yellow-400/70" : "text-slate-600 dark:text-slate-500"}`}
+                            className={`text-xs leading-none ${isActive ? "text-yellow-700/70 dark:text-yellow-400/70" : "text-slate-600 dark:text-white"}`}
                           >
                             {item.description}
                           </span>
@@ -149,7 +149,7 @@ export function StudentSidebar() {
           onClick={() => logoutUser()}
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-3 px-3 py-2.5 h-auto text-slate-700 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
+          className="cursor-pointer w-full justify-center gap-3 px-3 py-2.5 h-auto text-white dark:text-white hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
         >
           <LogOut className="h-4 w-4" />
           <span className="font-medium">Salir</span>

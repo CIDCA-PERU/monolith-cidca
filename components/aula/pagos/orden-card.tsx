@@ -82,8 +82,8 @@ export function OrdenCard({
 
         {/* Monto */}
         <div className="border-t border-border pt-3">
-          <p className="text-xs text-muted-foreground">Total a pagar</p>
-          <p className="text-2xl font-bold text-foreground">
+          <p className="text-sm text-white">Total a pagar</p>
+          <p className="text-2xl font-bold text-white">
             S/ {monto.toFixed(2)}
           </p>
         </div>

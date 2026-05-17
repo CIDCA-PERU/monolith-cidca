@@ -5,7 +5,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { StudentSidebar } from "@/components/layout/student-sidebar";
+import { StudentSidebar } from "@/components/aula/student-sidebar";
 
 export default async function AulaLayout({
   children,

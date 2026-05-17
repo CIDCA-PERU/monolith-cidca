@@ -67,7 +67,7 @@ export function NextModuleButton({ data }: { data: ModulesData }) {
       size="sm"
       onClick={handleNext}
       disabled={isLastVideoOfLastModule}
-      className="gap-1"
+      className="cursor-pointer gap-1 hover:text-white hover:bg-slate-800"
     >
       Siguiente
       <ChevronRight className="h-4 w-4" />

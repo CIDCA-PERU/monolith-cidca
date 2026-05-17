@@ -125,7 +125,7 @@ export function PagoUploadForm({
             <Button
               onClick={() => setShowChangeOption(true)}
               variant="outline"
-              className="w-full"
+              className="w-full hover:text-white"
             >
               <Upload className="h-4 w-4 mr-2" />
               Corregir comprobante
@@ -177,7 +177,7 @@ export function PagoUploadForm({
                 setSelectedFile(null);
               }}
               variant="outline"
-              className="w-full"
+              className="w-full hover:text-white"
               disabled={isUploading}
             >
               Cancelar cambio

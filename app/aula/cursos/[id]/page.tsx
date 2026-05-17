@@ -31,7 +31,7 @@ export default async function AulaCursoDetallePage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{curso.cur_nomb_vac}</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white">
             Selecciona un modulo para continuar.
           </p>
         </div>
@@ -39,7 +39,7 @@ export default async function AulaCursoDetallePage({
           <Button
             variant="outline"
             size="sm"
-            className="border-slate-700 text-slate-100 hover:bg-slate-800 hover:text-white"
+            className="cursor-pointer border-slate-700 text-slate-100 hover:bg-slate-800 hover:text-white"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
@@ -72,7 +72,7 @@ export default async function AulaCursoDetallePage({
                   {modulo.mod_nomb_vac || "Módulo"}
                 </h3>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2 [overflow-wrap:anywhere]">
+              <p className="text-sm text-white line-clamp-2 [overflow-wrap:anywhere]">
                 {modulo.mod_desc_vac || "Sin descripción"}
               </p>
               <Link
@@ -80,7 +80,7 @@ export default async function AulaCursoDetallePage({
                 className="block pt-2"
               >
                 <Button
-                  className="w-full bg-accent hover:bg-accent/90 text-primary font-semibold"
+                  className="w-full cursor-pointer bg-accent hover:bg-accent/90 text-white font-semibold"
                   size="sm"
                 >
                   Abrir módulo

@@ -85,15 +85,12 @@ function TicketCard({ ticket }: { ticket: SoporteConUrl }) {
           </p>
 
           {/* Meta: ID + estado */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono text-slate-400 dark:text-slate-500">
-              #{ticket.sop_id_int}
-            </span>
+          <div className="flex items-center gap-2 flex-wrap"> 
             <EstadoBadge estado={ticket.sop_estad_vac} />
           </div>
 
           {/* Fecha */}
-          <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
+          <p className="text-xs text-slate-400 dark:text-white flex items-center gap-1">
             <Clock className="h-3 w-3 flex-shrink-0" />
             {formatFecha(ticket.sop_cre_tmp)}
           </p>
@@ -105,7 +102,7 @@ function TicketCard({ ticket }: { ticket: SoporteConUrl }) {
             href={ticket.sop_signed_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 font-medium"
+            className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 underline dark:text-white font-medium"
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Adjunto
@@ -153,12 +150,12 @@ export function SoporteList({ tickets }: SoporteListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
         <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-full">
-          <MessageSquare className="h-8 w-8 text-slate-400" />
+          <MessageSquare className="h-8 w-8 text-slate-400 dark:text-white" />
         </div>
-        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+        <p className="text-sm font-medium text-slate-600 dark:text-white">
           No tienes solicitudes de soporte
         </p>
-        <p className="text-xs text-slate-400 max-w-xs">
+        <p className="text-xs text-slate-400 dark:text-white max-w-xs">
           Cuando envíes una solicitud, aparecerá aquí con su estado actualizado.
         </p>
       </div>

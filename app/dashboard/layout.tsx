@@ -5,7 +5,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { AdminSidebar } from '@/components/admin/admin-sidebar'
+import { AdminSidebar } from '@/components/dashboard/admin-sidebar'
 
 const DASHBOARD_ROLES = ['SISTEMAS', 'ADMINISTRADOR', 'DOCENTE']
 

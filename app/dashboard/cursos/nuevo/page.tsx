@@ -1,4 +1,4 @@
-import { CursoForm } from '@/components/cursos/curso-form'
+import { CursoForm } from '@/components/dashboard/cursos/nuevo/curso-form'
 
 export default function NuevoCursoPage() {
   return (

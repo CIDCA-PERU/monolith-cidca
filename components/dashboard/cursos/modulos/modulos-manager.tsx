@@ -7,7 +7,7 @@ import {
   crearModulo, actualizarModulo, eliminarModulo,
   crearApartado, actualizarApartado, eliminarApartado,
 } from '@/actions/admin.actions'
-import { ApartadoItems } from '@/components/admin/apartado-items'
+import { ApartadoItems } from '@/components/dashboard/cursos/modulos/apartado-items'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from '@/components/ui/sheet'

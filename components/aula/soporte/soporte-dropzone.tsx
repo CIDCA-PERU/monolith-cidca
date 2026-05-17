@@ -97,14 +97,14 @@ export function SoporteDropzone({
               <Upload className="h-5 w-5 text-slate-500 dark:text-slate-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <p className="text-sm font-medium text-slate-700 dark:text-white">
                 Arrastra tu captura de pantalla aquí
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-white mt-1">
                 o haz clic para seleccionar
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-600 mt-1">
-                JPG / PNG — máx. 5MB · <span className="font-medium text-slate-500">Opcional</span>
+              <p className="text-xs text-slate-400 dark:text-white mt-1">
+                JPG / PNG — máx. 5MB · <span className="font-medium text-white">Opcional</span>
               </p>
             </div>
           </div>

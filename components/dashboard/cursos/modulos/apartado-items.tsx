@@ -2,7 +2,7 @@
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { ItemApartadoDto, crearItem, actualizarItem, eliminarItem } from '@/actions/admin.actions'
-import { ItemSheet, ItemFormData, tipoConfig, ItemTipo } from '@/components/admin/item-sheet'
+import { ItemSheet, ItemFormData, tipoConfig, ItemTipo } from '@/components/dashboard/cursos/modulos/item-sheet'
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, ExternalLink, AlertCircle, EyeOff, SeparatorHorizontal } from 'lucide-react'
 
 const EMPTY: ItemFormData = { tipo: 'VIDEO', titulo: '', url: '', estado: 1 }
