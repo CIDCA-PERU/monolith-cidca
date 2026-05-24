@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState, use } from 'react'
-import { getCursoById } from '@/actions/curso.actions'
+import { getCursoById, updateCurso } from '@/actions/curso.actions'
 import { CursoDTO } from '@/dto/curso.dto'
 import { CursoForm } from '@/components/dashboard/cursos/nuevo/curso-form'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users, CalendarCheck, Power, PowerOff } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface CursoDetailPageProps {
@@ -20,6 +20,7 @@ export default function CursoDetailPage({ params }: CursoDetailPageProps) {
   const { id } = use(params)
   const [curso, setCurso] = useState<CursoDTO | null>(null)
   const [loading, setLoading] = useState(true)
+  const [togglingEstado, setTogglingEstado] = useState(false)
 
   useEffect(() => {
     loadCurso()
@@ -37,6 +38,32 @@ export default function CursoDetailPage({ params }: CursoDetailPageProps) {
       toast.error('Error al cargar curso')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleToggleEstado = async () => {
+    if (!curso) return
+    const nuevoEstado = curso.estado === 'activo' ? 'borrador' : 'activo'
+    const accion = nuevoEstado === 'activo' ? 'habilitar' : 'deshabilitar'
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de ${accion} el curso "${curso.nombre}"?`
+    )
+    if (!confirmed) return
+
+    setTogglingEstado(true)
+    try {
+      const result = await updateCurso(id, { estado: nuevoEstado })
+      if (result.success) {
+        setCurso((prev) => prev ? { ...prev, estado: nuevoEstado } : prev)
+        toast.success(`Curso ${nuevoEstado === 'activo' ? 'habilitado' : 'deshabilitado'} correctamente`)
+      } else {
+        toast.error(result.error || 'Error al cambiar estado del curso')
+      }
+    } catch {
+      toast.error('Error al cambiar estado del curso')
+    } finally {
+      setTogglingEstado(false)
     }
   }
 
@@ -59,67 +86,130 @@ export default function CursoDetailPage({ params }: CursoDetailPageProps) {
     )
   }
 
+  const isActivo = curso.estado === 'activo'
+
   return (
     <div className="py-8 px-4">
       <Link href="/dashboard/cursos" className="mb-6 inline-block">
-        <Button variant="ghost" className="gap-2">
+        <Button variant="ghost" className="cursor-pointer gap-2">
           <ArrowLeft className="w-4 h-4" />
           Volver
         </Button>
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Formulario principal */}
+        <div className="lg:col-span-2 w-full">
           <CursoForm curso={curso} onSuccess={loadCurso} />
         </div>
 
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
+        {/* Columna lateral */}
+        <div className="space-y-3">
+
+          {/* Card: Estado del Curso */}
+          <Card className="!py-3 !gap-2 px-4">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-sm font-semibold text-foreground">Estado</h3>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                isActivo
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'
+              }`}>
+                {isActivo ? 'Activo' : 'Inactivo'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              {isActivo
+                ? 'El curso es visible para los estudiantes.'
+                : 'El curso está deshabilitado y no es visible.'}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleEstado}
+              disabled={togglingEstado}
+              className={`cursor-pointer w-full gap-2 text-xs font-semibold ${
+                isActivo
+                  ? 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-500/10'
+                  : 'border-emerald-300 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-500/10'
+              }`}
+            >
+              {isActivo ? (
+                <><PowerOff className="h-3.5 w-3.5" /> Deshabilitar Curso</>
+              ) : (
+                <><Power className="h-3.5 w-3.5" /> Habilitar Curso</>
+              )}
+            </Button>
+          </Card>
+
+          {/* Card: Información */}
+          <Card className="!py-3 !gap-2 px-4">
+            <h3 className="text-sm font-semibold text-foreground">
               Información
             </h3>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Estado</p>
-                <p className="text-foreground font-medium">{curso.estado}</p>
+            <div className="space-y-1 text-sm px-0">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Estudiantes</span>
+                <span className="text-foreground font-medium">{curso.cantidad_estudiantes}</span>
               </div>
-              <div>
-                <p className="text-muted-foreground">Estudiantes</p>
-                <p className="text-foreground font-medium">
-                  {curso.cantidad_estudiantes}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Fecha de Inicio</p>
-                <p className="text-foreground font-medium">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fecha de Inicio</span>
+                <span className="text-foreground font-medium">
                   {new Date(curso.fecha_inicio).toLocaleDateString()}
-                </p>
+                </span>
               </div>
-              <div>
-                <p className="text-muted-foreground">Fecha de Fin</p>
-                <p className="text-foreground font-medium">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Fecha de Fin</span>
+                <span className="text-foreground font-medium">
                   {new Date(curso.fecha_fin).toLocaleDateString()}
-                </p>
+                </span>
               </div>
             </div>
           </Card>
 
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-4">
-              Módulos
-            </h3>
-            <p className="text-muted-foreground text-sm mb-4">
-              Los módulos aparecerán aquí
+          {/* Card: Módulos */}
+          <Card className="!py-3 !gap-2 px-4">
+            <h3 className="text-sm font-semibold text-foreground">Módulos</h3>
+            <p className="text-muted-foreground text-xs">
+              Gestiona el contenido y estructura del curso.
             </p>
             <Link href={`/dashboard/cursos/${curso.id}/modulos`}>
-              <Button
-                variant="outline"
-                className="w-full"
-              >
+              <Button variant="outline" className="cursor-pointer w-full gap-2 text-xs">
                 Gestionar Módulos
               </Button>
             </Link>
           </Card>
+
+          {/* Card: Estudiantes */}
+          <Card className="!py-3 !gap-2 px-4">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5" /> Estudiantes
+            </h3>
+            <p className="text-muted-foreground text-xs">
+              Gestiona los alumnos inscritos, su estado y asistencias.
+            </p>
+            <Link href={`/dashboard/cursos/${curso.id}/estudiantes`}>
+              <Button variant="outline" className="cursor-pointer w-full gap-2 text-xs">
+                Gestionar Estudiantes
+              </Button>
+            </Link>
+          </Card>
+
+          {/* Card: Asistencias */}
+          <Card className="!py-3 !gap-2 px-4">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <CalendarCheck className="h-3.5 w-3.5" /> Asistencias
+            </h3>
+            <p className="text-muted-foreground text-xs">
+              Registro de sesiones y control de asistencia por alumno.
+            </p>
+            <Link href={`/dashboard/cursos/${curso.id}/asistencias`}>
+              <Button variant="outline" className="cursor-pointer w-full gap-2 text-xs">
+                Ver Asistencias
+              </Button>
+            </Link>
+          </Card>
+
         </div>
       </div>
     </div>

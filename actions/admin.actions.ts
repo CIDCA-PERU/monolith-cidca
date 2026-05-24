@@ -459,6 +459,7 @@ export async function uploadCursoImagen(formData: FormData): Promise<{
     assertAdminOrCoordinador(user)
 
     const file = formData.get('file') as File | null
+    const cursoNombre = (formData.get('cursoNombre') as string) || 'CURSO'
     if (!file) return { success: false, error: 'No se recibió ningún archivo' }
 
     // Validar tipo
@@ -472,24 +473,73 @@ export async function uploadCursoImagen(formData: FormData): Promise<{
       return { success: false, error: 'La imagen no debe superar 5MB' }
     }
 
+    // Generar nombre: NOMBRE-CURSO-DD-MM-YYYY-HH-mm-ss.ext
     const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
-    const timestamp = Date.now()
-    const path = `cursos/${timestamp}-${user.usr_uuid}.${ext}`
+    const now = new Date()
+    const dd = String(now.getDate()).padStart(2, '0')
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const yyyy = now.getFullYear()
+    const hh = String(now.getHours()).padStart(2, '0')
+    const mins = String(now.getMinutes()).padStart(2, '0')
+    const ss = String(now.getSeconds()).padStart(2, '0')
+
+    const cleanCurso = cursoNombre
+      .toUpperCase()
+      .substring(0, 30)
+      .replace(/\s+/g, '-')
+      .replace(/[^A-Z0-9-]/g, '')
+
+    const filename = `${cleanCurso}-${dd}-${mm}-${yyyy}-${hh}-${mins}-${ss}.${ext}`
+    const path = `curso/${filename}`
 
     const { error: uploadErr } = await supabase.storage
-      .from('course-images')
+      .from('public_assets')
       .upload(path, file, { cacheControl: '3600', upsert: true })
 
     if (uploadErr) {
       return { success: false, error: `Error al subir: ${uploadErr.message}` }
     }
 
-    // Obtener URL pública
-    const { data } = supabase.storage.from('course-images').getPublicUrl(path)
+    // URL pública permanente (bucket público)
+    const { data } = supabase.storage.from('public_assets').getPublicUrl(path)
 
     return { success: true, url: data.publicUrl }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al subir imagen'
+    return { success: false, error: msg }
+  }
+}
+
+// ─── Eliminar imagen de curso del bucket ────────────────────────────────────────
+
+export async function deleteCursoImagen(publicUrl: string): Promise<{
+  success: boolean
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Extraer el path relativo del bucket a partir de la URL pública
+    // URL pública: https://xxx.supabase.co/storage/v1/object/public/public_assets/curso/FILENAME.ext
+    const marker = '/public_assets/'
+    const idx = publicUrl.indexOf(marker)
+    if (idx === -1) return { success: false, error: 'URL no válida para este bucket' }
+
+    const storagePath = publicUrl.substring(idx + marker.length) // "curso/FILENAME.ext"
+
+    const { error } = await supabase.storage
+      .from('public_assets')
+      .remove([storagePath])
+
+    if (error) {
+      console.error('Error deleting curso image:', error)
+      return { success: false, error: `Error al eliminar imagen: ${error.message}` }
+    }
+
+    return { success: true }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al eliminar imagen'
     return { success: false, error: msg }
   }
 }
@@ -519,6 +569,7 @@ export interface ApartadoAdminDto {
   apar_nomb_vac: string
   apar_desc_vac: string
   apar_est_int: number
+  apar_ordn_int: number
   items: ItemApartadoDto[]
 }
 
@@ -554,6 +605,7 @@ export async function getModulosByCursoAdmin(curUuid: string): Promise<{
           apar_nomb_vac,
           apar_desc_vac,
           apar_est_int,
+          apar_ordn_int,
           item_apartado (
             item_apar_uuid,
             item_apar_tipo_vac,
@@ -578,22 +630,25 @@ export async function getModulosByCursoAdmin(curUuid: string): Promise<{
       mod_desc_vac: m.mod_desc_vac ?? '',
       mod_est_int: m.mod_est_int ?? 1,
       mod_cre_tmp: m.mod_cre_tmp ?? '',
-      apartados: (m.apartado ?? []).map((a: any) => ({
-        apar_uuid: a.apar_uuid,
-        apar_nomb_vac: a.apar_nomb_vac ?? '',
-        apar_desc_vac: a.apar_desc_vac ?? '',
-        apar_est_int: a.apar_est_int ?? 1,
-        items: (a.item_apartado ?? [])
-          .sort((x: any, y: any) => (x.item_apar_ordn_inte ?? 0) - (y.item_apar_ordn_inte ?? 0))
-          .map((it: any) => ({
-            item_uuid: it.item_apar_uuid,
-            item_tipo_vac: it.item_apar_tipo_vac ?? 'TEXTO',
-            item_titulo_vac: it.item_apar_titulo_vac ?? '',
-            item_url_vac: it.item_apar_url_vac ?? null,
-            item_est_int: it.item_apar_est_int ?? 1,
-            item_ordn_inte: it.item_apar_ordn_inte ?? 0,
-          })),
-      })),
+      apartados: (m.apartado ?? [])
+        .sort((x: any, y: any) => (x.apar_ordn_int ?? 0) - (y.apar_ordn_int ?? 0))
+        .map((a: any) => ({
+          apar_uuid: a.apar_uuid,
+          apar_nomb_vac: a.apar_nomb_vac ?? '',
+          apar_desc_vac: a.apar_desc_vac ?? '',
+          apar_est_int: a.apar_est_int ?? 1,
+          apar_ordn_int: a.apar_ordn_int ?? 0,
+          items: (a.item_apartado ?? [])
+            .sort((x: any, y: any) => (x.item_apar_ordn_inte ?? 0) - (y.item_apar_ordn_inte ?? 0))
+            .map((it: any) => ({
+              item_uuid: it.item_apar_uuid,
+              item_tipo_vac: it.item_apar_tipo_vac ?? 'TEXTO',
+              item_titulo_vac: it.item_apar_titulo_vac ?? '',
+              item_url_vac: it.item_apar_url_vac ?? null,
+              item_est_int: it.item_apar_est_int ?? 1,
+              item_ordn_inte: it.item_apar_ordn_inte ?? 0,
+            })),
+        })),
     }))
 
     return { success: true, data: result }
@@ -690,7 +745,7 @@ export async function eliminarModulo(
 
 export async function crearApartado(
   modUuid: string,
-  datos: { nombre: string; descripcion: string; estado: number }
+  datos: { nombre: string; descripcion: string; estado: number; orden?: number }
 ): Promise<{ success: boolean; data?: ApartadoAdminDto; error?: string }> {
   try {
     const user = await assertAuthenticated()
@@ -707,8 +762,9 @@ export async function crearApartado(
         apar_nomb_vac: datos.nombre,
         apar_desc_vac: datos.descripcion,
         apar_est_int: datos.estado,
+        apar_ordn_int: datos.orden ?? 0,
       })
-      .select('apar_uuid, apar_nomb_vac, apar_desc_vac, apar_est_int')
+      .select('apar_uuid, apar_nomb_vac, apar_desc_vac, apar_est_int, apar_ordn_int')
       .single()
 
     if (error) return { success: false, error: error.message }
@@ -720,6 +776,7 @@ export async function crearApartado(
         apar_nomb_vac: a.apar_nomb_vac ?? '',
         apar_desc_vac: a.apar_desc_vac ?? '',
         apar_est_int: a.apar_est_int ?? 1,
+        apar_ordn_int: a.apar_ordn_int ?? 0,
         items: [],
       },
     }
@@ -730,7 +787,7 @@ export async function crearApartado(
 
 export async function actualizarApartado(
   aparUuid: string,
-  datos: { nombre?: string; descripcion?: string; estado?: number }
+  datos: { nombre?: string; descripcion?: string; estado?: number; orden?: number }
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await assertAuthenticated()
@@ -740,6 +797,7 @@ export async function actualizarApartado(
     if (datos.nombre !== undefined) updates.apar_nomb_vac = datos.nombre
     if (datos.descripcion !== undefined) updates.apar_desc_vac = datos.descripcion
     if (datos.estado !== undefined) updates.apar_est_int = datos.estado
+    if (datos.orden !== undefined) updates.apar_ordn_int = datos.orden
 
     const { error } = await supabase
       .from('apartado').update(updates).eq('apar_uuid', aparUuid)
@@ -852,5 +910,105 @@ export async function eliminarItem(
     return { success: true }
   } catch (error) {
     return { success: false, error: 'Error al eliminar item' }
+  }
+}
+
+// ─── Desactivación en cascada ──────────────────────────────────────────────────
+
+export async function desactivarModuloCascada(
+  modUuid: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Resolver mod_id_int
+    const { data: modulo, error: mErr } = await supabase
+      .from('modulo')
+      .select('mod_id_int')
+      .eq('mod_uuid', modUuid)
+      .single()
+
+    if (mErr || !modulo) return { success: false, error: 'Módulo no encontrado' }
+
+    const now = new Date().toISOString()
+
+    // 1. Desactivar el módulo
+    const { error: e1 } = await supabase
+      .from('modulo')
+      .update({ mod_est_int: 0, mod_upd_tmp: now })
+      .eq('mod_uuid', modUuid)
+
+    if (e1) return { success: false, error: e1.message }
+
+    // 2. Obtener apartados del módulo
+    const { data: apartados } = await supabase
+      .from('apartado')
+      .select('apar_id_int')
+      .eq('mod_id_int', modulo.mod_id_int)
+
+    if (apartados && apartados.length > 0) {
+      const aparIds = apartados.map((a: any) => a.apar_id_int)
+
+      // 3. Desactivar todos los apartados
+      const { error: e2 } = await supabase
+        .from('apartado')
+        .update({ apar_est_int: 0, apar_upd_tmp: now })
+        .eq('mod_id_int', modulo.mod_id_int)
+
+      if (e2) return { success: false, error: e2.message }
+
+      // 4. Desactivar todos los items de esos apartados
+      const { error: e3 } = await supabase
+        .from('item_apartado')
+        .update({ item_apar_est_int: 0, item_apar_upd_tmp: now })
+        .in('apar_id_int', aparIds)
+
+      if (e3) return { success: false, error: e3.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Error al desactivar módulo en cascada' }
+  }
+}
+
+export async function desactivarApartadoCascada(
+  aparUuid: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Resolver apar_id_int
+    const { data: apartado, error: aErr } = await supabase
+      .from('apartado')
+      .select('apar_id_int')
+      .eq('apar_uuid', aparUuid)
+      .single()
+
+    if (aErr || !apartado) return { success: false, error: 'Apartado no encontrado' }
+
+    const now = new Date().toISOString()
+
+    // 1. Desactivar el apartado
+    const { error: e1 } = await supabase
+      .from('apartado')
+      .update({ apar_est_int: 0, apar_upd_tmp: now })
+      .eq('apar_uuid', aparUuid)
+
+    if (e1) return { success: false, error: e1.message }
+
+    // 2. Desactivar todos los items del apartado
+    const { error: e2 } = await supabase
+      .from('item_apartado')
+      .update({ item_apar_est_int: 0, item_apar_upd_tmp: now })
+      .eq('apar_id_int', apartado.apar_id_int)
+
+    if (e2) return { success: false, error: e2.message }
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Error al desactivar apartado en cascada' }
   }
 }

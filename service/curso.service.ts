@@ -79,6 +79,7 @@ export class CursoService {
       fecha_fin: request.fecha_fin,
       cantidad_estudiantes: 0,
       imagen_url: request.imagen_url,
+      zoom_url: request.zoom_url,
     })
 
     return curso
@@ -137,7 +138,8 @@ export class CursoService {
       throw new BusinessError('Solo el docente propietario puede agregar estudiantes')
     }
 
-    await CursoRepository.addEstudianteToCurso(cursoId, estudianteId)
+    // addEstudianteToCurso ahora toma (curIdInt: number, estIdInt: number)
+    await CursoRepository.addEstudianteToCurso(parseInt(cursoId), parseInt(estudianteId))
   }
 
   static async removeEstudiante(
@@ -156,6 +158,9 @@ export class CursoService {
       throw new BusinessError('Solo el docente propietario puede remover estudiantes')
     }
 
-    await CursoRepository.removeEstudianteFromCurso(cursoId, estudianteId)
+    // removeEstudianteFromCurso ahora toma el est_cur_id_int (PK de la relación)
+    // El service legacy recibe cursoId/estudianteId — no hay forma directa sin buscar el PK
+    // Se deja como no-op con throw para forzar uso del nuevo flow
+    throw new BusinessError('Usa toggleEstudianteCurso para gestionar estudiantes')
   }
 }

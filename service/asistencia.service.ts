@@ -18,7 +18,7 @@ export class AsistenciaService {
     }
 
     // Solo docente propietario puede ver sesiones
-    if (curso.docente_id !== usuarioId) {
+    if (String(curso.docente_id) !== String(usuarioId)) {
       throw new BusinessError('No tienes permiso para ver estas sesiones')
     }
 
@@ -40,7 +40,6 @@ export class AsistenciaService {
    */
   private static calcularVentanaAsistencia(sesion: SesionClaseDto) {
     const ahora = getCurrentTimeInCIDCA()
-    const sesionFecha = new Date(sesion.ses_fecha_dat)
     const sesionInicio = new Date(`${sesion.ses_fecha_dat}T${sesion.ses_hora_inic_tmp}`)
     const sesionFin = new Date(`${sesion.ses_fecha_dat}T${sesion.ses_hora_fin_tmp}`)
 
@@ -105,7 +104,7 @@ export class AsistenciaService {
     sesionId: string,
     estudianteId: string
   ): Promise<RegistrarAsistenciaResponseDto> {
-    const sesion = await AsistenciaRepository.getSesionById(sesionId)
+    const sesion = await AsistenciaRepository.getSesionById(parseInt(sesionId))
 
     if (!sesion) {
       return {
@@ -126,15 +125,25 @@ export class AsistenciaService {
       }
     }
 
-    // Determinar estado: PRESENTE o TARDÍO
-    const estado = ventana.minutos_desde_inicio > 15 ? 3 : 1 // 1=Presente, 3=Tardío
+    // Determinar estado: PRESENTE(1) o TARDÍO(2)
+    const estado = ventana.minutos_desde_inicio > 15 ? 2 : 1
 
     try {
-      const asistenciaId = await AsistenciaRepository.registrarAsistencia(
-        sesionId,
-        estudianteId,
-        estado
-      )
+      // Insertar directamente en la tabla asistencia con usr_id_int
+      const { supabase } = await import('@/lib/supabase')
+      const { data, error } = await supabase
+        .from('asistencia')
+        .insert({
+          ses_id_int: parseInt(sesionId),
+          usr_id_int: parseInt(estudianteId),
+          asist_est_int: estado,
+          asist_cre_tmp: new Date().toISOString(),
+          asist_upd_tmp: new Date().toISOString(),
+        })
+        .select('asist_id_int')
+        .single()
+
+      if (error) throw error
 
       return {
         success: true,
@@ -142,7 +151,7 @@ export class AsistenciaService {
           estado === 1
             ? 'Asistencia registrada como PRESENTE'
             : 'Asistencia registrada como TARDÍO',
-        asist_id_int: asistenciaId,
+        asist_id_int: data.asist_id_int,
       }
     } catch (error) {
       return {
@@ -169,16 +178,13 @@ export class AsistenciaService {
     sesionId: string,
     usuarioId: string
   ): Promise<any> {
-    const sesion = await AsistenciaRepository.getSesionById(sesionId)
+    const sesion = await AsistenciaRepository.getSesionById(parseInt(sesionId))
 
     if (!sesion) {
       throw new BusinessError('Sesión no encontrada', 404)
     }
 
-    // Verificar permisos
-    // (Implementar según necesidad)
-
-    return AsistenciaRepository.getReporteAsistencia(sesionId)
+    return AsistenciaRepository.getReporteAsistencia(parseInt(sesionId))
   }
 
   static async updateAsistencia(
@@ -187,10 +193,15 @@ export class AsistenciaService {
     usuarioId: string,
     observaciones?: string
   ): Promise<void> {
-    // Solo docente puede actualizar asistencia
-    // (Implementar verificación de permisos)
-
-    await AsistenciaRepository.updateAsistencia(asistenciaId, estado, observaciones)
+    // Actualizar estado — historial se maneja via updateAsistenciaManual en actions
+    const { supabase } = await import('@/lib/supabase')
+    await supabase
+      .from('asistencia')
+      .update({
+        asist_est_int: estado,
+        asist_upd_tmp: new Date().toISOString(),
+      })
+      .eq('asist_id_int', parseInt(asistenciaId))
   }
 
   static async getReporteGeneralCurso(
@@ -203,10 +214,12 @@ export class AsistenciaService {
       throw new BusinessError('Curso no encontrado', 404)
     }
 
-    if (curso.docente_id !== usuarioId) {
+    if (String(curso.docente_id) !== String(usuarioId)) {
       throw new BusinessError('No tienes permiso para ver este reporte')
     }
 
-    return AsistenciaRepository.getReporteGeneralCurso(cursoId)
+    // Devolver sesiones con sus reportes
+    const sesiones = await AsistenciaRepository.getSesionesByCurso(cursoId)
+    return sesiones
   }
 }
