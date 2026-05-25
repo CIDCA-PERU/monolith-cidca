@@ -1,7 +1,15 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { PagoAdminDto, actualizarEstadoPago } from '@/actions/admin.actions'
+import { useState, useEffect, useTransition } from 'react'
+import Image from 'next/image'
+import {
+  PagoAdminDto,
+  actualizarEstadoPago,
+  editarPagoAdmin,
+  eliminarPagoAdmin,
+  getVoucherSignedUrl,
+} from '@/actions/admin.actions'
+import { NuevoPagoSheet } from '@/components/dashboard/pagos/nuevo-pago-sheet'
 import {
   Sheet,
   SheetContent,
@@ -9,16 +17,23 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { CreditCard, ExternalLink, FileImage, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import {
+  CreditCard, ExternalLink, FileImage, CheckCircle2,
+  Clock, AlertCircle, Loader2, ImageOff,
+  Pencil, Trash2, Hash, DollarSign, TriangleAlert,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-// ─── Badge de estado ───────────────────────────────────────────────────────────
+// ─── Badge de estado ──────────────────────────────────────────────────────────
 
 function EstadoBadge({ estado }: { estado: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-    PAGADO:    { label: 'Pagado',    className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
+    ACEPTADO:  { label: 'Aceptado',  className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
     PENDIENTE: { label: 'Pendiente', className: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20', icon: Clock },
     OBSERVADO: { label: 'Observado', className: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20', icon: AlertCircle },
+    // compatibilidad con registros viejos
+    PAGADO:    { label: 'Aceptado',  className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
+    ENVIADO:   { label: 'Enviado',   className: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20', icon: FileImage },
   }
   const cfg = map[estado] ?? map.PENDIENTE
   const Icon = cfg.icon
@@ -36,33 +51,168 @@ function formatDate(iso: string) {
   })
 }
 
-// ─── Sheet de detalle ─────────────────────────────────────────────────────────
+// ─── Previsualización del comprobante ─────────────────────────────────────────
+
+function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher: boolean }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(false)
+
+  useEffect(() => {
+    if (!hasVoucher) return
+    setLoading(true)
+    setError(false)
+    getVoucherSignedUrl(pagoUuid).then((res) => {
+      if (res.success && res.url) setSignedUrl(res.url)
+      else setError(true)
+      setLoading(false)
+    })
+  }, [pagoUuid, hasVoucher])
+
+  if (!hasVoucher) return (
+    <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">
+      <ImageOff className="h-8 w-8" />
+      <p className="text-xs">Sin comprobante adjunto</p>
+    </div>
+  )
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+      <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+    </div>
+  )
+
+  if (error || !signedUrl) return (
+    <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-dashed border-red-200 dark:border-red-500/20 text-red-400">
+      <AlertCircle className="h-8 w-8" />
+      <p className="text-xs">No se pudo cargar el comprobante</p>
+    </div>
+  )
+
+  // Determinar si es imagen o PDF
+  const isPdf = signedUrl.includes('.pdf') || signedUrl.includes('application/pdf')
+
+  if (isPdf) {
+    return (
+      <a
+        href={signedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors"
+      >
+        <FileImage className="h-4 w-4 flex-shrink-0" />
+        Ver comprobante PDF
+        <ExternalLink className="h-3.5 w-3.5 ml-auto flex-shrink-0" />
+      </a>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative w-full h-64 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <Image
+          src={signedUrl}
+          alt="Comprobante de pago"
+          fill
+          className="object-contain"
+          unoptimized // URL firmada temporal — no cachear
+        />
+      </div>
+      <a
+        href={signedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 hover:underline"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Abrir en tamaño completo
+      </a>
+    </div>
+  )
+}
+
+// ─── Sheet de detalle / edición ───────────────────────────────────────────────
 
 function PagoSheet({
   pago,
   open,
   onClose,
   onUpdate,
+  onDelete,
 }: {
   pago: PagoAdminDto | null
   open: boolean
   onClose: () => void
-  onUpdate: (uuid: string, estado: 'PENDIENTE' | 'PAGADO' | 'OBSERVADO', obs?: string) => void
+  onUpdate: (uuid: string, changes: Partial<PagoAdminDto>) => void
+  onDelete: (uuid: string) => void
 }) {
-  const [obs, setObs] = useState(pago?.pago_obs_vac ?? '')
-  const [isPending, startTransition] = useTransition()
+  const [obs, setObs]         = useState('')
+  const [monto, setMonto]     = useState('')
+  const [nro, setNro]         = useState('')
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [isPending, start]    = useTransition()
+  const [isDeleting, startDel] = useTransition()
+  const [isSaving, startSave] = useTransition()
+
+  // Sincronizar campos cuando cambia el pago seleccionado
+  useEffect(() => {
+    setObs(pago?.pago_obs_vac ?? '')
+    setMonto(String(pago?.pago_mont_num ?? ''))
+    setNro(pago?.pago_nro_vac ?? '')
+    setConfirmDel(false)
+  }, [pago?.pago_uuid])
 
   if (!pago) return null
 
-  const handleEstado = (nuevoEstado: 'PAGADO' | 'OBSERVADO' | 'PENDIENTE') => {
-    startTransition(async () => {
+  const esPendiente = pago.pago_estad_vac === 'PENDIENTE'
+
+  // ── Cambiar estado ───────────────────────────────────────────────────────────
+  const handleEstado = (nuevoEstado: 'ACEPTADO' | 'OBSERVADO' | 'PENDIENTE') => {
+    start(async () => {
       const res = await actualizarEstadoPago(pago.pago_uuid, nuevoEstado, obs || undefined)
       if (res.success) {
         toast.success(`Pago marcado como ${nuevoEstado}`)
-        onUpdate(pago.pago_uuid, nuevoEstado, obs || undefined)
+        onUpdate(pago.pago_uuid, { pago_estad_vac: nuevoEstado, pago_obs_vac: obs || pago.pago_obs_vac })
         onClose()
       } else {
         toast.error(res.error ?? 'Error al actualizar')
+      }
+    })
+  }
+
+  // ── Guardar cambios de datos ──────────────────────────────────────────────────
+  const handleGuardar = () => {
+    startSave(async () => {
+      const res = await editarPagoAdmin(pago.pago_uuid, {
+        pagoMontNum: Number(monto) || 0,
+        pagoNroVac:  nro.trim()   || null,
+        pagoObsVac:  obs.trim()   || null,
+      })
+      if (res.success) {
+        toast.success('Pago actualizado correctamente')
+        onUpdate(pago.pago_uuid, {
+          pago_mont_num: Number(monto) || 0,
+          pago_nro_vac:  nro.trim()   || null,
+          pago_obs_vac:  obs.trim()   || null,
+        })
+        onClose()
+      } else {
+        toast.error(res.error ?? 'Error al guardar')
+      }
+    })
+  }
+
+  // ── Eliminar ──────────────────────────────────────────────────────────────────
+  const handleEliminar = () => {
+    startDel(async () => {
+      const res = await eliminarPagoAdmin(pago.pago_uuid)
+      if (res.success) {
+        toast.success('Pago eliminado')
+        onDelete(pago.pago_uuid)
+        onClose()
+      } else {
+        toast.error(res.error ?? 'Error al eliminar')
+        setConfirmDel(false)
       }
     })
   }
@@ -73,82 +223,99 @@ function PagoSheet({
         <SheetHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
           <SheetTitle className="text-slate-900 dark:text-white flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-amber-500" />
-            Detalle del pago
+            Gestión de pago
           </SheetTitle>
           <SheetDescription className="text-slate-500 dark:text-slate-400">
-            {pago.pago_nro_vac ?? 'Sin número de comprobante'}
+            {pago.estudiante_apellidos} {pago.estudiante_nombre} — {pago.curso_nombre}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-5 py-5">
-          {/* Estado actual */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500 dark:text-slate-400">Estado actual</span>
-            <EstadoBadge estado={pago.pago_estad_vac} />
-          </div>
+        <div className="space-y-6 py-5">
 
-          {/* Info del pago */}
-          <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 divide-y divide-slate-100 dark:divide-slate-800">
-            {[
-              { label: 'Estudiante', value: `${pago.estudiante_apellidos}, ${pago.estudiante_nombre}` },
-              { label: 'Curso', value: pago.curso_nombre },
-              { label: 'Monto', value: `S/ ${Number(pago.pago_mont_num).toFixed(2)}` },
-              { label: 'Registrado', value: formatDate(pago.pago_cre_tmp) },
-              { label: 'Actualizado', value: formatDate(pago.pago_upd_tmp) },
-            ].map((row) => (
-              <div key={row.label} className="flex justify-between items-center px-4 py-3">
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{row.label}</span>
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 text-right max-w-[60%]">{row.value}</span>
-              </div>
-            ))}
-          </div>
+          {/* ── Editar datos ─────────────────────────────────────────────── */}
+          <div className="space-y-4">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <Pencil className="h-3.5 w-3.5" />
+              Datos del pago
+            </p>
 
-          {/* Comprobante */}
-          {pago.pago_url_vac && (
-            <div>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Comprobante
-              </p>
-              <a
-                href={pago.pago_url_vac}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors"
-              >
-                <FileImage className="h-4 w-4 flex-shrink-0" />
-                Ver comprobante adjunto
-                <ExternalLink className="h-3.5 w-3.5 ml-auto flex-shrink-0" />
-              </a>
+            {/* Monto */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <DollarSign className="h-3 w-3" />
+                Monto (S/)
+              </label>
+              <input
+                type="number" min="0" step="0.01"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                placeholder="0.00"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition"
+              />
             </div>
-          )}
 
-          {/* Observaciones */}
-          <div>
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
-              Observaciones
-            </label>
-            <textarea
-              rows={3}
-              value={obs}
-              onChange={(e) => setObs(e.target.value)}
-              placeholder="Añadir observaciones internas..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
-            />
+            {/* Nro. orden */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <Hash className="h-3 w-3" />
+                Nro. de orden
+              </label>
+              <input
+                type="text"
+                value={nro}
+                onChange={(e) => setNro(e.target.value)}
+                placeholder="OP-2025-001"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 font-mono transition"
+              />
+            </div>
+
+            {/* Observaciones */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Observaciones
+              </label>
+              <textarea
+                rows={2}
+                value={obs}
+                onChange={(e) => setObs(e.target.value)}
+                placeholder="Notas internas..."
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
+              />
+            </div>
+
+            <button
+              onClick={handleGuardar}
+              disabled={isSaving}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40 text-white font-semibold text-sm transition-all"
+            >
+              {isSaving
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+                : <><Pencil className="h-4 w-4" /> Guardar cambios</>
+              }
+            </button>
           </div>
 
-          {/* Acciones de estado */}
+          {/* ── Comprobante ─────────────────────────────────────────────────── */}
+          <div>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+              Comprobante de pago
+            </p>
+            <VoucherPreview pagoUuid={pago.pago_uuid} hasVoucher={Boolean(pago.pago_url_vac)} />
+          </div>
+
+          {/* ── Cambiar estado ───────────────────────────────────────────────── */}
           <div>
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
               Cambiar estado
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => handleEstado('PAGADO')}
-                disabled={isPending || pago.pago_estad_vac === 'PAGADO'}
+                onClick={() => handleEstado('ACEPTADO')}
+                disabled={isPending || pago.pago_estad_vac === 'ACEPTADO'}
                 className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 <CheckCircle2 className="h-5 w-5" />
-                Aprobar
+                Aceptar
               </button>
               <button
                 onClick={() => handleEstado('PENDIENTE')}
@@ -167,61 +334,123 @@ function PagoSheet({
                 Observar
               </button>
             </div>
+            {isPending && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando...
+              </div>
+            )}
           </div>
+
+          {/* ── Zona de peligro: Eliminar ────────────────────────────────────── */}
+          {esPendiente && (
+            <div className="rounded-xl border border-red-200 dark:border-red-500/20 p-4 space-y-3">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-red-500 uppercase tracking-wider">
+                <TriangleAlert className="h-3.5 w-3.5" />
+                Zona de peligro
+              </p>
+
+              {!confirmDel ? (
+                <button
+                  onClick={() => setConfirmDel(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar pago
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium text-center">
+                    ¿Confirmas la eliminación? Esta acción no se puede deshacer.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setConfirmDel(false)}
+                      className="py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleEliminar}
+                      disabled={isDeleting}
+                      className="py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-bold transition flex items-center justify-center gap-1"
+                    >
+                      {isDeleting
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <><Trash2 className="h-3.5 w-3.5" /> Eliminar</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-slate-400 text-center">
+                Solo eliminable si no hay inscripción activa en el curso.
+              </p>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
   )
 }
 
-// ─── Tabla principal ───────────────────────────────────────────────────────────
+// ─── Tabla principal ──────────────────────────────────────────────────────────
 
 export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
   const [pagos, setPagos] = useState(initialPagos)
   const [selected, setSelected] = useState<PagoAdminDto | null>(null)
   const [filter, setFilter] = useState<string>('TODOS')
 
-  const handleUpdate = (
-    uuid: string,
-    estado: 'PENDIENTE' | 'PAGADO' | 'OBSERVADO',
-    obs?: string
-  ) => {
+  const handleUpdate = (uuid: string, changes: Partial<PagoAdminDto>) => {
     setPagos((prev) =>
-      prev.map((p) =>
-        p.pago_uuid === uuid
-          ? { ...p, pago_estad_vac: estado, pago_obs_vac: obs ?? p.pago_obs_vac }
-          : p
-      )
+      prev.map((p) => p.pago_uuid === uuid ? { ...p, ...changes } : p)
     )
   }
 
-  const filtered = filter === 'TODOS' ? pagos : pagos.filter((p) => p.pago_estad_vac === filter)
+  const handleDelete = (uuid: string) => {
+    setPagos((prev) => prev.filter((p) => p.pago_uuid !== uuid))
+  }
+
+  const normalizeEstado = (e: string) =>
+    e === 'PAGADO' ? 'ACEPTADO' : e // compatibilidad con registros viejos
+
+  const filtered = filter === 'TODOS'
+    ? pagos
+    : pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === filter)
 
   const counts = {
-    TODOS: pagos.length,
-    PENDIENTE: pagos.filter((p) => p.pago_estad_vac === 'PENDIENTE').length,
-    PAGADO: pagos.filter((p) => p.pago_estad_vac === 'PAGADO').length,
-    OBSERVADO: pagos.filter((p) => p.pago_estad_vac === 'OBSERVADO').length,
+    TODOS:     pagos.length,
+    PENDIENTE: pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === 'PENDIENTE').length,
+    ACEPTADO:  pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === 'ACEPTADO').length,
+    OBSERVADO: pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === 'OBSERVADO').length,
   }
 
   return (
     <>
-      {/* Filtros por estado */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {(['TODOS', 'PENDIENTE', 'PAGADO', 'OBSERVADO'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
-              filter === f
-                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/40'
-            }`}
-          >
-            {f === 'TODOS' ? 'Todos' : f.charAt(0) + f.slice(1).toLowerCase()}
-            <span className="ml-1.5 opacity-70">({counts[f]})</span>
-          </button>
-        ))}
+      {/* Header: filtros + botón nuevo pago */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Filtros por estado */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {(['TODOS', 'PENDIENTE', 'ACEPTADO', 'OBSERVADO'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                filter === f
+                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/40'
+              }`}
+            >
+              {f === 'TODOS' ? 'Todos' : f.charAt(0) + f.slice(1).toLowerCase()}
+              <span className="ml-1.5 opacity-70">({counts[f]})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Botón nuevo pago */}
+        <NuevoPagoSheet
+          pagosExistentes={pagos}
+          onCreado={(nuevo) => setPagos((prev) => [nuevo, ...prev])}
+        />
       </div>
 
       {/* Tabla */}
@@ -289,12 +518,13 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
         )}
       </div>
 
-      {/* Sheet de detalle */}
+      {/* Sheet de detalle/edición */}
       <PagoSheet
         pago={selected}
         open={!!selected}
         onClose={() => setSelected(null)}
         onUpdate={handleUpdate}
+        onDelete={handleDelete}
       />
     </>
   )

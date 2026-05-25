@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,9 +30,12 @@ import {
   getModuloByUuid,
   getModulosByCurso,
 } from "@/repository/aula.repository";
-import { NextModuleButton } from "@/components/aula/cursos/modulos/next-module-button";
-import { ModuleVideoPlayer } from "@/components/aula/cursos/modulos/module-video-player";
-import { ComentariosSection } from "@/components/aula/cursos/modulos/comentarios-section";
+import { NextModuleButton } from '@/components/aula/cursos/modulos/next-module-button'
+import { ModuleVideoPlayer } from '@/components/aula/cursos/modulos/module-video-player'
+import { ComentariosSection } from '@/components/aula/cursos/modulos/comentarios-section'
+import { SesionActions } from '@/components/aula/cursos/sesion-actions'
+import { supabase } from '@/lib/supabase'
+import { getCurrentUser } from '@/actions/auth.actions'
 
 export default async function AulaModuloPage({
   params,
@@ -59,6 +62,11 @@ export default async function AulaModuloPage({
 
   if (modulo.cur_id_int !== curso.cur_id_int) {
     notFound();
+  }
+
+  // Si el módulo está inactivo, redirigir al alumno al curso
+  if (modulo.mod_est_int !== 1) {
+    redirect(`/aula/cursos/${curso.cur_uuid || curso.cur_id_int}`);
   }
 
   const modulos = await getModulosByCurso(curso.cur_id_int);
@@ -171,6 +179,64 @@ export default async function AulaModuloPage({
     cursoId: curso.cur_uuid || curso.cur_id_int.toString(),
   };
 
+  // URL de Zoom viene directo del campo cur_zoom_url_vac del curso
+  const zoomUrl = curso.cur_zoom_url_vac ?? null
+
+  // ── Calcular día actual en hora Lima (UTC-5) ─────────────────────────────
+  // JS getDay(): 0=domingo,1=lunes,...,6=sábado
+  // BD hor_cur_dia_int: 1=lunes,...,6=sábado,7=domingo
+  const ahoraUtc = new Date()
+  const ahoraLimaMs = ahoraUtc.getTime() - 5 * 60 * 60 * 1000
+  const ahoraLima = new Date(ahoraLimaMs)
+  const jsDia = ahoraLima.getUTCDay()                        // 0=Dom
+  const bdDia = jsDia === 0 ? 7 : jsDia                     // 7=Dom, 1=Lun...6=Sáb
+  const hoy = ahoraLima.toISOString().split('T')[0]          // "YYYY-MM-DD" en Lima
+
+  // Buscar el horario de hoy para este curso
+  const { data: horarioHoy } = await supabase
+    .from('horario_curso')
+    .select('hor_cur_id_int, hor_cur_dia_int, hor_cur_inic_tmp, hor_cur_fin_tmp')
+    .eq('cur_id_int', curso.cur_id_int)
+    .eq('hor_cur_dia_int', bdDia)
+    .limit(1)
+    .maybeSingle()
+
+  // Si hay horario hoy, buscar la sesión_clase correspondiente (para el ID de asistencia)
+  const { data: sesionHoy } = horarioHoy
+    ? await supabase
+        .from('sesion_clase')
+        .select('ses_id_int')
+        .eq('cur_id_int', curso.cur_id_int)
+        .eq('ses_fecha_dat', hoy)
+        .order('ses_hora_inic_tmp', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
+
+  const activeSesionId     = sesionHoy?.ses_id_int ?? null
+  // La ventana se basa en horario_curso — existe aunque no haya sesion_clase creada
+  const sesionFecha        = horarioHoy ? hoy : null
+  const sesionHoraInicio   = horarioHoy
+    ? (horarioHoy.hor_cur_inic_tmp as string).slice(0, 5)
+    : null
+
+  // Verificar si el alumno ya registró asistencia hoy (para persistir estado tras F5)
+  let yaRegistroAsistencia = false
+  if (sesionHoy?.ses_id_int) {
+    const currentUser = await getCurrentUser()
+    if (currentUser) {
+      const { data: asistExistente } = await supabase
+        .from('asistencia')
+        .select('asist_id_int, asist_est_int')
+        .eq('ses_id_int', sesionHoy.ses_id_int)
+        .eq('usr_id_int', currentUser.usr_id_int)
+        .maybeSingle()
+      // Con el patrón default-to-absent, todos tienen registro (asist_est_int = 0 = ausente)
+      // Solo consideramos "ya registró" si su estado es > 0 (presente o tardanza)
+      yaRegistroAsistencia = Boolean(asistExistente && asistExistente.asist_est_int > 0)
+    }
+  }
+
   return (
     <div className="grid gap-6 grid-cols-1 lg:grid-cols-[7fr_3fr] min-w-0 overflow-hidden">
       <div className="space-y-4 min-w-0 overflow-hidden">
@@ -203,7 +269,7 @@ export default async function AulaModuloPage({
           <TabsContent value="descripcion">
             <Card className="p-4 overflow-hidden">
               <p className="text-sm text-slate-600 dark:text-slate-200 [overflow-wrap:anywhere] whitespace-pre-line">
-                {modulo.mod_desc_vac || "Descripcion del modulo."}
+                {modulo.mod_desc_vac || "Sin descripción por el momento."}
               </p>
             </Card>
           </TabsContent>
@@ -316,11 +382,10 @@ export default async function AulaModuloPage({
                   className="border-0"
                 >
                   <div
-                    className={`flex items-center gap-0 rounded transition-all ${
-                      isCurrentModule
+                    className={`flex items-center gap-0 rounded transition-all ${isCurrentModule
                         ? "bg-accent/15 border border-accent/40"
                         : "hover:bg-accent/5"
-                    }`}
+                      }`}
                   >
                     <Link
                       href={href}
@@ -330,9 +395,8 @@ export default async function AulaModuloPage({
                         Módulo {idx + 1}
                       </div>
                       <div
-                        className={`text-sm font-bold leading-snug ${
-                          isCurrentModule ? "text-slate-900 dark:text-white" : "text-foreground"
-                        }`}
+                        className={`text-sm font-bold leading-snug ${isCurrentModule ? "text-slate-900 dark:text-white" : "text-foreground"
+                          }`}
                       >
                         {mod.mod_nomb_vac || `Módulo ${mod.mod_id_int}`}
                       </div>
@@ -430,19 +494,15 @@ export default async function AulaModuloPage({
           </Accordion>
         </Card>
 
-        <div className="space-y-2">
-          <Button className="w-full bg-accent hover:bg-accent/90 text-white font-bold h-12 gap-2 text-base">
-            <Play className="h-5 w-5" />
-            Ir a Zoom
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full h-12 gap-2 border-accent/30 hover:bg-accent/5 hover:border-accent text-slate-900 dark:text-white font-semibold hover:text-slate-900 dark:hover:text-white"
-          >
-            <CheckCircle className="h-5 w-5" />
-            Marcar Asistencia
-          </Button>
-        </div>
+        <SesionActions
+          zoomUrl={zoomUrl}
+          curIdInt={curso.cur_id_int}
+          horCurIdInt={horarioHoy?.hor_cur_id_int ?? 0}
+          sesionFecha={sesionFecha}
+          sesionHoraInicio={sesionHoraInicio}
+          sesionHoraFin={horarioHoy ? (horarioHoy.hor_cur_fin_tmp as string).slice(0, 5) : null}
+          yaRegistroAsistencia={yaRegistroAsistencia}
+        />
 
         <Card className="p-4 bg-muted/50 border-muted-foreground/20">
           <p className="text-sm text-slate-600 dark:text-slate-300 text-center leading-relaxed">

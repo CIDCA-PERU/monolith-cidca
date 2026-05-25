@@ -25,27 +25,19 @@ export function AsistenciaReporte({
 }: AsistenciaReporteProps) {
   const getEstadoLabel = (estado: number) => {
     switch (estado) {
-      case 1:
-        return 'Presente'
-      case 2:
-        return 'Ausente'
-      case 3:
-        return 'Tardío'
-      default:
-        return 'Desconocido'
+      case 1: return 'Presente'
+      case 2: return 'Tardanza'
+      case 0: return 'Ausente'
+      default: return 'Desconocido'
     }
   }
 
   const getEstadoColor = (estado: number) => {
     switch (estado) {
-      case 1:
-        return 'bg-green-900 text-green-100'
-      case 2:
-        return 'bg-red-900 text-red-100'
-      case 3:
-        return 'bg-yellow-900 text-yellow-100'
-      default:
-        return 'bg-gray-700 text-gray-100'
+      case 1:  return 'bg-green-900 text-green-100'
+      case 2:  return 'bg-yellow-900 text-yellow-100'
+      case 0:  return 'bg-red-900 text-red-100'
+      default: return 'bg-gray-700 text-gray-100'
     }
   }
 
@@ -133,8 +125,10 @@ export function AsistenciaReporte({
                   key={registro.asist_id_int}
                   className="border-border hover:bg-secondary"
                 >
-                  <TableCell className="text-foreground">
-                    {registro.estu_nomb_vac} {registro.estu_apell_pat_vac}
+                  <TableCell className="text-foreground font-medium">
+                    {[registro.estu_nomb_vac, registro.estu_apell_pat_vac, registro.estu_apell_mat_vac]
+                      .filter(Boolean)
+                      .join(' ')}
                   </TableCell>
                   <TableCell>
                     <Badge className={getEstadoColor(registro.asist_est_int)}>
@@ -160,8 +154,8 @@ export function AsistenciaReporte({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onUpdateAsistencia(registro.asist_id_int.toString(), 3)}
-                            disabled={registro.asist_est_int === 3}
+                            onClick={() => onUpdateAsistencia(registro.asist_id_int.toString(), 2)}
+                            disabled={registro.asist_est_int === 2}
                             className="text-xs"
                           >
                             T
@@ -169,8 +163,8 @@ export function AsistenciaReporte({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onUpdateAsistencia(registro.asist_id_int.toString(), 2)}
-                            disabled={registro.asist_est_int === 2}
+                            onClick={() => onUpdateAsistencia(registro.asist_id_int.toString(), 0)}
+                            disabled={registro.asist_est_int === 0}
                             className="text-xs"
                           >
                             A

@@ -6,17 +6,22 @@ import {
   ModuloAdminDto, ApartadoAdminDto,
   crearModulo, actualizarModulo, eliminarModulo,
   crearApartado, actualizarApartado, eliminarApartado,
+  desactivarModuloCascada, desactivarApartadoCascada,
 } from '@/actions/admin.actions'
 import { ApartadoItems } from '@/components/dashboard/cursos/modulos/apartado-items'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from '@/components/ui/sheet'
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
   Plus, Pencil, Trash2, ChevronUp, ChevronDown,
-  ChevronRight, Loader2, Layers, FileText, AlertCircle,
+  ChevronRight, Loader2, Layers, FileText, AlertCircle, AlertTriangle,
 } from 'lucide-react'
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -49,7 +54,7 @@ function EstadoBadge({ estado, onClick }: { estado: number; onClick?: () => void
 interface FormData { nombre: string; descripcion: string; estado: number }
 
 function FormSheet({
-  open, onClose, title, initial, onSave, loading,
+  open, onClose, title, initial, onSave, loading, entityType,
 }: {
   open: boolean
   onClose: () => void
@@ -57,11 +62,17 @@ function FormSheet({
   initial: FormData
   onSave: (d: FormData) => void
   loading: boolean
+  entityType?: 'mod' | 'apar'
 }) {
   const [data, setData] = useState<FormData>(initial)
 
   // reset when opening
   useState(() => { setData(initial) })
+
+  // Detectar cambio de estado respecto al original
+  const estadoCambio = data.estado !== initial.estado
+  const vaADesactivar = estadoCambio && data.estado === 0 && initial.estado === 1
+  const vaAActivar = estadoCambio && data.estado === 1 && initial.estado === 0
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose() }}>
@@ -108,6 +119,36 @@ function FormSheet({
                 </button>
               ))}
             </div>
+
+            {/* Advertencia al cambiar estado */}
+            {vaADesactivar && (
+              <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 animate-in slide-in-from-top-1 duration-200">
+                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-700 dark:text-amber-400">
+                  {entityType === 'mod' ? (
+                    <><strong>Atención:</strong> Al desactivar este módulo, todos los apartados e items dentro de él también se ocultarán para los estudiantes.</>
+                  ) : entityType === 'apar' ? (
+                    <><strong>Atención:</strong> Al desactivar este apartado, todos los items dentro de él también se ocultarán para los estudiantes.</>
+                  ) : (
+                    <><strong>Atención:</strong> Este elemento dejará de ser visible para los estudiantes.</>
+                  )}
+                </div>
+              </div>
+            )}
+            {vaAActivar && (
+              <div className="mt-3 flex items-start gap-2 px-3 py-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 animate-in slide-in-from-top-1 duration-200">
+                <AlertTriangle className="h-4 w-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-700 dark:text-emerald-400">
+                  {entityType === 'mod' ? (
+                    <><strong>Nota:</strong> Al activar este módulo, será visible para los estudiantes. Los apartados e items internos mantendrán su propio estado.</>
+                  ) : entityType === 'apar' ? (
+                    <><strong>Nota:</strong> Al activar este apartado, será visible para los estudiantes. Los items internos mantendrán su propio estado.</>
+                  ) : (
+                    <><strong>Nota:</strong> Este elemento volverá a ser visible para los estudiantes.</>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -178,6 +219,16 @@ export function ModulosManager({
     label: string
   } | null>(null)
 
+  // Confirm dialog state for status toggles
+  const [confirmDialog, setConfirmDialog] = useState<{
+    type: 'mod' | 'apar'
+    modUuid: string
+    aparUuid?: string
+    label: string
+    newEstado: number
+    isCascade: boolean // true when deactivating (will affect children)
+  } | null>(null)
+
   const [sheetLoading, setSheetLoading] = useState(false)
 
   // ── Reorder helpers ────────────────────────────────────────────────────────
@@ -189,14 +240,19 @@ export function ModulosManager({
   }
 
   const moveApartado = (modUuid: string, idx: number, dir: -1 | 1) => {
+    const mod = modulos.find((m) => m.mod_uuid === modUuid)
+    if (!mod) return
+    const j = idx + dir
+    if (j < 0 || j >= mod.apartados.length) return
+    const swapped = swap(mod.apartados, idx, j)
     setModulos((prev) =>
-      prev.map((m) => {
-        if (m.mod_uuid !== modUuid) return m
-        const j = idx + dir
-        if (j < 0 || j >= m.apartados.length) return m
-        return { ...m, apartados: swap(m.apartados, idx, j) }
-      })
+      prev.map((m) => m.mod_uuid !== modUuid ? m : { ...m, apartados: swapped })
     )
+    // Persistir orden al backend
+    startTransition(async () => {
+      await actualizarApartado(swapped[idx].apar_uuid, { orden: idx + 1 })
+      await actualizarApartado(swapped[j].apar_uuid, { orden: j + 1 })
+    })
   }
 
   const toggleExpand = (uuid: string) => {
@@ -207,16 +263,19 @@ export function ModulosManager({
     })
   }
 
-  // ── Toggle estado rápido ──────────────────────────────────────────────────
+  // ── Toggle estado (abre confirmación) ──────────────────────────────────────
 
   const toggleEstadoModulo = (modUuid: string) => {
     const m = modulos.find((x) => x.mod_uuid === modUuid)
     if (!m) return
     const newEst = m.mod_est_int === 1 ? 0 : 1
-    setModulos((prev) => prev.map((x) => x.mod_uuid === modUuid ? { ...x, mod_est_int: newEst } : x))
-    startTransition(async () => {
-      const res = await actualizarModulo(modUuid, { estado: newEst })
-      if (!res.success) toast.error(res.error)
+    const isCascade = newEst === 0 // desactivar = cascada
+    setConfirmDialog({
+      type: 'mod',
+      modUuid,
+      label: m.mod_nomb_vac,
+      newEstado: newEst,
+      isCascade,
     })
   }
 
@@ -225,18 +284,89 @@ export function ModulosManager({
     const a = m?.apartados.find((x) => x.apar_uuid === aparUuid)
     if (!a) return
     const newEst = a.apar_est_int === 1 ? 0 : 1
-    setModulos((prev) => prev.map((m) =>
-      m.mod_uuid !== modUuid ? m : {
-        ...m,
-        apartados: m.apartados.map((ap) =>
-          ap.apar_uuid === aparUuid ? { ...ap, apar_est_int: newEst } : ap
-        ),
-      }
-    ))
-    startTransition(async () => {
-      const res = await actualizarApartado(aparUuid, { estado: newEst })
-      if (!res.success) toast.error(res.error)
+    const isCascade = newEst === 0
+    setConfirmDialog({
+      type: 'apar',
+      modUuid,
+      aparUuid,
+      label: a.apar_nomb_vac,
+      newEstado: newEst,
+      isCascade,
     })
+  }
+
+  // ── Ejecutar toggle tras confirmación ─────────────────────────────────────
+
+  const executeToggle = () => {
+    if (!confirmDialog) return
+    const { type, modUuid, aparUuid, newEstado, isCascade } = confirmDialog
+    setConfirmDialog(null)
+
+    if (type === 'mod') {
+      if (isCascade) {
+        // Desactivar en cascada: módulo + apartados + items → todo a 0
+        setModulos((prev) => prev.map((x) =>
+          x.mod_uuid !== modUuid ? x : {
+            ...x,
+            mod_est_int: 0,
+            apartados: x.apartados.map((ap) => ({
+              ...ap,
+              apar_est_int: 0,
+              items: (ap.items ?? []).map((it) => ({ ...it, item_est_int: 0 })),
+            })),
+          }
+        ))
+        startTransition(async () => {
+          const res = await desactivarModuloCascada(modUuid)
+          if (!res.success) toast.error(res.error)
+          else toast.success('Módulo y todo su contenido desactivado')
+        })
+      } else {
+        // Activar solo el módulo
+        setModulos((prev) => prev.map((x) => x.mod_uuid === modUuid ? { ...x, mod_est_int: newEstado } : x))
+        startTransition(async () => {
+          const res = await actualizarModulo(modUuid, { estado: newEstado })
+          if (!res.success) toast.error(res.error)
+          else toast.success('Módulo activado')
+        })
+      }
+    } else if (type === 'apar' && aparUuid) {
+      if (isCascade) {
+        // Desactivar en cascada: apartado + items → todo a 0
+        setModulos((prev) => prev.map((m) =>
+          m.mod_uuid !== modUuid ? m : {
+            ...m,
+            apartados: m.apartados.map((ap) =>
+              ap.apar_uuid !== aparUuid ? ap : {
+                ...ap,
+                apar_est_int: 0,
+                items: (ap.items ?? []).map((it) => ({ ...it, item_est_int: 0 })),
+              }
+            ),
+          }
+        ))
+        startTransition(async () => {
+          const res = await desactivarApartadoCascada(aparUuid)
+          if (!res.success) toast.error(res.error)
+          else toast.success('Apartado y todo su contenido desactivado')
+        })
+      } else {
+        // Activar solo el apartado
+        setModulos((prev) => prev.map((m) =>
+          m.mod_uuid !== modUuid ? m : {
+            ...m,
+            apartados: m.apartados.map((ap) =>
+              ap.apar_uuid === aparUuid ? { ...ap, apar_est_int: newEstado } : ap
+            ),
+          }
+        ))
+        startTransition(async () => {
+          const res = await actualizarApartado(aparUuid, { estado: newEstado })
+          if (!res.success) toast.error(res.error)
+          else toast.success('Apartado activado')
+        })
+      }
+    }
   }
 
   // ── Save sheet ─────────────────────────────────────────────────────────────
@@ -266,7 +396,9 @@ export function ModulosManager({
         setSheet(null)
       }
       else if (sheet.type === 'apar-new' && sheet.modUuid) {
-        const res = await crearApartado(sheet.modUuid, formData)
+        const mod = modulos.find((m) => m.mod_uuid === sheet.modUuid)
+        const nextOrden = (mod?.apartados.length ?? 0) + 1
+        const res = await crearApartado(sheet.modUuid, { ...formData, orden: nextOrden })
         if (!res.success || !res.data) { toast.error(res.error); return }
         setModulos((prev) => prev.map((m) =>
           m.mod_uuid !== sheet.modUuid ? m : { ...m, apartados: [...m.apartados, res.data!] }
@@ -526,8 +658,57 @@ export function ModulosManager({
           initial={sheet.initial}
           onSave={handleSave}
           loading={sheetLoading}
+          entityType={sheet.type.startsWith('mod') ? 'mod' : 'apar'}
         />
       )}
+
+      {/* Confirm dialog for status toggle */}
+      <AlertDialog open={!!confirmDialog} onOpenChange={(open) => { if (!open) setConfirmDialog(null) }}>
+        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+              {confirmDialog?.isCascade && <AlertTriangle className="h-5 w-5 text-amber-500" />}
+              {confirmDialog?.newEstado === 1 ? 'Activar' : 'Desactivar'} {confirmDialog?.type === 'mod' ? 'módulo' : 'apartado'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
+              {confirmDialog?.isCascade ? (
+                confirmDialog.type === 'mod' ? (
+                  <>
+                    ¿Estás seguro de desactivar el módulo <strong className="text-slate-800 dark:text-slate-200">«{confirmDialog.label}»</strong>?
+                    <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
+                      ⚠️ Esto también ocultará todos los apartados e items dentro de este módulo.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    ¿Estás seguro de desactivar el apartado <strong className="text-slate-800 dark:text-slate-200">«{confirmDialog.label}»</strong>?
+                    <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
+                      ⚠️ Esto también ocultará todos los items dentro de este apartado.
+                    </span>
+                  </>
+                )
+              ) : (
+                <>
+                  ¿Estás seguro de activar {confirmDialog?.type === 'mod' ? 'el módulo' : 'el apartado'}{' '}
+                  <strong className="text-slate-800 dark:text-slate-200">«{confirmDialog?.label}»</strong>?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeToggle}
+              className={confirmDialog?.isCascade
+                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white font-bold'
+              }
+            >
+              {confirmDialog?.newEstado === 1 ? 'Sí, activar' : 'Sí, desactivar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

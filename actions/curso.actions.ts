@@ -3,6 +3,8 @@
 import { CursoService } from '@/service/curso.service'
 import { assertAuthenticated, assertDashboard, assertAdminOrCoordinador } from '@/lib/auth-guards'
 import { CursoDTO, CreateCursoRequest } from '@/dto/curso.dto'
+import { EstudianteCursoDto } from '@/dto/estudiante-curso.dto'
+import { CursoRepository } from '@/repository/curso.repository'
 import { AppError } from '@/lib/errors'
 
 /**
@@ -196,6 +198,45 @@ export async function removeEstudianteFromCurso(
     return { success: true }
   } catch (error) {
     const message = error instanceof AppError ? error.message : 'Error desconocido'
+    return { success: false, error: message }
+  }
+}
+
+// ─── Gestión de Estudiantes del Curso ──────────────────────────────────────────
+
+/**
+ * Obtiene la lista de estudiantes inscritos al curso.
+ */
+export async function getEstudiantesByCurso(cursoId: string): Promise<{
+  success: boolean
+  data?: EstudianteCursoDto[]
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertDashboard(user)
+    const data = await CursoRepository.getEstudiantesByCurso(cursoId)
+    return { success: true, data }
+  } catch (error) {
+    const message = error instanceof AppError ? error.message : 'Error al obtener estudiantes'
+    return { success: false, error: message }
+  }
+}
+
+/**
+ * Habilita o deshabilita un estudiante dentro de un curso.
+ */
+export async function toggleEstudianteCurso(
+  estCurId: number,
+  estado: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertDashboard(user)
+    await CursoRepository.toggleEstudianteCurso(estCurId, estado)
+    return { success: true }
+  } catch (error) {
+    const message = error instanceof AppError ? error.message : 'Error al cambiar estado del estudiante'
     return { success: false, error: message }
   }
 }

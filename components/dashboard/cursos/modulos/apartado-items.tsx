@@ -3,12 +3,16 @@ import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 import { ItemApartadoDto, crearItem, actualizarItem, eliminarItem } from '@/actions/admin.actions'
 import { ItemSheet, ItemFormData, tipoConfig, ItemTipo } from '@/components/dashboard/cursos/modulos/item-sheet'
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, ExternalLink, AlertCircle, EyeOff, SeparatorHorizontal } from 'lucide-react'
 
 const EMPTY: ItemFormData = { tipo: 'VIDEO', titulo: '', url: '', estado: 1 }
 
 function swap<T>(arr: T[], i: number, j: number): T[] {
-  const c = [...arr]; [c[i], c[j]] = [c[j], c[i]]; return c
+  const c = [...arr];[c[i], c[j]] = [c[j], c[i]]; return c
 }
 
 export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; initialItems: ItemApartadoDto[] }) {
@@ -33,10 +37,25 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
     const it = items.find(x => x.item_uuid === uuid)
     if (!it) return
     const newEst = it.item_est_int === 1 ? 0 : 1
-    setItems(p => p.map(x => x.item_uuid === uuid ? { ...x, item_est_int: newEst } : x))
+    setItemConfirm({ uuid, label: it.item_titulo_vac || 'Separador', newEstado: newEst })
+  }
+
+  // Confirm dialog state for item status toggle
+  const [itemConfirm, setItemConfirm] = useState<{
+    uuid: string
+    label: string
+    newEstado: number
+  } | null>(null)
+
+  const executeItemToggle = () => {
+    if (!itemConfirm) return
+    const { uuid, newEstado } = itemConfirm
+    setItemConfirm(null)
+    setItems(p => p.map(x => x.item_uuid === uuid ? { ...x, item_est_int: newEstado } : x))
     startT(async () => {
-      const res = await actualizarItem(uuid, { estado: newEst })
+      const res = await actualizarItem(uuid, { estado: newEstado })
       if (!res.success) toast.error(res.error)
+      else toast.success(newEstado === 1 ? 'Item activado' : 'Item desactivado')
     })
   }
 
@@ -86,7 +105,7 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
 
             {/* ── SEPARADOR: render como línea divisoria ── */}
             {isSep ? (
-              <div className="group flex items-center gap-3 px-8 py-2">
+              <div className="group flex items-center gap-2 px-8 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
                 {it.item_titulo_vac && (
                   <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
@@ -98,6 +117,7 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
                   <span className="text-[11px] text-slate-400 dark:text-slate-500 italic whitespace-nowrap">{it.item_url_vac}</span>
                 )}
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+
                 {/* acciones separador */}
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   {inactive && <span title="Oculto para estudiantes"><EyeOff className="h-3 w-3 text-slate-400 mr-1" /></span>}
@@ -105,6 +125,10 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
                     className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${inactive ? 'bg-slate-100 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600' : 'bg-emerald-50 text-emerald-600 hover:bg-slate-100 hover:text-slate-500'}`}>
                     {inactive ? 'Activar' : 'Ocultar'}
                   </button>
+                  <div className="flex flex-col">
+                    <button onClick={() => moveItem(i, -1)} disabled={i === 0} className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronUp className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronDown className="h-3.5 w-3.5" /></button>
+                  </div>
                   <button onClick={() => setSheet({ itemUuid: it.item_uuid, initial: { tipo: it.item_tipo_vac as ItemTipo, titulo: it.item_titulo_vac, url: it.item_url_vac ?? '', estado: it.item_est_int } })}
                     className="p-1 rounded text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
                     <Pencil className="h-3 w-3" />
@@ -142,11 +166,10 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
 
                 {/* Toggle estado (click) */}
                 <button onClick={() => toggleEstado(it.item_uuid)} title={inactive ? 'Activar' : 'Desactivar'}
-                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                    inactive
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'
-                      : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-slate-100 hover:text-slate-500'
-                  }`}>
+                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${inactive
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'
+                    : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-slate-100 hover:text-slate-500'
+                    }`}>
                   {inactive ? <><EyeOff className="h-2.5 w-2.5 inline mr-0.5" />Oculto</> : 'Visible'}
                 </button>
 
@@ -189,6 +212,37 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
       {sheet && (
         <ItemSheet open title={sheet.itemUuid ? 'Editar contenido' : 'Nuevo contenido'} initial={sheet.initial} onClose={() => setSheet(null)} onSave={handleSave} loading={loading} />
       )}
+
+      <AlertDialog open={!!itemConfirm} onOpenChange={(open) => { if (!open) setItemConfirm(null) }}>
+        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-900 dark:text-white">
+              {itemConfirm?.newEstado === 1 ? 'Activar' : 'Desactivar'} item
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
+              ¿Estás seguro de {itemConfirm?.newEstado === 1 ? 'activar' : 'desactivar'} el item{' '}
+              <strong className="text-slate-800 dark:text-slate-200">«{itemConfirm?.label}»</strong>?
+              {itemConfirm?.newEstado === 0 && (
+                <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
+                  Este contenido dejará de ser visible para los estudiantes.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeItemToggle}
+              className={itemConfirm?.newEstado === 0
+                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white font-bold'
+              }
+            >
+              {itemConfirm?.newEstado === 1 ? 'Sí, activar' : 'Sí, desactivar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
