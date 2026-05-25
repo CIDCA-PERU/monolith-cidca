@@ -38,6 +38,8 @@ export interface EstudianteAdminDto {
 export interface PagoAdminDto {
   pago_uuid: string
   pago_id_int: number
+  estu_id_int: number          // para chequeo de duplicados en cliente
+  cur_id_int: number           // para chequeo de duplicados en cliente
   pago_nro_vac: string | null
   pago_mont_num: number
   pago_estad_vac: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO'
@@ -50,12 +52,49 @@ export interface PagoAdminDto {
   curso_nombre: string
 }
 
+export interface EstudianteSelectDto {
+  estu_id_int: number
+  nombre_completo: string
+}
+
+export interface CursoSelectDto {
+  cur_id_int: number
+  cur_nomb_vac: string
+  cur_precio_num: number
+}
+
 export interface AuditoriaItemDto {
   tipo: 'PAGO' | 'CURSO' | 'MATRICULA'
   descripcion: string
   fecha: string
   responsable: string
   accion: string
+}
+
+// ─── Certificados ─────────────────────────────────────────────────────────────
+
+export interface CursoCertificadoDto {
+  cur_id_int: number
+  cur_uuid: string
+  cur_nomb_vac: string
+  cur_fec_inic_tmp: string | null
+  cur_fec_fin_tmp: string | null
+  total_inscritos: number
+  certs_emitidos: number
+}
+
+export interface EstudianteCertificadoDto {
+  estu_id_int: number
+  estu_uuid: string
+  estu_nomb_vac: string
+  estu_apell_pat_vac: string
+  estu_apell_mat_vac: string | null
+  // Certificado (null si no existe aún)
+  cert_id_int: number | null
+  cert_uuid: string | null
+  cert_cod_vac: string | null
+  cert_url_vac: string | null
+  cert_fec_emi_tmp: string | null
 }
 
 // ─── Cursos ────────────────────────────────────────────────────────────────────
@@ -216,7 +255,143 @@ export async function getEstudianteByUuid(estuUuid: string): Promise<{
   }
 }
 
+// ─── Perfil completo de estudiante ────────────────────────────────────────────
+
+export interface CursoPerfilDto {
+  cur_id_int: number
+  cur_uuid: string
+  cur_nomb_vac: string
+  cur_fec_inic_tmp: string | null
+  cur_fec_fin_tmp: string | null
+  // Pago asociado a este curso
+  pago_estad_vac: string | null
+  pago_mont_num: number | null
+  pago_nro_vac: string | null
+  // Certificado
+  cert_url_vac: string | null
+  cert_cod_vac: string | null
+  cert_fec_emi_tmp: string | null
+}
+
+export interface EstudiantePerfilDto extends EstudianteAdminDto {
+  estu_id_int: number
+  cursos: CursoPerfilDto[]
+}
+
+/**
+ * Perfil completo de un estudiante para el panel admin:
+ * info personal + cursos inscritos + pago/certificado por curso.
+ */
+export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
+  success: boolean
+  data?: EstudiantePerfilDto
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // ── 1. Datos básicos del estudiante ──────────────────────────────────────
+    const { data: estData, error: estErr } = await supabase
+      .from('estudiante')
+      .select(`
+        estu_id_int, estu_uuid, estu_nomb_vac, estu_apell_pat_vac,
+        estu_apell_mat_vac, estu_gen_vac, estu_cre_tmp,
+        usuarios (
+          usr_uuid, usr_email_vac, usr_nomb_vac, usr_est_int
+        ),
+        estudiante_curso ( est_cur_id_int )
+      `)
+      .eq('estu_uuid', estuUuid)
+      .single()
+
+    if (estErr || !estData) throw new AppError('Estudiante no encontrado', 'NOT_FOUND', 404)
+
+    const e = estData as any
+    const estuIdInt: number = e.estu_id_int
+
+    // ── 2. Cursos en los que está inscrito ───────────────────────────────────
+    const { data: inscripciones } = await supabase
+      .from('estudiante_curso')
+      .select(`
+        cur_id_int,
+        curso:cur_id_int (
+          cur_id_int, cur_uuid, cur_nomb_vac,
+          cur_fec_inic_tmp, cur_fec_fin_tmp
+        )
+      `)
+      .eq('est_id_int', estuIdInt)
+
+    // ── 3. Pagos del estudiante ───────────────────────────────────────────────
+    const { data: pagos } = await supabase
+      .from('pago')
+      .select('cur_id_int, pago_estad_vac, pago_mont_num, pago_nro_vac')
+      .eq('estu_id_int', estuIdInt)
+      .order('pago_cre_tmp', { ascending: false })
+
+    // ── 4. Certificados del estudiante ────────────────────────────────────────
+    const { data: certs } = await supabase
+      .from('certificado')
+      .select('cur_id_int, cert_url_vac, cert_cod_vac, cert_fec_emi_tmp')
+      .eq('estu_id_int', estuIdInt)
+
+    // Indexar por cur_id_int (primer pago y primer cert por curso)
+    const pagoMap = new Map<number, any>()
+    ;(pagos ?? []).forEach((p: any) => {
+      if (!pagoMap.has(p.cur_id_int)) pagoMap.set(p.cur_id_int, p)
+    })
+    const certMap = new Map<number, any>()
+    ;(certs ?? []).forEach((c: any) => certMap.set(c.cur_id_int, c))
+
+    // ── 5. Combinar ───────────────────────────────────────────────────────────
+    const cursos: CursoPerfilDto[] = (inscripciones ?? [])
+      .map((row: any) => {
+        const cur = Array.isArray(row.curso) ? row.curso[0] : row.curso
+        if (!cur) return null
+        const pago = pagoMap.get(cur.cur_id_int) ?? null
+        const cert = certMap.get(cur.cur_id_int) ?? null
+        return {
+          cur_id_int:      cur.cur_id_int,
+          cur_uuid:        cur.cur_uuid,
+          cur_nomb_vac:    cur.cur_nomb_vac ?? '—',
+          cur_fec_inic_tmp: cur.cur_fec_inic_tmp ?? null,
+          cur_fec_fin_tmp:  cur.cur_fec_fin_tmp  ?? null,
+          pago_estad_vac:  pago?.pago_estad_vac ?? null,
+          pago_mont_num:   pago?.pago_mont_num   ?? null,
+          pago_nro_vac:    pago?.pago_nro_vac    ?? null,
+          cert_url_vac:    cert?.cert_url_vac    ?? null,
+          cert_cod_vac:    cert?.cert_cod_vac    ?? null,
+          cert_fec_emi_tmp: cert?.cert_fec_emi_tmp ?? null,
+        } satisfies CursoPerfilDto
+      })
+      .filter((x): x is CursoPerfilDto => x !== null)
+
+    return {
+      success: true,
+      data: {
+        estu_id_int:        estuIdInt,
+        estu_uuid:          e.estu_uuid,
+        estu_nomb_vac:      e.estu_nomb_vac       ?? '',
+        estu_apell_pat_vac: e.estu_apell_pat_vac  ?? '',
+        estu_apell_mat_vac: e.estu_apell_mat_vac  ?? '',
+        estu_gen_vac:       e.estu_gen_vac         ?? null,
+        estu_cre_tmp:       e.estu_cre_tmp,
+        usr_uuid:           e.usuarios?.usr_uuid   ?? '',
+        usr_email_vac:      e.usuarios?.usr_email_vac ?? '',
+        usr_nomb_vac:       e.usuarios?.usr_nomb_vac  ?? '',
+        usr_est_int:        e.usuarios?.usr_est_int   ?? 0,
+        cursos_count:       (e.estudiante_curso ?? []).length,
+        cursos,
+      },
+    }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al cargar perfil'
+    return { success: false, error: msg }
+  }
+}
+
 // ─── Pagos ─────────────────────────────────────────────────────────────────────
+
 
 export async function getPagosAdmin(): Promise<{
   success: boolean
@@ -232,6 +407,8 @@ export async function getPagosAdmin(): Promise<{
       .select(`
         pago_uuid,
         pago_id_int,
+        estu_id_int,
+        cur_id_int,
         pago_nro_vac,
         pago_mont_num,
         pago_estad_vac,
@@ -253,6 +430,8 @@ export async function getPagosAdmin(): Promise<{
     const result: PagoAdminDto[] = (data ?? []).map((p: any) => ({
       pago_uuid:           p.pago_uuid,
       pago_id_int:         p.pago_id_int,
+      estu_id_int:         p.estu_id_int,
+      cur_id_int:          p.cur_id_int,
       pago_nro_vac:        p.pago_nro_vac ?? null,
       pago_mont_num:       p.pago_mont_num ?? 0,
       pago_estad_vac:      p.pago_estad_vac ?? 'PENDIENTE',
@@ -324,6 +503,98 @@ export async function actualizarEstadoPago(
 }
 
 /**
+ * Edita los campos de datos de un pago (monto, nro, observaciones).
+ * El estado se maneja por separado con actualizarEstadoPago.
+ */
+export async function editarPagoAdmin(
+  pagoUuid: string,
+  input: {
+    pagoMontNum: number
+    pagoNroVac: string | null
+    pagoObsVac: string | null
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    const { error } = await supabase
+      .from('pago')
+      .update({
+        pago_mont_num: input.pagoMontNum,
+        pago_nro_vac:  input.pagoNroVac  || null,
+        pago_obs_vac:  input.pagoObsVac  || null,
+        pago_upd_tmp:  new Date().toISOString(),
+      })
+      .eq('pago_uuid', pagoUuid)
+
+    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    return { success: true }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al editar pago'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Elimina un pago. Solo permitido si:
+ *   1. El estado es PENDIENTE.
+ *   2. El alumno NO tiene un registro activo en estudiante_curso para ese curso.
+ */
+export async function eliminarPagoAdmin(
+  pagoUuid: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Obtener datos del pago
+    const { data: pago, error: fetchErr } = await supabase
+      .from('pago')
+      .select('pago_id_int, pago_estad_vac, estu_id_int, cur_id_int')
+      .eq('pago_uuid', pagoUuid)
+      .maybeSingle()
+
+    if (fetchErr || !pago) throw new AppError('Pago no encontrado', 'NOT_FOUND', 404)
+
+    // Regla 1: solo PENDIENTE
+    if (pago.pago_estad_vac !== 'PENDIENTE') {
+      return {
+        success: false,
+        error: 'Solo se pueden eliminar pagos en estado PENDIENTE.',
+      }
+    }
+
+    // Regla 2: sin relación activa en estudiante_curso
+    const { data: inscripcion } = await supabase
+      .from('estudiante_curso')
+      .select('est_cur_id_int')
+      .eq('est_id_int', pago.estu_id_int)
+      .eq('cur_id_int', pago.cur_id_int)
+      .maybeSingle()
+
+    if (inscripcion) {
+      return {
+        success: false,
+        error: 'No se puede eliminar: el alumno ya está inscrito en este curso.',
+      }
+    }
+
+    // Eliminar
+    const { error: delErr } = await supabase
+      .from('pago')
+      .delete()
+      .eq('pago_uuid', pagoUuid)
+
+    if (delErr) throw new AppError(delErr.message, 'SERVER_ERROR', 500)
+    return { success: true }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al eliminar pago'
+    return { success: false, error: msg }
+  }
+}
+
+/**
  * Genera una URL firmada (1 hora) para que el admin pueda ver
  * el comprobante de pago almacenado en el bucket privado.
  */
@@ -359,7 +630,125 @@ export async function getVoucherSignedUrl(
   }
 }
 
+/**
+ * Lista simplificada de estudiantes para el selector del formulario de nuevo pago.
+ */
+export async function getEstudiantesSelectAdmin(): Promise<{
+  success: boolean
+  data?: EstudianteSelectDto[]
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    const { data, error } = await supabase
+      .from('estudiante')
+      .select('estu_id_int, estu_nomb_vac, estu_apell_pat_vac, estu_apell_mat_vac')
+      .order('estu_apell_pat_vac', { ascending: true })
+
+    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    const result: EstudianteSelectDto[] = (data ?? []).map((e: any) => ({
+      estu_id_int: e.estu_id_int,
+      nombre_completo: [e.estu_nomb_vac, e.estu_apell_pat_vac, e.estu_apell_mat_vac]
+        .filter(Boolean).join(' '),
+    }))
+
+    return { success: true, data: result }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al cargar estudiantes'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Lista de cursos activos con precio para el selector del formulario de nuevo pago.
+ */
+export async function getCursosSelectAdmin(): Promise<{
+  success: boolean
+  data?: CursoSelectDto[]
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    const { data, error } = await supabase
+      .from('curso')
+      .select('cur_id_int, cur_nomb_vac, cur_precio_num')
+      .eq('cur_est_int', 1)
+      .order('cur_nomb_vac', { ascending: true })
+
+    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    const result: CursoSelectDto[] = (data ?? []).map((c: any) => ({
+      cur_id_int:    c.cur_id_int,
+      cur_nomb_vac:  c.cur_nomb_vac  ?? '—',
+      cur_precio_num: Number(c.cur_precio_num ?? 0),
+    }))
+
+    return { success: true, data: result }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Crea un nuevo pago generado por el admin.
+ * Verifica que el alumno no tenga ya un pago registrado para ese curso.
+ */
+export async function crearPagoAdmin(input: {
+  estuIdInt: number
+  curIdInt: number
+  pagoMontNum: number
+  pagoNroVac?: string
+  pagoEstadVac: 'PENDIENTE' | 'ACEPTADO'
+  pagoObsVac?: string
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Verificar duplicado: mismo alumno + mismo curso
+    const { data: existing } = await supabase
+      .from('pago')
+      .select('pago_id_int')
+      .eq('estu_id_int', input.estuIdInt)
+      .eq('cur_id_int', input.curIdInt)
+      .maybeSingle()
+
+    if (existing) {
+      return {
+        success: false,
+        error: 'Este alumno ya tiene un pago registrado para este curso.',
+      }
+    }
+
+    const now = new Date().toISOString()
+    const { error } = await supabase.from('pago').insert({
+      estu_id_int:    input.estuIdInt,
+      cur_id_int:     input.curIdInt,
+      pago_mont_num:  input.pagoMontNum,
+      pago_nro_vac:   input.pagoNroVac   || null,
+      pago_estad_vac: input.pagoEstadVac,
+      pago_obs_vac:   input.pagoObsVac   || null,
+      pago_cre_tmp:   now,
+      pago_upd_tmp:   now,
+    })
+
+    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    return { success: true }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al crear pago'
+    return { success: false, error: msg }
+  }
+}
+
 // ─── Auditoría ─────────────────────────────────────────────────────────────────
+
 
 export async function getAuditoriaAdmin(): Promise<{
   success: boolean
@@ -1049,5 +1438,292 @@ export async function desactivarApartadoCascada(
     return { success: true }
   } catch (error) {
     return { success: false, error: 'Error al desactivar apartado en cascada' }
+  }
+}
+
+// ─── Certificados Admin ────────────────────────────────────────────────────────
+
+/**
+ * Lista todos los cursos con estadísticas de certificados emitidos.
+ */
+export async function getCursosConCertificadosAdmin(): Promise<{
+  success: boolean
+  data?: CursoCertificadoDto[]
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Cursos con sus inscritos y certificados
+    const { data, error } = await supabase
+      .from('curso')
+      .select(`
+        cur_id_int,
+        cur_uuid,
+        cur_nomb_vac,
+        cur_fec_inic_tmp,
+        cur_fec_fin_tmp,
+        estudiante_curso ( est_cur_id_int ),
+        certificado ( cert_id_int )
+      `)
+      .eq('cur_est_int', 1)
+      .order('cur_fec_inic_tmp', { ascending: false })
+
+    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    const result: CursoCertificadoDto[] = (data ?? []).map((c: any) => ({
+      cur_id_int:       c.cur_id_int,
+      cur_uuid:         c.cur_uuid,
+      cur_nomb_vac:     c.cur_nomb_vac ?? '—',
+      cur_fec_inic_tmp: c.cur_fec_inic_tmp ?? null,
+      cur_fec_fin_tmp:  c.cur_fec_fin_tmp  ?? null,
+      total_inscritos:  (c.estudiante_curso ?? []).length,
+      certs_emitidos:   (c.certificado ?? []).length,
+    }))
+
+    return { success: true, data: result }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Lista los alumnos inscritos en un curso junto con su certificado (si existe).
+ */
+export async function getEstudiantesParaCertificado(curIdInt: number): Promise<{
+  success: boolean
+  data?: EstudianteCertificadoDto[]
+  cursoNombre?: string
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Nombre del curso
+    const { data: cursoData } = await supabase
+      .from('curso')
+      .select('cur_nomb_vac')
+      .eq('cur_id_int', curIdInt)
+      .single()
+
+    // Alumnos inscritos
+    const { data: inscritos, error: inscErr } = await supabase
+      .from('estudiante_curso')
+      .select(`
+        est_id_int,
+        estudiante!est_id_int (
+          estu_id_int,
+          estu_uuid,
+          estu_nomb_vac,
+          estu_apell_pat_vac,
+          estu_apell_mat_vac
+        )
+      `)
+      .eq('cur_id_int', curIdInt)
+      .eq('est_cur_estado_bol', true)
+
+    if (inscErr) throw new AppError(inscErr.message, 'SERVER_ERROR', 500)
+
+    // Certificados existentes para este curso
+    const { data: certs } = await supabase
+      .from('certificado')
+      .select('cert_id_int, cert_uuid, cert_cod_vac, cert_url_vac, cert_fec_emi_tmp, estu_id_int')
+      .eq('cur_id_int', curIdInt)
+
+    // Indexar certificados por estu_id_int para O(1) lookup
+    const certMap = new Map<number, any>()
+    ;(certs ?? []).forEach((c: any) => certMap.set(c.estu_id_int, c))
+
+    const result: EstudianteCertificadoDto[] = (inscritos ?? [])
+      .map((row: any) => {
+        const est = Array.isArray(row.estudiante) ? row.estudiante[0] : row.estudiante
+        if (!est) return null
+        const cert = certMap.get(est.estu_id_int) ?? null
+        return {
+          estu_id_int:        est.estu_id_int,
+          estu_uuid:          est.estu_uuid,
+          estu_nomb_vac:      est.estu_nomb_vac      ?? '',
+          estu_apell_pat_vac: est.estu_apell_pat_vac ?? '',
+          estu_apell_mat_vac: est.estu_apell_mat_vac ?? null,
+          cert_id_int:        cert?.cert_id_int   ?? null,
+          cert_uuid:          cert?.cert_uuid      ?? null,
+          cert_cod_vac:       cert?.cert_cod_vac   ?? null,
+          cert_url_vac:       cert?.cert_url_vac   ?? null,
+          cert_fec_emi_tmp:   cert?.cert_fec_emi_tmp ?? null,
+        } satisfies EstudianteCertificadoDto
+      })
+      .filter((x): x is EstudianteCertificadoDto => x !== null)
+
+    return {
+      success: true,
+      data: result,
+      cursoNombre: cursoData?.cur_nomb_vac ?? '—',
+    }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al cargar estudiantes'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Crea o actualiza el certificado de un alumno en un curso.
+ * Si ya existe (estu_id_int + cur_id_int) hace UPDATE, si no hace INSERT.
+ */
+export async function upsertCertificado(input: {
+  estuIdInt: number
+  curIdInt: number
+  certCodVac: string
+  certUrlVac: string
+  certFecEmiTmp: string   // ISO string
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    // Verificar si ya existe
+    const { data: existing } = await supabase
+      .from('certificado')
+      .select('cert_id_int')
+      .eq('estu_id_int', input.estuIdInt)
+      .eq('cur_id_int', input.curIdInt)
+      .maybeSingle()
+
+    if (existing) {
+      // UPDATE
+      const { error } = await supabase
+        .from('certificado')
+        .update({
+          cert_cod_vac:    input.certCodVac,
+          cert_url_vac:    input.certUrlVac,
+          cert_fec_emi_tmp: input.certFecEmiTmp,
+          cert_update_at:  new Date().toISOString(),
+        })
+        .eq('cert_id_int', existing.cert_id_int)
+
+      if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    } else {
+      // INSERT
+      const { error } = await supabase
+        .from('certificado')
+        .insert({
+          estu_id_int:     input.estuIdInt,
+          cur_id_int:      input.curIdInt,
+          cert_cod_vac:    input.certCodVac,
+          cert_url_vac:    input.certUrlVac,
+          cert_fec_emi_tmp: input.certFecEmiTmp,
+          cert_created_at: new Date().toISOString(),
+          cert_update_at:  new Date().toISOString(),
+        })
+
+      if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    }
+
+    return { success: true }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al guardar certificado'
+    return { success: false, error: msg }
+  }
+}
+
+// ─── Perfil de usuario (admin/coordinador logueado) ───────────────────────────
+
+export interface PerfilUsuarioDto {
+  usr_uuid: string
+  usr_nomb_vac: string
+  usr_email_vac: string
+  usr_est_int: number
+  usr_mod_bol: boolean
+  usr_cre_tmp: string | null
+  usr_upd_tmp: string | null
+  rol_nam_vc: string
+  permiso_cod_vac: string[]
+  // Sesiones activas del usuario
+  sesiones_count: number
+}
+
+/**
+ * Devuelve el perfil completo del usuario autenticado actualmente.
+ */
+export async function getPerfilAdmin(): Promise<{
+  success: boolean
+  data?: PerfilUsuarioDto
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertDashboard(user)
+
+    // Datos frescos de la tabla usuarios
+    const { data: u, error: uErr } = await supabase
+      .from('usuarios')
+      .select(`
+        usr_uuid, usr_nomb_vac, usr_email_vac,
+        usr_est_int, usr_mod_bol, usr_cre_tmp, usr_upd_tmp
+      `)
+      .eq('usr_id_int', user.usr_id_int)
+      .single()
+
+    if (uErr || !u) throw new AppError('Usuario no encontrado', 'NOT_FOUND', 404)
+
+    // Sesiones activas
+    const { count: sesCount } = await supabase
+      .from('sesion')
+      .select('ses_uuid', { count: 'exact', head: true })
+      .eq('usr_id_int', user.usr_id_int)
+      .eq('ses_revocada_bol', false)
+      .gt('ses_expira_tmp', new Date().toISOString())
+
+    return {
+      success: true,
+      data: {
+        usr_uuid:        u.usr_uuid,
+        usr_nomb_vac:    u.usr_nomb_vac    ?? '',
+        usr_email_vac:   u.usr_email_vac   ?? '',
+        usr_est_int:     u.usr_est_int     ?? 1,
+        usr_mod_bol:     u.usr_mod_bol     ?? false,
+        usr_cre_tmp:     u.usr_cre_tmp     ?? null,
+        usr_upd_tmp:     u.usr_upd_tmp     ?? null,
+        rol_nam_vc:      user.rol_nam_vc   ?? '—',
+        permiso_cod_vac: user.permiso_cod_vac ?? [],
+        sesiones_count:  sesCount ?? 0,
+      },
+    }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al cargar perfil'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Actualiza el nombre y/o la preferencia de modo oscuro
+ * del usuario autenticado actualmente.
+ */
+export async function actualizarPerfilAdmin(input: {
+  usrNombVac?: string
+  usrModBol?: boolean
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertDashboard(user)
+
+    const dbUpdates: Record<string, unknown> = {
+      usr_upd_tmp: new Date().toISOString(),
+    }
+    if (input.usrNombVac !== undefined) dbUpdates.usr_nomb_vac = input.usrNombVac.trim()
+    if (input.usrModBol  !== undefined) dbUpdates.usr_mod_bol  = input.usrModBol
+
+    const { error } = await supabase
+      .from('usuarios')
+      .update(dbUpdates)
+      .eq('usr_id_int', user.usr_id_int)
+
+    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    return { success: true }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al actualizar perfil'
+    return { success: false, error: msg }
   }
 }

@@ -5,8 +5,11 @@ import Image from 'next/image'
 import {
   PagoAdminDto,
   actualizarEstadoPago,
+  editarPagoAdmin,
+  eliminarPagoAdmin,
   getVoucherSignedUrl,
 } from '@/actions/admin.actions'
+import { NuevoPagoSheet } from '@/components/dashboard/pagos/nuevo-pago-sheet'
 import {
   Sheet,
   SheetContent,
@@ -17,6 +20,7 @@ import {
 import {
   CreditCard, ExternalLink, FileImage, CheckCircle2,
   Clock, AlertCircle, Loader2, ImageOff,
+  Pencil, Trash2, Hash, DollarSign, TriangleAlert,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -127,38 +131,88 @@ function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher
   )
 }
 
-// ─── Sheet de detalle ─────────────────────────────────────────────────────────
+// ─── Sheet de detalle / edición ───────────────────────────────────────────────
 
 function PagoSheet({
   pago,
   open,
   onClose,
   onUpdate,
+  onDelete,
 }: {
   pago: PagoAdminDto | null
   open: boolean
   onClose: () => void
-  onUpdate: (uuid: string, estado: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO', obs?: string) => void
+  onUpdate: (uuid: string, changes: Partial<PagoAdminDto>) => void
+  onDelete: (uuid: string) => void
 }) {
-  const [obs, setObs] = useState(pago?.pago_obs_vac ?? '')
-  const [isPending, startTransition] = useTransition()
+  const [obs, setObs]         = useState('')
+  const [monto, setMonto]     = useState('')
+  const [nro, setNro]         = useState('')
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [isPending, start]    = useTransition()
+  const [isDeleting, startDel] = useTransition()
+  const [isSaving, startSave] = useTransition()
 
-  // Sincronizar obs cuando cambia el pago seleccionado
+  // Sincronizar campos cuando cambia el pago seleccionado
   useEffect(() => {
     setObs(pago?.pago_obs_vac ?? '')
+    setMonto(String(pago?.pago_mont_num ?? ''))
+    setNro(pago?.pago_nro_vac ?? '')
+    setConfirmDel(false)
   }, [pago?.pago_uuid])
 
   if (!pago) return null
 
+  const esPendiente = pago.pago_estad_vac === 'PENDIENTE'
+
+  // ── Cambiar estado ───────────────────────────────────────────────────────────
   const handleEstado = (nuevoEstado: 'ACEPTADO' | 'OBSERVADO' | 'PENDIENTE') => {
-    startTransition(async () => {
+    start(async () => {
       const res = await actualizarEstadoPago(pago.pago_uuid, nuevoEstado, obs || undefined)
       if (res.success) {
         toast.success(`Pago marcado como ${nuevoEstado}`)
-        onUpdate(pago.pago_uuid, nuevoEstado, obs || undefined)
+        onUpdate(pago.pago_uuid, { pago_estad_vac: nuevoEstado, pago_obs_vac: obs || pago.pago_obs_vac })
         onClose()
       } else {
         toast.error(res.error ?? 'Error al actualizar')
+      }
+    })
+  }
+
+  // ── Guardar cambios de datos ──────────────────────────────────────────────────
+  const handleGuardar = () => {
+    startSave(async () => {
+      const res = await editarPagoAdmin(pago.pago_uuid, {
+        pagoMontNum: Number(monto) || 0,
+        pagoNroVac:  nro.trim()   || null,
+        pagoObsVac:  obs.trim()   || null,
+      })
+      if (res.success) {
+        toast.success('Pago actualizado correctamente')
+        onUpdate(pago.pago_uuid, {
+          pago_mont_num: Number(monto) || 0,
+          pago_nro_vac:  nro.trim()   || null,
+          pago_obs_vac:  obs.trim()   || null,
+        })
+        onClose()
+      } else {
+        toast.error(res.error ?? 'Error al guardar')
+      }
+    })
+  }
+
+  // ── Eliminar ──────────────────────────────────────────────────────────────────
+  const handleEliminar = () => {
+    startDel(async () => {
+      const res = await eliminarPagoAdmin(pago.pago_uuid)
+      if (res.success) {
+        toast.success('Pago eliminado')
+        onDelete(pago.pago_uuid)
+        onClose()
+      } else {
+        toast.error(res.error ?? 'Error al eliminar')
+        setConfirmDel(false)
       }
     })
   }
@@ -169,37 +223,79 @@ function PagoSheet({
         <SheetHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
           <SheetTitle className="text-slate-900 dark:text-white flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-amber-500" />
-            Detalle del pago
+            Gestión de pago
           </SheetTitle>
           <SheetDescription className="text-slate-500 dark:text-slate-400">
-            {pago.pago_nro_vac ?? 'Sin número de comprobante'}
+            {pago.estudiante_apellidos} {pago.estudiante_nombre} — {pago.curso_nombre}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-5 py-5">
-          {/* Estado actual */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500 dark:text-slate-400">Estado actual</span>
-            <EstadoBadge estado={pago.pago_estad_vac} />
+        <div className="space-y-6 py-5">
+
+          {/* ── Editar datos ─────────────────────────────────────────────── */}
+          <div className="space-y-4">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <Pencil className="h-3.5 w-3.5" />
+              Datos del pago
+            </p>
+
+            {/* Monto */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <DollarSign className="h-3 w-3" />
+                Monto (S/)
+              </label>
+              <input
+                type="number" min="0" step="0.01"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                placeholder="0.00"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition"
+              />
+            </div>
+
+            {/* Nro. orden */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <Hash className="h-3 w-3" />
+                Nro. de orden
+              </label>
+              <input
+                type="text"
+                value={nro}
+                onChange={(e) => setNro(e.target.value)}
+                placeholder="OP-2025-001"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 font-mono transition"
+              />
+            </div>
+
+            {/* Observaciones */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                Observaciones
+              </label>
+              <textarea
+                rows={2}
+                value={obs}
+                onChange={(e) => setObs(e.target.value)}
+                placeholder="Notas internas..."
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
+              />
+            </div>
+
+            <button
+              onClick={handleGuardar}
+              disabled={isSaving}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40 text-white font-semibold text-sm transition-all"
+            >
+              {isSaving
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
+                : <><Pencil className="h-4 w-4" /> Guardar cambios</>
+              }
+            </button>
           </div>
 
-          {/* Info del pago */}
-          <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 divide-y divide-slate-100 dark:divide-slate-800">
-            {[
-              { label: 'Estudiante', value: `${pago.estudiante_apellidos}, ${pago.estudiante_nombre}` },
-              { label: 'Curso',      value: pago.curso_nombre },
-              { label: 'Monto',      value: `S/ ${Number(pago.pago_mont_num).toFixed(2)}` },
-              { label: 'Registrado', value: formatDate(pago.pago_cre_tmp) },
-              { label: 'Actualizado',value: formatDate(pago.pago_upd_tmp) },
-            ].map((row) => (
-              <div key={row.label} className="flex justify-between items-center px-4 py-3">
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{row.label}</span>
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 text-right max-w-[60%]">{row.value}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Comprobante — solo lectura para el admin */}
+          {/* ── Comprobante ─────────────────────────────────────────────────── */}
           <div>
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
               Comprobante de pago
@@ -207,21 +303,7 @@ function PagoSheet({
             <VoucherPreview pagoUuid={pago.pago_uuid} hasVoucher={Boolean(pago.pago_url_vac)} />
           </div>
 
-          {/* Observaciones */}
-          <div>
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
-              Observaciones
-            </label>
-            <textarea
-              rows={3}
-              value={obs}
-              onChange={(e) => setObs(e.target.value)}
-              placeholder="Añadir observaciones internas..."
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
-            />
-          </div>
-
-          {/* Acciones de estado */}
+          {/* ── Cambiar estado ───────────────────────────────────────────────── */}
           <div>
             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
               Cambiar estado
@@ -258,6 +340,53 @@ function PagoSheet({
               </div>
             )}
           </div>
+
+          {/* ── Zona de peligro: Eliminar ────────────────────────────────────── */}
+          {esPendiente && (
+            <div className="rounded-xl border border-red-200 dark:border-red-500/20 p-4 space-y-3">
+              <p className="flex items-center gap-1.5 text-xs font-bold text-red-500 uppercase tracking-wider">
+                <TriangleAlert className="h-3.5 w-3.5" />
+                Zona de peligro
+              </p>
+
+              {!confirmDel ? (
+                <button
+                  onClick={() => setConfirmDel(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 transition-all"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar pago
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium text-center">
+                    ¿Confirmas la eliminación? Esta acción no se puede deshacer.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setConfirmDel(false)}
+                      className="py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleEliminar}
+                      disabled={isDeleting}
+                      className="py-2 rounded-lg bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-xs font-bold transition flex items-center justify-center gap-1"
+                    >
+                      {isDeleting
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <><Trash2 className="h-3.5 w-3.5" /> Eliminar</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-slate-400 text-center">
+                Solo eliminable si no hay inscripción activa en el curso.
+              </p>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -271,18 +400,14 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
   const [selected, setSelected] = useState<PagoAdminDto | null>(null)
   const [filter, setFilter] = useState<string>('TODOS')
 
-  const handleUpdate = (
-    uuid: string,
-    estado: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO',
-    obs?: string
-  ) => {
+  const handleUpdate = (uuid: string, changes: Partial<PagoAdminDto>) => {
     setPagos((prev) =>
-      prev.map((p) =>
-        p.pago_uuid === uuid
-          ? { ...p, pago_estad_vac: estado, pago_obs_vac: obs ?? p.pago_obs_vac }
-          : p
-      )
+      prev.map((p) => p.pago_uuid === uuid ? { ...p, ...changes } : p)
     )
+  }
+
+  const handleDelete = (uuid: string) => {
+    setPagos((prev) => prev.filter((p) => p.pago_uuid !== uuid))
   }
 
   const normalizeEstado = (e: string) =>
@@ -301,22 +426,31 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
 
   return (
     <>
-      {/* Filtros por estado */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {(['TODOS', 'PENDIENTE', 'ACEPTADO', 'OBSERVADO'] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
-              filter === f
-                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/40'
-            }`}
-          >
-            {f === 'TODOS' ? 'Todos' : f.charAt(0) + f.slice(1).toLowerCase()}
-            <span className="ml-1.5 opacity-70">({counts[f]})</span>
-          </button>
-        ))}
+      {/* Header: filtros + botón nuevo pago */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Filtros por estado */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {(['TODOS', 'PENDIENTE', 'ACEPTADO', 'OBSERVADO'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
+                filter === f
+                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/40'
+              }`}
+            >
+              {f === 'TODOS' ? 'Todos' : f.charAt(0) + f.slice(1).toLowerCase()}
+              <span className="ml-1.5 opacity-70">({counts[f]})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Botón nuevo pago */}
+        <NuevoPagoSheet
+          pagosExistentes={pagos}
+          onCreado={(nuevo) => setPagos((prev) => [nuevo, ...prev])}
+        />
       </div>
 
       {/* Tabla */}
@@ -384,12 +518,13 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
         )}
       </div>
 
-      {/* Sheet de detalle */}
+      {/* Sheet de detalle/edición */}
       <PagoSheet
         pago={selected}
         open={!!selected}
         onClose={() => setSelected(null)}
         onUpdate={handleUpdate}
+        onDelete={handleDelete}
       />
     </>
   )
