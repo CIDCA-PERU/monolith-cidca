@@ -230,17 +230,14 @@ export async function getSesionesConAsistencia(cursoId: string): Promise<{
 }
 
 /**
- * ── Marcar asistencia desde el Aula Virtual (alumno) ─────────────────────────
+ * ── Marcar asistencia desde el Aula Virtual (alumno) — patrón default-to-absent ──
  *
- * Usa "lazy creation": si el docente no creó la sesion_clase manualmente,
- * este action la crea automáticamente usando los datos del horario_curso.
+ * Cuando el primer alumno hace clic, se crea la sesion_clase y SE INSERTAN
+ * todos los alumnos inscritos como AUSENTE (0) de inmediato.
+ * Luego el alumno que hizo clic queda actualizado a PRESENTE(1) o TARDANZA(2).
  *
- * Flujo:
- *  1. Valida la ventana de tiempo (−15 a +30 min del inicio) usando hora Lima.
- *  2. Busca sesion_clase para hoy en este curso.
- *  3. Si no existe → la crea a partir del horario_curso del día.
- *  4. Verifica que el alumno no haya registrado asistencia ya.
- *  5. Inserta en la tabla asistencia.
+ * Los demás alumnos que marquen después reciben un UPDATE de su registro AUSENTE.
+ * Los que nunca marquen ya tienen su falta registrada sin necesidad de un timer.
  */
 export async function registrarAsistenciaAula(input: {
   /** ID entero del curso (cur_id_int) */
@@ -259,10 +256,6 @@ export async function registrarAsistenciaAula(input: {
     const { supabase } = await import('@/lib/supabase')
 
     // ── 1. Validar ventana de tiempo en el servidor ───────────────────────────
-    // Ambas fechas se expresan en UTC internamente:
-    //   - inicioLima: new Date("YYYY-MM-DDTHH:MM:00-05:00") → el motor la convierte a UTC
-    //   - ahora: new Date() → siempre UTC
-    // → La diferencia .getTime() es correcta sin ningún offset manual
     const ahora = new Date()
     const inicioLima = new Date(`${input.fecha}T${input.horaInicio}:00-05:00`)
     const minutosDesdeInicio = Math.floor(
@@ -284,10 +277,10 @@ export async function registrarAsistenciaAula(input: {
       }
     }
 
-    // Estado: PRESENTE(1) si llegó antes de 15 min de iniciada, TARDÍO(2) si después
-    const estadoAsistencia = minutosDesdeInicio > 15 ? 2 : 1
+    const estadoAsistencia = minutosDesdeInicio > 15 ? 2 : 1   // 1=Presente, 2=Tardanza
+    const ahora2 = new Date().toISOString()
 
-    // ── 2. Buscar sesión_clase de hoy (Paso A) ───────────────────────────────
+    // ── 2. Buscar sesión_clase de hoy ─────────────────────────────────────────
     const { data: sesionExistente } = await supabase
       .from('sesion_clase')
       .select('ses_id_int')
@@ -300,19 +293,19 @@ export async function registrarAsistenciaAula(input: {
     let sesIdInt: number
 
     if (sesionExistente) {
-      // ── 3a. Ya existe → usar su ID (Paso C) ─────────────────────────────
+      // ── 2a. Sesión ya existe ──────────────────────────────────────────────
       sesIdInt = sesionExistente.ses_id_int
     } else {
-      // ── 3b. No existe → crearla al vuelo (Paso B) ───────────────────────
+      // ── 2b. Primer alumno: crear sesión y marcar a TODOS como AUSENTE ─────
       const { data: nuevaSesion, error: createErr } = await supabase
         .from('sesion_clase')
         .insert({
-          cur_id_int:       input.curIdInt,
-          hor_cur_id_int:   input.horCurIdInt,
-          ses_fecha_dat:    input.fecha,
+          cur_id_int:        input.curIdInt,
+          hor_cur_id_int:    input.horCurIdInt,
+          ses_fecha_dat:     input.fecha,
           ses_hora_inic_tmp: input.horaInicio,
           ses_hora_fin_tmp:  input.horaFin,
-          ses_estado_vac:   'ACTIVA',
+          ses_estado_vac:    'ACTIVA',
         })
         .select('ses_id_int')
         .single()
@@ -326,41 +319,85 @@ export async function registrarAsistenciaAula(input: {
         }
       }
       sesIdInt = nuevaSesion.ses_id_int
+
+      // Obtener todos los alumnos inscritos y activos con su usr_id_int
+      // estudiante_curso → est_id_int → estudiante → usr_id_int
+      const { data: inscritos } = await supabase
+        .from('estudiante_curso')
+        .select('est_id_int, estudiante!est_id_int ( usr_id_int )')
+        .eq('cur_id_int', input.curIdInt)
+        .eq('est_cur_estado_bol', true)
+
+      if (inscritos && inscritos.length > 0) {
+        const ausentesRows = inscritos
+          .map((e: any) => (e.estudiante as any)?.usr_id_int as number | undefined)
+          .filter((usrId): usrId is number => Boolean(usrId))
+          .map((usrId) => ({
+            ses_id_int:    sesIdInt,
+            usr_id_int:    usrId,
+            asist_est_int: 0,          // AUSENTE por defecto
+            asist_cre_tmp: ahora2,
+            asist_upd_tmp: ahora2,
+          }))
+        const { error: bulkErr } = await supabase.from('asistencia').insert(ausentesRows)
+        if (bulkErr) {
+          console.error('[registrarAsistenciaAula] Error insertando ausentes bulk:', bulkErr)
+          // No bloqueamos el flujo — al menos el alumno actual podrá marcar
+        }
+      }
     }
 
-    // ── 4. Verificar que no haya registrado ya asistencia ───────────────────
-    const { data: asistenciaExistente } = await supabase
+    // ── 3. Buscar el registro de asistencia del alumno actual ─────────────────
+    const { data: miAsistencia } = await supabase
       .from('asistencia')
-      .select('asist_id_int')
+      .select('asist_id_int, asist_est_int')
       .eq('ses_id_int', sesIdInt)
       .eq('usr_id_int', user.usr_id_int)
       .maybeSingle()
 
-    if (asistenciaExistente) {
-      return {
-        success: false,
-        mensaje: 'Ya registraste tu asistencia para esta sesión.',
-        razon_rechazo: 'Ya registraste tu asistencia para esta sesión.',
+    if (miAsistencia) {
+      // ── 3a. Ya tiene registro: verificar si ya marcó (no es ausente) ───────
+      if (miAsistencia.asist_est_int > 0) {
+        return {
+          success: false,
+          mensaje: 'Ya registraste tu asistencia para esta sesión.',
+          razon_rechazo: 'Ya registraste tu asistencia para esta sesión.',
+        }
       }
-    }
 
-    // ── 5. Insertar asistencia (Paso D) ──────────────────────────────────────
-    const { error: insertErr } = await supabase
-      .from('asistencia')
-      .insert({
-        ses_id_int:    sesIdInt,
-        usr_id_int:    user.usr_id_int,
-        asist_est_int: estadoAsistencia,
-        asist_cre_tmp: new Date().toISOString(),
-        asist_upd_tmp: new Date().toISOString(),
-      })
+      // Actualizar de AUSENTE → PRESENTE o TARDANZA
+      const { error: updErr } = await supabase
+        .from('asistencia')
+        .update({ asist_est_int: estadoAsistencia, asist_upd_tmp: ahora2 })
+        .eq('asist_id_int', miAsistencia.asist_id_int)
 
-    if (insertErr) {
-      console.error('[registrarAsistenciaAula] Error insertando asistencia:', insertErr)
-      return {
-        success: false,
-        mensaje: 'Error al registrar asistencia',
-        razon_rechazo: insertErr.message,
+      if (updErr) {
+        console.error('[registrarAsistenciaAula] Error actualizando asistencia:', updErr)
+        return {
+          success: false,
+          mensaje: 'Error al registrar asistencia',
+          razon_rechazo: updErr.message,
+        }
+      }
+    } else {
+      // ── 3b. Sin registro (no estaba inscrito cuando se creó la sesión) ─────
+      const { error: insertErr } = await supabase
+        .from('asistencia')
+        .insert({
+          ses_id_int:    sesIdInt,
+          usr_id_int:    user.usr_id_int,
+          asist_est_int: estadoAsistencia,
+          asist_cre_tmp: ahora2,
+          asist_upd_tmp: ahora2,
+        })
+
+      if (insertErr) {
+        console.error('[registrarAsistenciaAula] Error insertando asistencia:', insertErr)
+        return {
+          success: false,
+          mensaje: 'Error al registrar asistencia',
+          razon_rechazo: insertErr.message,
+        }
       }
     }
 
@@ -458,13 +495,23 @@ export async function generarAusentesParaHorario(input: {
       .neq('ses_estado_vac', 'CERRADA')
 
     // ── 3. Obtener alumnos inscritos y activos en el curso ────────────────────
+    // estudiante_curso → est_id_int → estudiante → usr_id_int
     const { data: inscritos } = await supabase
       .from('estudiante_curso')
-      .select('usr_id_int')
+      .select('est_id_int, estudiante!est_id_int ( usr_id_int )')
       .eq('cur_id_int', input.curIdInt)
       .eq('est_cur_estado_bol', true)
 
     if (!inscritos || inscritos.length === 0) {
+      return { success: true, ausentesGenerados: 0 }
+    }
+
+    // Extraer usr_id_int de la relación anidada
+    const inscritosUsrIds = inscritos
+      .map((e: any) => (e.estudiante as any)?.usr_id_int as number | undefined)
+      .filter((id): id is number => Boolean(id))
+
+    if (inscritosUsrIds.length === 0) {
       return { success: true, ausentesGenerados: 0 }
     }
 
@@ -479,14 +526,15 @@ export async function generarAusentesParaHorario(input: {
     )
 
     // ── 5. Insertar AUSENTE (0) para los que no marcaron ─────────────────────
-    const ausentesRows = inscritos
-      .filter((e: any) => !usrIdsConAsistencia.has(e.usr_id_int))
-      .map((e: any) => ({
+    const now = new Date().toISOString()
+    const ausentesRows = inscritosUsrIds
+      .filter((usrId) => !usrIdsConAsistencia.has(usrId))
+      .map((usrId) => ({
         ses_id_int:    sesIdInt,
-        usr_id_int:    e.usr_id_int,
-        asist_est_int: 0,                         // Ausente
-        asist_cre_tmp: new Date().toISOString(),
-        asist_upd_tmp: new Date().toISOString(),
+        usr_id_int:    usrId,
+        asist_est_int: 0,
+        asist_cre_tmp: now,
+        asist_upd_tmp: now,
       }))
 
     if (ausentesRows.length === 0) {

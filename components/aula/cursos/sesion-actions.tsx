@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Play, CheckCircle, Loader2, ExternalLink } from 'lucide-react'
-import { registrarAsistenciaAula, generarAusentesParaHorario } from '@/actions/asistencia.actions'
+import { registrarAsistenciaAula } from '@/actions/asistencia.actions'
 import { toast } from 'sonner'
 
 interface SesionActionsProps {
@@ -18,38 +18,36 @@ interface SesionActionsProps {
   sesionHoraInicio: string | null
   /** "HH:MM" — hora de fin del horario */
   sesionHoraFin: string | null
-  /** true si el alumno ya registró asistencia en esta sesión (persiste tras F5) */
+  /** true si el alumno ya tiene estado > 0 (presente o tardanza) para esta sesión */
   yaRegistroAsistencia?: boolean
 }
 
 /**
  * Calcula las dos ventanas de tiempo:
- * - mostrarZoom: desde −15 min del inicio hasta el fin de la clase (hor_cur_fin_tmp)
+ * - mostrarZoom: desde −15 min del inicio hasta el fin de la clase
  * - enVentanaAsistencia: desde −15 min del inicio hasta +30 min del inicio
+ *
+ * La hora de la sesión está en Lima (UTC-5) → se añade -05:00 al parsear.
+ * Comparar contra new Date() (UTC) es correcto porque ambos son epoch.
  */
 function calcularVentanas(
   fecha: string,
   horaInicio: string,
   horaFin: string
-): { mostrarZoom: boolean; enVentanaAsistencia: boolean; minutosDesdeInicio: number } {
-  const horaInicioStr = horaInicio.slice(0, 5)
-  const horaFinStr    = horaFin.slice(0, 5)
-
-  // Ambas se parsean con offset Lima (UTC-5) para comparar contra new Date() en UTC
-  const inicioLima = new Date(`${fecha}T${horaInicioStr}:00-05:00`)
-  const finLima    = new Date(`${fecha}T${horaFinStr}:00-05:00`)
+): { mostrarZoom: boolean; enVentanaAsistencia: boolean } {
+  const inicioLima = new Date(`${fecha}T${horaInicio.slice(0, 5)}:00-05:00`)
+  const finLima    = new Date(`${fecha}T${horaFin.slice(0, 5)}:00-05:00`)
   const ahora      = new Date()
 
   const minutosDesdeInicio = Math.floor((ahora.getTime() - inicioLima.getTime()) / 60000)
   const claseTermino       = ahora >= finLima
 
-  // Zoom aparece desde 15 min antes del inicio hasta que termina la clase
-  const mostrarZoom = minutosDesdeInicio >= -15 && !claseTermino
-
-  // Asistencia solo en la primera mitad: hasta +30 min del inicio
-  const enVentanaAsistencia = minutosDesdeInicio >= -15 && minutosDesdeInicio <= 30
-
-  return { mostrarZoom, enVentanaAsistencia, minutosDesdeInicio }
+  return {
+    // Zoom: desde -15 min hasta que termina la clase
+    mostrarZoom: minutosDesdeInicio >= -15 && !claseTermino,
+    // Asistencia: solo en los primeros 30 min desde el inicio
+    enVentanaAsistencia: minutosDesdeInicio >= -15 && minutosDesdeInicio <= 30,
+  }
 }
 
 export function SesionActions({
@@ -68,23 +66,6 @@ export function SesionActions({
   const [enVentanaAsistencia, setEnVentanaAsistencia]   = useState(false)
   const [isPending, startTransition]                    = useTransition()
 
-  // Refs para detectar la transición "en ventana → cerrada" y dispararla una sola vez
-  const wasInVentanaRef  = useRef(false)
-  const ausentesDisparadoRef = useRef(false)
-
-  const dispararAusentes = () => {
-    if (ausentesDisparadoRef.current) return
-    if (!sesionFecha || !sesionHoraInicio || !sesionHoraFin) return
-    ausentesDisparadoRef.current = true
-    generarAusentesParaHorario({
-      curIdInt,
-      horCurIdInt,
-      horaInicio: sesionHoraInicio.slice(0, 5),
-      horaFin:    sesionHoraFin.slice(0, 5),
-      fecha:      sesionFecha,
-    }).catch(console.error)
-  }
-
   // Recalcular ventanas cada 30 segundos
   useEffect(() => {
     if (!sesionFecha || !sesionHoraInicio || !sesionHoraFin) {
@@ -94,26 +75,8 @@ export function SesionActions({
     }
 
     const check = () => {
-      const { mostrarZoom: mz, enVentanaAsistencia: eva, minutosDesdeInicio } =
+      const { mostrarZoom: mz, enVentanaAsistencia: eva } =
         calcularVentanas(sesionFecha, sesionHoraInicio, sesionHoraFin)
-
-      const ventanaAsistCerro = minutosDesdeInicio > 30
-
-      // Caso 1: Transición dentro → fuera de ventana de asistencia
-      if (wasInVentanaRef.current && !eva && ventanaAsistCerro) {
-        dispararAusentes()
-      }
-      // Caso 2: Página cargada ya con ventana de asistencia cerrada
-      if (!wasInVentanaRef.current && ventanaAsistCerro && mz) {
-        // Solo si la clase aún está en curso (zoom visible) significa q ya pasó la asistencia
-        dispararAusentes()
-      }
-      // Caso 3: Página cargada después de que terminó la clase
-      if (!wasInVentanaRef.current && !mz && ventanaAsistCerro) {
-        dispararAusentes()
-      }
-
-      wasInVentanaRef.current = eva
       setMostrarZoom(mz)
       setEnVentanaAsistencia(eva)
     }
@@ -154,12 +117,12 @@ export function SesionActions({
     })
   }
 
-  // No renderizar nada si la clase aún no ha empezado (-15 min) o ya terminó
+  // No renderizar nada si la clase aún no ha empezado o ya terminó
   if (!mostrarZoom) return null
 
   return (
     <div className="space-y-2">
-      {/* Botón Zoom */}
+      {/* Botón Zoom — visible hasta que termina la clase */}
       <Button
         onClick={handleZoomClick}
         disabled={!zoomUrl}
@@ -179,7 +142,7 @@ export function SesionActions({
         )}
       </Button>
 
-      {/* Botón Marcar Asistencia — solo activo tras click en Zoom Y dentro de la ventana de asistencia */}
+      {/* Botón Marcar Asistencia — solo durante los primeros 30 min */}
       {enVentanaAsistencia && (
         <Button
           onClick={handleMarcarAsistencia}

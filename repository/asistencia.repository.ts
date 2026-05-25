@@ -83,6 +83,7 @@ export class AsistenciaRepository {
 
   /**
    * Obtiene las asistencias de una sesión con datos del estudiante.
+   * Ruta: asistencia → usuarios (FK) → estudiante (FK inversa, devuelve array → usar [0])
    */
   static async getAsistenciaBySesion(sesionId: number): Promise<AsistenciaRegistroDto[]> {
     const { data, error } = await supabase
@@ -94,10 +95,11 @@ export class AsistenciaRepository {
         ses_id_int,
         asist_cre_tmp,
         usuarios!usr_id_int (
-          usr_nomb_vac,
+          usr_id_int,
           estudiante!usr_id_int (
             estu_nomb_vac,
-            estu_apell_pat_vac
+            estu_apell_pat_vac,
+            estu_apell_mat_vac
           )
         )
       `)
@@ -105,15 +107,23 @@ export class AsistenciaRepository {
 
     if (error) throw error
 
-    return (data || []).map((registro: any) => ({
-      asist_id_int: registro.asist_id_int,
-      asist_uuid: registro.asist_uuid,
-      asist_est_int: registro.asist_est_int,
-      ses_id_int: registro.ses_id_int,
-      estu_nomb_vac: registro.usuarios?.estudiante?.estu_nomb_vac ?? registro.usuarios?.usr_nomb_vac ?? '',
-      estu_apell_pat_vac: registro.usuarios?.estudiante?.estu_apell_pat_vac ?? '',
-      asist_cre_tmp: registro.asist_cre_tmp,
-    }))
+    return (data || []).map((registro: any) => {
+      // PostgREST devuelve estudiante como ARRAY (no hay UNIQUE en usr_id_int)
+      const est = Array.isArray(registro.usuarios?.estudiante)
+        ? registro.usuarios.estudiante[0]
+        : registro.usuarios?.estudiante
+
+      return {
+        asist_id_int:       registro.asist_id_int,
+        asist_uuid:         registro.asist_uuid,
+        asist_est_int:      registro.asist_est_int,
+        ses_id_int:         registro.ses_id_int,
+        estu_nomb_vac:      est?.estu_nomb_vac      ?? '',
+        estu_apell_pat_vac: est?.estu_apell_pat_vac ?? '',
+        estu_apell_mat_vac: est?.estu_apell_mat_vac ?? '',
+        asist_cre_tmp:      registro.asist_cre_tmp,
+      }
+    })
   }
 
   /**

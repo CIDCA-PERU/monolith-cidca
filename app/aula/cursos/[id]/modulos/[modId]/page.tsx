@@ -227,11 +227,13 @@ export default async function AulaModuloPage({
     if (currentUser) {
       const { data: asistExistente } = await supabase
         .from('asistencia')
-        .select('asist_id_int')
+        .select('asist_id_int, asist_est_int')
         .eq('ses_id_int', sesionHoy.ses_id_int)
         .eq('usr_id_int', currentUser.usr_id_int)
         .maybeSingle()
-      yaRegistroAsistencia = Boolean(asistExistente)
+      // Con el patrón default-to-absent, todos tienen registro (asist_est_int = 0 = ausente)
+      // Solo consideramos "ya registró" si su estado es > 0 (presente o tardanza)
+      yaRegistroAsistencia = Boolean(asistExistente && asistExistente.asist_est_int > 0)
     }
   }
 

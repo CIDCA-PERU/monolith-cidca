@@ -37,10 +37,11 @@ export interface EstudianteAdminDto {
 
 export interface PagoAdminDto {
   pago_uuid: string
+  pago_id_int: number
   pago_nro_vac: string | null
   pago_mont_num: number
-  pago_estad_vac: 'PENDIENTE' | 'PAGADO' | 'OBSERVADO'
-  pago_url_vac: string | null
+  pago_estad_vac: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO'
+  pago_url_vac: string | null   // path en storage privado
   pago_obs_vac: string | null
   pago_cre_tmp: string
   pago_upd_tmp: string
@@ -230,6 +231,7 @@ export async function getPagosAdmin(): Promise<{
       .from('pago')
       .select(`
         pago_uuid,
+        pago_id_int,
         pago_nro_vac,
         pago_mont_num,
         pago_estad_vac,
@@ -249,15 +251,16 @@ export async function getPagosAdmin(): Promise<{
     if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
 
     const result: PagoAdminDto[] = (data ?? []).map((p: any) => ({
-      pago_uuid: p.pago_uuid,
-      pago_nro_vac: p.pago_nro_vac ?? null,
-      pago_mont_num: p.pago_mont_num ?? 0,
-      pago_estad_vac: p.pago_estad_vac ?? 'PENDIENTE',
-      pago_url_vac: p.pago_url_vac ?? null,
-      pago_obs_vac: p.pago_obs_vac ?? null,
-      pago_cre_tmp: p.pago_cre_tmp,
-      pago_upd_tmp: p.pago_upd_tmp,
-      estudiante_nombre: p.estudiante?.estu_nomb_vac ?? '—',
+      pago_uuid:           p.pago_uuid,
+      pago_id_int:         p.pago_id_int,
+      pago_nro_vac:        p.pago_nro_vac ?? null,
+      pago_mont_num:       p.pago_mont_num ?? 0,
+      pago_estad_vac:      p.pago_estad_vac ?? 'PENDIENTE',
+      pago_url_vac:        p.pago_url_vac ?? null,
+      pago_obs_vac:        p.pago_obs_vac ?? null,
+      pago_cre_tmp:        p.pago_cre_tmp,
+      pago_upd_tmp:        p.pago_upd_tmp,
+      estudiante_nombre:   p.estudiante?.estu_nomb_vac ?? '—',
       estudiante_apellidos:
         [p.estudiante?.estu_apell_pat_vac, p.estudiante?.estu_apell_mat_vac]
           .filter(Boolean)
@@ -274,7 +277,7 @@ export async function getPagosAdmin(): Promise<{
 
 export async function actualizarEstadoPago(
   pagoUuid: string,
-  nuevoEstado: 'PENDIENTE' | 'PAGADO' | 'OBSERVADO',
+  nuevoEstado: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO',
   observacion?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -316,6 +319,42 @@ export async function actualizarEstadoPago(
     return { success: true }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al actualizar pago'
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Genera una URL firmada (1 hora) para que el admin pueda ver
+ * el comprobante de pago almacenado en el bucket privado.
+ */
+export async function getVoucherSignedUrl(
+  pagoUuid: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    const { data: pago, error: fetchErr } = await supabase
+      .from('pago')
+      .select('pago_url_vac')
+      .eq('pago_uuid', pagoUuid)
+      .single()
+
+    if (fetchErr || !pago?.pago_url_vac) {
+      return { success: false, error: 'Comprobante no encontrado' }
+    }
+
+    const { data: signed, error: signErr } = await supabase.storage
+      .from('student-private')
+      .createSignedUrl(pago.pago_url_vac, 3600) // 1 hora
+
+    if (signErr || !signed?.signedUrl) {
+      return { success: false, error: 'No se pudo generar el enlace' }
+    }
+
+    return { success: true, url: signed.signedUrl }
+  } catch (error) {
+    const msg = error instanceof AppError ? error.message : 'Error al obtener comprobante'
     return { success: false, error: msg }
   }
 }

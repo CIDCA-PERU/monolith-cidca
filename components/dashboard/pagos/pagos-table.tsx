@@ -1,7 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { PagoAdminDto, actualizarEstadoPago } from '@/actions/admin.actions'
+import { useState, useEffect, useTransition } from 'react'
+import Image from 'next/image'
+import {
+  PagoAdminDto,
+  actualizarEstadoPago,
+  getVoucherSignedUrl,
+} from '@/actions/admin.actions'
 import {
   Sheet,
   SheetContent,
@@ -9,16 +14,22 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { CreditCard, ExternalLink, FileImage, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import {
+  CreditCard, ExternalLink, FileImage, CheckCircle2,
+  Clock, AlertCircle, Loader2, ImageOff,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
-// ─── Badge de estado ───────────────────────────────────────────────────────────
+// ─── Badge de estado ──────────────────────────────────────────────────────────
 
 function EstadoBadge({ estado }: { estado: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-    PAGADO:    { label: 'Pagado',    className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
+    ACEPTADO:  { label: 'Aceptado',  className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
     PENDIENTE: { label: 'Pendiente', className: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/20', icon: Clock },
     OBSERVADO: { label: 'Observado', className: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/20', icon: AlertCircle },
+    // compatibilidad con registros viejos
+    PAGADO:    { label: 'Aceptado',  className: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20', icon: CheckCircle2 },
+    ENVIADO:   { label: 'Enviado',   className: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/20', icon: FileImage },
   }
   const cfg = map[estado] ?? map.PENDIENTE
   const Icon = cfg.icon
@@ -36,6 +47,86 @@ function formatDate(iso: string) {
   })
 }
 
+// ─── Previsualización del comprobante ─────────────────────────────────────────
+
+function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher: boolean }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState(false)
+
+  useEffect(() => {
+    if (!hasVoucher) return
+    setLoading(true)
+    setError(false)
+    getVoucherSignedUrl(pagoUuid).then((res) => {
+      if (res.success && res.url) setSignedUrl(res.url)
+      else setError(true)
+      setLoading(false)
+    })
+  }, [pagoUuid, hasVoucher])
+
+  if (!hasVoucher) return (
+    <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">
+      <ImageOff className="h-8 w-8" />
+      <p className="text-xs">Sin comprobante adjunto</p>
+    </div>
+  )
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+      <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+    </div>
+  )
+
+  if (error || !signedUrl) return (
+    <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-dashed border-red-200 dark:border-red-500/20 text-red-400">
+      <AlertCircle className="h-8 w-8" />
+      <p className="text-xs">No se pudo cargar el comprobante</p>
+    </div>
+  )
+
+  // Determinar si es imagen o PDF
+  const isPdf = signedUrl.includes('.pdf') || signedUrl.includes('application/pdf')
+
+  if (isPdf) {
+    return (
+      <a
+        href={signedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors"
+      >
+        <FileImage className="h-4 w-4 flex-shrink-0" />
+        Ver comprobante PDF
+        <ExternalLink className="h-3.5 w-3.5 ml-auto flex-shrink-0" />
+      </a>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative w-full h-64 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <Image
+          src={signedUrl}
+          alt="Comprobante de pago"
+          fill
+          className="object-contain"
+          unoptimized // URL firmada temporal — no cachear
+        />
+      </div>
+      <a
+        href={signedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 hover:underline"
+      >
+        <ExternalLink className="h-3 w-3" />
+        Abrir en tamaño completo
+      </a>
+    </div>
+  )
+}
+
 // ─── Sheet de detalle ─────────────────────────────────────────────────────────
 
 function PagoSheet({
@@ -47,14 +138,19 @@ function PagoSheet({
   pago: PagoAdminDto | null
   open: boolean
   onClose: () => void
-  onUpdate: (uuid: string, estado: 'PENDIENTE' | 'PAGADO' | 'OBSERVADO', obs?: string) => void
+  onUpdate: (uuid: string, estado: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO', obs?: string) => void
 }) {
   const [obs, setObs] = useState(pago?.pago_obs_vac ?? '')
   const [isPending, startTransition] = useTransition()
 
+  // Sincronizar obs cuando cambia el pago seleccionado
+  useEffect(() => {
+    setObs(pago?.pago_obs_vac ?? '')
+  }, [pago?.pago_uuid])
+
   if (!pago) return null
 
-  const handleEstado = (nuevoEstado: 'PAGADO' | 'OBSERVADO' | 'PENDIENTE') => {
+  const handleEstado = (nuevoEstado: 'ACEPTADO' | 'OBSERVADO' | 'PENDIENTE') => {
     startTransition(async () => {
       const res = await actualizarEstadoPago(pago.pago_uuid, nuevoEstado, obs || undefined)
       if (res.success) {
@@ -91,10 +187,10 @@ function PagoSheet({
           <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 divide-y divide-slate-100 dark:divide-slate-800">
             {[
               { label: 'Estudiante', value: `${pago.estudiante_apellidos}, ${pago.estudiante_nombre}` },
-              { label: 'Curso', value: pago.curso_nombre },
-              { label: 'Monto', value: `S/ ${Number(pago.pago_mont_num).toFixed(2)}` },
+              { label: 'Curso',      value: pago.curso_nombre },
+              { label: 'Monto',      value: `S/ ${Number(pago.pago_mont_num).toFixed(2)}` },
               { label: 'Registrado', value: formatDate(pago.pago_cre_tmp) },
-              { label: 'Actualizado', value: formatDate(pago.pago_upd_tmp) },
+              { label: 'Actualizado',value: formatDate(pago.pago_upd_tmp) },
             ].map((row) => (
               <div key={row.label} className="flex justify-between items-center px-4 py-3">
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{row.label}</span>
@@ -103,24 +199,13 @@ function PagoSheet({
             ))}
           </div>
 
-          {/* Comprobante */}
-          {pago.pago_url_vac && (
-            <div>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Comprobante
-              </p>
-              <a
-                href={pago.pago_url_vac}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors"
-              >
-                <FileImage className="h-4 w-4 flex-shrink-0" />
-                Ver comprobante adjunto
-                <ExternalLink className="h-3.5 w-3.5 ml-auto flex-shrink-0" />
-              </a>
-            </div>
-          )}
+          {/* Comprobante — solo lectura para el admin */}
+          <div>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+              Comprobante de pago
+            </p>
+            <VoucherPreview pagoUuid={pago.pago_uuid} hasVoucher={Boolean(pago.pago_url_vac)} />
+          </div>
 
           {/* Observaciones */}
           <div>
@@ -143,12 +228,12 @@ function PagoSheet({
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => handleEstado('PAGADO')}
-                disabled={isPending || pago.pago_estad_vac === 'PAGADO'}
+                onClick={() => handleEstado('ACEPTADO')}
+                disabled={isPending || pago.pago_estad_vac === 'ACEPTADO'}
                 className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 <CheckCircle2 className="h-5 w-5" />
-                Aprobar
+                Aceptar
               </button>
               <button
                 onClick={() => handleEstado('PENDIENTE')}
@@ -167,6 +252,11 @@ function PagoSheet({
                 Observar
               </button>
             </div>
+            {isPending && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando...
+              </div>
+            )}
           </div>
         </div>
       </SheetContent>
@@ -174,7 +264,7 @@ function PagoSheet({
   )
 }
 
-// ─── Tabla principal ───────────────────────────────────────────────────────────
+// ─── Tabla principal ──────────────────────────────────────────────────────────
 
 export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
   const [pagos, setPagos] = useState(initialPagos)
@@ -183,7 +273,7 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
 
   const handleUpdate = (
     uuid: string,
-    estado: 'PENDIENTE' | 'PAGADO' | 'OBSERVADO',
+    estado: 'PENDIENTE' | 'ACEPTADO' | 'OBSERVADO',
     obs?: string
   ) => {
     setPagos((prev) =>
@@ -195,20 +285,25 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
     )
   }
 
-  const filtered = filter === 'TODOS' ? pagos : pagos.filter((p) => p.pago_estad_vac === filter)
+  const normalizeEstado = (e: string) =>
+    e === 'PAGADO' ? 'ACEPTADO' : e // compatibilidad con registros viejos
+
+  const filtered = filter === 'TODOS'
+    ? pagos
+    : pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === filter)
 
   const counts = {
-    TODOS: pagos.length,
-    PENDIENTE: pagos.filter((p) => p.pago_estad_vac === 'PENDIENTE').length,
-    PAGADO: pagos.filter((p) => p.pago_estad_vac === 'PAGADO').length,
-    OBSERVADO: pagos.filter((p) => p.pago_estad_vac === 'OBSERVADO').length,
+    TODOS:     pagos.length,
+    PENDIENTE: pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === 'PENDIENTE').length,
+    ACEPTADO:  pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === 'ACEPTADO').length,
+    OBSERVADO: pagos.filter((p) => normalizeEstado(p.pago_estad_vac) === 'OBSERVADO').length,
   }
 
   return (
     <>
       {/* Filtros por estado */}
       <div className="flex items-center gap-2 flex-wrap">
-        {(['TODOS', 'PENDIENTE', 'PAGADO', 'OBSERVADO'] as const).map((f) => (
+        {(['TODOS', 'PENDIENTE', 'ACEPTADO', 'OBSERVADO'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
