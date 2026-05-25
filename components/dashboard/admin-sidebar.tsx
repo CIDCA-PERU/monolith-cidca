@@ -14,6 +14,8 @@ import {
   LogOut,
   ChevronRight,
   GraduationCap,
+  Award,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -82,6 +84,13 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard/pagos",
     icon: CreditCard,
     description: "Gestión de pagos",
+    roles: ["SISTEMAS", "ADMINISTRADOR"],
+  },
+  {
+    title: "Certificados",
+    href: "/dashboard/certificados",
+    icon: Award,
+    description: "Emitir certificados",
     roles: ["SISTEMAS", "ADMINISTRADOR"],
   },
   {
@@ -254,10 +263,19 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
 
       {/* ── Footer ─────────────────────────────────────────────── */}
       <SidebarFooter className="border-t border-slate-800/60 px-3 py-4">
-        {/* Info del usuario */}
-        <div className="flex items-center gap-3 px-2 py-2 mb-1">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-slate-200">
+        {/* Info del usuario → link al perfil */}
+        <Link
+          href="/dashboard/perfil"
+          className={`
+            flex items-center gap-3 px-2 py-2 mb-1 rounded-lg transition-all duration-150 group
+            ${isActive('/dashboard/perfil')
+              ? 'bg-amber-500/10'
+              : 'hover:bg-slate-800/60'
+            }
+          `}
+        >
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-500/20">
+            <span className="text-xs font-bold text-slate-950">
               {nombre?.charAt(0)?.toUpperCase() ?? "?"}
             </span>
           </div>
@@ -270,7 +288,7 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
           <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 flex-shrink-0">
             {rolUpper === "ADMINISTRADOR" ? "ADMIN" : rolUpper}
           </span>
-        </div>
+        </Link>
 
         {/* Botón logout */}
         <button

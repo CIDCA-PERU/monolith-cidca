@@ -2,6 +2,7 @@ import 'server-only'
 
 import { supabase } from '@/lib/supabase'
 import { CursoDTO } from '@/dto/curso.dto'
+import { EstudianteCursoDto } from '@/dto/estudiante-curso.dto'
 
 export class CursoRepository {
   private static mapCursoRow(row: any): CursoDTO {
@@ -15,6 +16,7 @@ export class CursoRepository {
       fecha_fin: row.cur_fec_fin_tmp ?? '',
       cantidad_estudiantes: (row.estudiante_curso ?? []).length,
       imagen_url: row.cur_url_vac ?? null,
+      zoom_url: row.cur_zoom_url_vac ?? null,
       created_at: row.cur_cre_tmp ?? '',
     }
   }
@@ -30,6 +32,7 @@ export class CursoRepository {
         cur_fec_inic_tmp,
         cur_fec_fin_tmp,
         cur_url_vac,
+        cur_zoom_url_vac,
         cur_cre_tmp,
         usr_id_int,
         estudiante_curso ( est_cur_id_int )
@@ -53,6 +56,7 @@ export class CursoRepository {
         cur_fec_inic_tmp,
         cur_fec_fin_tmp,
         cur_url_vac,
+        cur_zoom_url_vac,
         cur_cre_tmp,
         cur_precio_num,
         usr_id_int,
@@ -82,6 +86,7 @@ export class CursoRepository {
         cur_fec_inic_tmp: curso.fecha_inicio,
         cur_fec_fin_tmp: curso.fecha_fin,
         cur_url_vac: curso.imagen_url ?? null,
+        cur_zoom_url_vac: curso.zoom_url ?? null,
       })
       .select(`
         cur_uuid,
@@ -91,6 +96,7 @@ export class CursoRepository {
         cur_fec_inic_tmp,
         cur_fec_fin_tmp,
         cur_url_vac,
+        cur_zoom_url_vac,
         cur_cre_tmp,
         usr_id_int,
         estudiante_curso ( est_cur_id_int )
@@ -118,6 +124,7 @@ export class CursoRepository {
     if (updates.fecha_inicio !== undefined) updatePayload.cur_fec_inic_tmp = updates.fecha_inicio
     if (updates.fecha_fin !== undefined) updatePayload.cur_fec_fin_tmp = updates.fecha_fin
     if (updates.imagen_url !== undefined) updatePayload.cur_url_vac = updates.imagen_url
+    if (updates.zoom_url !== undefined) updatePayload.cur_zoom_url_vac = updates.zoom_url
 
     const { data, error } = await supabase
       .from('curso')
@@ -131,6 +138,7 @@ export class CursoRepository {
         cur_fec_inic_tmp,
         cur_fec_fin_tmp,
         cur_url_vac,
+        cur_zoom_url_vac,
         cur_cre_tmp,
         usr_id_int,
         estudiante_curso ( est_cur_id_int )
@@ -150,49 +158,101 @@ export class CursoRepository {
     if (error) throw error
   }
 
-  static async getEstudiantesByCurso(cursoId: string) {
+  /**
+   * Obtiene la lista de estudiantes inscritos a un curso.
+   * Usa la tabla real: estudiante_curso, con join a estudiante y usuarios.
+   */
+  static async getEstudiantesByCurso(cursoUuid: string): Promise<EstudianteCursoDto[]> {
+    // Primero obtener el cur_id_int a partir del uuid
+    const { data: cursoData, error: cursoError } = await supabase
+      .from('curso')
+      .select('cur_id_int')
+      .eq('cur_uuid', cursoUuid)
+      .single()
+
+    if (cursoError || !cursoData) return []
+
     const { data, error } = await supabase
-      .from('curso_estudiante')
+      .from('estudiante_curso')
       .select(`
-        estudiante_id,
-        usuario:usuario_id (
-          id,
-          nombre,
-          email,
-          numero_documento
-        ),
-        fecha_inscripcion
+        est_cur_id_int,
+        cur_id_int,
+        est_id_int,
+        est_cur_estado_bol,
+        est_cur_cre_tmp,
+        estudiante!est_id_int (
+          estu_id_int,
+          estu_uuid,
+          estu_nomb_vac,
+          estu_apell_pat_vac,
+          estu_apell_mat_vac,
+          usuarios!usr_id_int (
+            usr_email_vac
+          )
+        )
       `)
-      .eq('curso_id', cursoId)
+      .eq('cur_id_int', cursoData.cur_id_int)
+      .order('est_cur_cre_tmp', { ascending: true })
 
     if (error) throw error
-    return data
+
+    return (data ?? []).map((row: any) => ({
+      est_cur_id_int: row.est_cur_id_int,
+      cur_id_int: row.cur_id_int,
+      est_id_int: row.est_id_int,
+      est_cur_estado_bol: row.est_cur_estado_bol,
+      est_cur_cre_tmp: row.est_cur_cre_tmp,
+      estu_nomb_vac: row.estudiante?.estu_nomb_vac ?? '',
+      estu_apell_pat_vac: row.estudiante?.estu_apell_pat_vac ?? '',
+      estu_apell_mat_vac: row.estudiante?.estu_apell_mat_vac ?? '',
+      usr_email_vac: row.estudiante?.usuarios?.usr_email_vac ?? '',
+      estu_uuid: row.estudiante?.estu_uuid ?? '',
+    }))
   }
 
-  static async addEstudianteToCurso(
-    cursoId: string,
-    estudianteId: string
+  /**
+   * Habilita o deshabilita a un estudiante en el curso (est_cur_estado_bol).
+   */
+  static async toggleEstudianteCurso(
+    estCurId: number,
+    estado: boolean
   ): Promise<void> {
     const { error } = await supabase
-      .from('curso_estudiante')
+      .from('estudiante_curso')
+      .update({ est_cur_estado_bol: estado, est_cur_upd_tmp: new Date().toISOString() })
+      .eq('est_cur_id_int', estCurId)
+
+    if (error) throw error
+  }
+
+  /**
+   * Inscribe un estudiante a un curso por sus IDs enteros.
+   */
+  static async addEstudianteToCurso(
+    curIdInt: number,
+    estIdInt: number
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('estudiante_curso')
       .insert({
-        curso_id: cursoId,
-        estudiante_id: estudianteId,
-        fecha_inscripcion: new Date().toISOString(),
+        cur_id_int: curIdInt,
+        est_id_int: estIdInt,
+        est_cur_estado_bol: true,
+        est_cur_cre_tmp: new Date().toISOString(),
+        est_cur_upd_tmp: new Date().toISOString(),
       })
 
     if (error) throw error
   }
 
-  static async removeEstudianteFromCurso(
-    cursoId: string,
-    estudianteId: string
-  ): Promise<void> {
+  /**
+   * Elimina la relación estudiante-curso por el ID de la relación.
+   */
+  static async removeEstudianteFromCurso(estCurId: number): Promise<void> {
     const { error } = await supabase
-      .from('curso_estudiante')
+      .from('estudiante_curso')
       .delete()
-      .eq('curso_id', cursoId)
-      .eq('estudiante_id', estudianteId)
+      .eq('est_cur_id_int', estCurId)
 
     if (error) throw error
   }

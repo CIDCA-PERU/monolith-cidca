@@ -1,14 +1,24 @@
 import 'server-only'
 
 import { supabase } from '@/lib/supabase'
-import {
-  SesionClaseDto,
-  AsistenciaRegistroDto,
-  ReporteAsistenciaDto,
-} from '@/dto/asistencia.dto'
+import { SesionClaseDto, AsistenciaRegistroDto, ReporteAsistenciaDto } from '@/dto/asistencia.dto'
 
 export class AsistenciaRepository {
-  static async getSesionesByCurso(cursoId: string): Promise<SesionClaseDto[]> {
+
+  /**
+   * Obtiene las sesiones de clase de un curso usando cur_id_int.
+   * La sesion_clase se relaciona con curso via cur_id_int (entero), no uuid.
+   */
+  static async getSesionesByCurso(cursoUuid: string): Promise<SesionClaseDto[]> {
+    // Primero obtener cur_id_int del uuid
+    const { data: cursoData, error: cursoError } = await supabase
+      .from('curso')
+      .select('cur_id_int')
+      .eq('cur_uuid', cursoUuid)
+      .single()
+
+    if (cursoError || !cursoData) return []
+
     const { data, error } = await supabase
       .from('sesion_clase')
       .select(`
@@ -17,22 +27,29 @@ export class AsistenciaRepository {
         ses_fecha_dat,
         ses_hora_inic_tmp,
         ses_hora_fin_tmp,
-        ses_estado_vac
+        ses_estado_vac,
+        cur_id_int,
+        hor_cur_id_int
       `)
-      .eq('curso_id', cursoId)
+      .eq('cur_id_int', cursoData.cur_id_int)
       .order('ses_fecha_dat', { ascending: false })
 
     if (error) throw error
 
     return (data || []).map((sesion: any) => ({
-      ...sesion,
+      ses_id_int: sesion.ses_id_int,
+      asist_uuid: sesion.asist_uuid,
+      ses_fecha_dat: sesion.ses_fecha_dat,
+      ses_hora_inic_tmp: sesion.ses_hora_inic_tmp,
+      ses_hora_fin_tmp: sesion.ses_hora_fin_tmp,
+      ses_estado_vac: sesion.ses_estado_vac ?? 'PROGRAMADA',
       puede_asistir: false,
       minutos_antes_inicio: 0,
       minutos_desde_inicio: 0,
     }))
   }
 
-  static async getSesionById(sesionId: string): Promise<SesionClaseDto | null> {
+  static async getSesionById(sesionId: number): Promise<SesionClaseDto | null> {
     const { data, error } = await supabase
       .from('sesion_clase')
       .select(`
@@ -43,7 +60,7 @@ export class AsistenciaRepository {
         ses_hora_fin_tmp,
         ses_estado_vac
       `)
-      .eq('ses_id_int', parseInt(sesionId))
+      .eq('ses_id_int', sesionId)
       .single()
 
     if (error) {
@@ -52,36 +69,23 @@ export class AsistenciaRepository {
     }
 
     return {
-      ...data,
+      ses_id_int: data.ses_id_int,
+      asist_uuid: data.asist_uuid,
+      ses_fecha_dat: data.ses_fecha_dat,
+      ses_hora_inic_tmp: data.ses_hora_inic_tmp,
+      ses_hora_fin_tmp: data.ses_hora_fin_tmp,
+      ses_estado_vac: data.ses_estado_vac ?? 'PROGRAMADA',
       puede_asistir: false,
       minutos_antes_inicio: 0,
       minutos_desde_inicio: 0,
     }
   }
 
-  static async registrarAsistencia(
-    sesionId: string,
-    estudianteId: string,
-    estado: number, // 1=Presente, 2=Ausente, 3=Tardío
-    observaciones?: string
-  ): Promise<number> {
-    const { data, error } = await supabase
-      .from('asistencia')
-      .insert({
-        sesion_clase_id: parseInt(sesionId),
-        estudiante_id: estudianteId,
-        asist_est_int: estado,
-        observaciones,
-        asist_cre_tmp: new Date().toISOString(),
-      })
-      .select('asist_id_int')
-      .single()
-
-    if (error) throw error
-    return data.asist_id_int
-  }
-
-  static async getAsistenciaBySesion(sesionId: string): Promise<AsistenciaRegistroDto[]> {
+  /**
+   * Obtiene las asistencias de una sesión con datos del estudiante.
+   * Ruta: asistencia → usuarios (FK) → estudiante (FK inversa, devuelve array → usar [0])
+   */
+  static async getAsistenciaBySesion(sesionId: number): Promise<AsistenciaRegistroDto[]> {
     const { data, error } = await supabase
       .from('asistencia')
       .select(`
@@ -89,41 +93,84 @@ export class AsistenciaRepository {
         asist_uuid,
         asist_est_int,
         ses_id_int,
-        usuario:estudiante_id(
-          nombre: nombre,
-          apellido_paterno: apellido_paterno
-        ),
-        asist_cre_tmp
+        asist_cre_tmp,
+        usuarios!usr_id_int (
+          usr_id_int,
+          estudiante!usr_id_int (
+            estu_nomb_vac,
+            estu_apell_pat_vac,
+            estu_apell_mat_vac
+          )
+        )
       `)
-      .eq('sesion_clase_id', parseInt(sesionId))
+      .eq('ses_id_int', sesionId)
 
     if (error) throw error
 
-    return (data || []).map((registro: any) => ({
-      asist_id_int: registro.asist_id_int,
-      asist_uuid: registro.asist_uuid,
-      asist_est_int: registro.asist_est_int,
-      ses_id_int: registro.ses_id_int,
-      estu_nomb_vac: registro.usuario?.nombre || '',
-      estu_apell_pat_vac: registro.usuario?.apellido_paterno || '',
-      asist_cre_tmp: registro.asist_cre_tmp,
-    }))
+    return (data || []).map((registro: any) => {
+      // PostgREST devuelve estudiante como ARRAY (no hay UNIQUE en usr_id_int)
+      const est = Array.isArray(registro.usuarios?.estudiante)
+        ? registro.usuarios.estudiante[0]
+        : registro.usuarios?.estudiante
+
+      return {
+        asist_id_int:       registro.asist_id_int,
+        asist_uuid:         registro.asist_uuid,
+        asist_est_int:      registro.asist_est_int,
+        ses_id_int:         registro.ses_id_int,
+        estu_nomb_vac:      est?.estu_nomb_vac      ?? '',
+        estu_apell_pat_vac: est?.estu_apell_pat_vac ?? '',
+        estu_apell_mat_vac: est?.estu_apell_mat_vac ?? '',
+        asist_cre_tmp:      registro.asist_cre_tmp,
+      }
+    })
   }
 
-  static async getReporteAsistencia(sesionId: string): Promise<ReporteAsistenciaDto> {
-    const { data: sesion, error: sesionError } = await supabase
-      .from('sesion_clase')
-      .select('ses_fecha_dat, ses_id_int')
-      .eq('ses_id_int', parseInt(sesionId))
-      .single()
+  /**
+   * Actualiza el estado de una asistencia + registra en historial.
+   */
+  static async updateAsistencia(
+    asistenciaId: number,
+    nuevoEstado: number,
+    usuarioId: number,
+    valorAnterior: string,
+    valorNuevo: string
+  ): Promise<void> {
+    const { error: updateError } = await supabase
+      .from('asistencia')
+      .update({
+        asist_est_int: nuevoEstado,
+        asist_upd_tmp: new Date().toISOString(),
+      })
+      .eq('asist_id_int', asistenciaId)
 
-    if (sesionError) throw sesionError
+    if (updateError) throw updateError
+
+    // Registrar en historial
+    await supabase
+      .from('historial_asistencia')
+      .insert({
+        asist_id_int: asistenciaId,
+        usr_id_int: usuarioId,
+        hist_asist_acc_vac: 'UPDATE',
+        hist_asist_old_val_vac: valorAnterior,
+        hist_asist_new_val_vac: valorNuevo,
+        hist_asist_cre_tmp: new Date().toISOString(),
+      })
+  }
+
+  /**
+   * Obtiene reporte completo de asistencia de una sesión.
+   */
+  static async getReporteAsistencia(sesionId: number): Promise<ReporteAsistenciaDto> {
+    const sesion = await this.getSesionById(sesionId)
+    if (!sesion) throw new Error('Sesión no encontrada')
 
     const registros = await this.getAsistenciaBySesion(sesionId)
 
     const presentes = registros.filter((r) => r.asist_est_int === 1).length
-    const tardios = registros.filter((r) => r.asist_est_int === 3).length
-    const ausentes = registros.filter((r) => r.asist_est_int === 2).length
+    const tardios = registros.filter((r) => r.asist_est_int === 2).length
+    const ausentes = registros.filter((r) => r.asist_est_int === 0).length
     const total = registros.length
 
     return {
@@ -133,49 +180,35 @@ export class AsistenciaRepository {
       presentes,
       ausentes,
       tardios,
-      porcentaje_asistencia: total > 0 ? (presentes / total) * 100 : 0,
+      porcentaje_asistencia: total > 0 ? Math.round((presentes / total) * 100) : 0,
       registros,
     }
   }
 
-  static async updateAsistencia(
-    asistenciaId: string,
-    estado: number,
-    observaciones?: string
-  ): Promise<void> {
-    const { error } = await supabase
-      .from('asistencia')
-      .update({
-        asist_est_int: estado,
-        observaciones,
-      })
-      .eq('asist_id_int', parseInt(asistenciaId))
-
-    if (error) throw error
-  }
-
-  static async deleteAsistencia(asistenciaId: string): Promise<void> {
-    const { error } = await supabase
-      .from('asistencia')
-      .delete()
-      .eq('asist_id_int', parseInt(asistenciaId))
-
-    if (error) throw error
-  }
-
-  static async getReporteGeneralCurso(cursoId: string): Promise<any> {
+  /**
+   * Crea una nueva sesión de clase manualmente.
+   */
+  static async crearSesion(
+    curIdInt: number,
+    fecha: string,
+    horaInicio: string,
+    horaFin: string,
+    horCurIdInt?: number
+  ): Promise<number> {
     const { data, error } = await supabase
       .from('sesion_clase')
-      .select(`
-        ses_id_int,
-        ses_fecha_dat,
-        asistencias:asistencia(asist_est_int),
-        estudiantes_total:curso_estudiante(count)
-      `)
-      .eq('curso_id', cursoId)
+      .insert({
+        cur_id_int: curIdInt,
+        ses_fecha_dat: fecha,
+        ses_hora_inic_tmp: horaInicio,
+        ses_hora_fin_tmp: horaFin,
+        ses_estado_vac: 'PROGRAMADA',
+        hor_cur_id_int: horCurIdInt ?? null,
+      })
+      .select('ses_id_int')
+      .single()
 
     if (error) throw error
-
-    return data
+    return data.ses_id_int
   }
 }

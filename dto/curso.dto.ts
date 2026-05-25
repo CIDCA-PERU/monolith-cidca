@@ -12,7 +12,8 @@ export interface CursoDTO {
   fecha_inicio: string;
   fecha_fin: string;
   cantidad_estudiantes: number;
-  imagen_url?: string;
+  imagen_url?: string | null;
+  zoom_url?: string | null;
   created_at: string;
 }
 
@@ -21,7 +22,8 @@ export interface CreateCursoRequest {
   descripcion: string;
   fecha_inicio: string;
   fecha_fin: string;
-  imagen_url?: string;
+  imagen_url?: string | null;
+  zoom_url?: string | null;
 }
 
 export interface CursoListDto {

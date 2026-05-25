@@ -8,6 +8,7 @@ export type AulaCurso = {
   cur_nomb_vac: string
   cur_desc_vac: string | null
   cur_url_vac?: string | null
+  cur_zoom_url_vac?: string | null
   cur_est_int: number
   cur_fec_inic_tmp: string | null
   cur_fec_fin_tmp: string | null
@@ -131,6 +132,7 @@ export async function getCursosByEstudiante(estuId: number): Promise<AulaCurso[]
         cur_nomb_vac,
         cur_desc_vac,
         cur_url_vac,
+        cur_zoom_url_vac,
         cur_est_int,
         cur_fec_inic_tmp,
         cur_fec_fin_tmp
@@ -144,14 +146,14 @@ export async function getCursosByEstudiante(estuId: number): Promise<AulaCurso[]
 
   return (data || [])
     .map((row: any) => row.curso)
-    .filter(Boolean) as AulaCurso[]
+    .filter((curso: any) => Boolean(curso) && curso.cur_est_int === 1) as AulaCurso[]
 }
 
 export async function getCursoById(curId: number): Promise<AulaCurso | null> {
   const { data, error } = await supabase
     .from('curso')
     .select(
-      'cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp'
+      'cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_url_vac, cur_zoom_url_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp'
     )
     .eq('cur_id_int', curId)
     .single()
@@ -160,6 +162,9 @@ export async function getCursoById(curId: number): Promise<AulaCurso | null> {
     if (error.code === 'PGRST116') return null
     throw error
   }
+
+  // Si el curso está inactivo (cur_est_int = 0), tratarlo como no encontrado para los estudiantes
+  if (data.cur_est_int === 0) return null
 
   return data as AulaCurso
 }
@@ -171,7 +176,7 @@ export async function getCursoByUuid(curUuid: string): Promise<AulaCurso | null>
   const { data, error } = await supabase
     .from('curso')
     .select(
-      'cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp'
+      'cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_url_vac, cur_zoom_url_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp'
     )
     .eq('cur_uuid', curUuid)
     .single()
@@ -181,6 +186,9 @@ export async function getCursoByUuid(curUuid: string): Promise<AulaCurso | null>
     throw error
   }
 
+  // Si el curso está inactivo (cur_est_int = 0), no mostrarlo al estudiante
+  if (data.cur_est_int === 0) return null
+
   return data as AulaCurso
 }
 
@@ -189,6 +197,7 @@ export async function getModulosByCurso(curId: number): Promise<AulaModulo[]> {
     .from('modulo')
     .select('mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int')
     .eq('cur_id_int', curId)
+    .eq('mod_est_int', 1)
     .order('mod_id_int', { ascending: true })
 
   if (error) throw error
@@ -233,6 +242,8 @@ export async function getApartadosByModulo(modId: number): Promise<AulaApartado[
     .from('apartado')
     .select('apar_id_int, apar_nomb_vac, apar_desc_vac, apar_est_int, mod_id_int')
     .eq('mod_id_int', modId)
+    .eq('apar_est_int', 1)
+    .order('apar_ordn_int', { ascending: true })
     .order('apar_id_int', { ascending: true })
 
   if (error) throw error
@@ -250,6 +261,8 @@ export async function getApartadosByModuloIds(
     .from('apartado')
     .select('apar_id_int, apar_nomb_vac, apar_desc_vac, apar_est_int, mod_id_int')
     .in('mod_id_int', moduloIds)
+    .eq('apar_est_int', 1)
+    .order('apar_ordn_int', { ascending: true })
     .order('apar_id_int', { ascending: true })
 
   if (error) throw error
