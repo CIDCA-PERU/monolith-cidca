@@ -11,7 +11,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: 'CIDCA',
-  description: 'Sistema de gestión de aprendizaje profesional',
+  description: 'Círculo de Investigación de Derecho Civil y Arbitraje',
   icons: {
     icon: [
       {

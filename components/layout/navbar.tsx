@@ -3,36 +3,30 @@
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import {
-  Menu,
-  BookOpen,
-  Users,
-  BarChart3,
-  Globe,
-  Zap,
-  Award,
-  ChevronDown,
-  LogIn,
-} from "lucide-react"
-
+import { Menu, LogIn, X } from "lucide-react"
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { HoverDropdownMenu } from "@/components/layout/hover-dropdown-menu"
+
+const NAV_LINKS = [
+  { label: "Inicio", href: "/" },
+  { label: "Nosotros", href: "/#nosotros" },
+  { label: "Revista", href: "/#revista" },
+  { label: "Cursos", href: "/#cursos-ilimitados" },
+  { label: "ArbitraUNT", href: "/#arbitraunt" },
+  { label: "Moot Court UNT", href: "/#moot-court" },
+  { label: "Eventos", href: "/#eventos" },
+  { label: "Alianzas", href: "/#alianzas" },
+]
 
 export const Navbar = function Navbar() {
   const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true)
-      } else {
-        setScrolled(false)
-      }
+      setScrolled(window.scrollY > 50)
     }
-
     handleScroll()
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
@@ -40,401 +34,161 @@ export const Navbar = function Navbar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 w-full transition-colors duration-300"
+      className="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-500"
       style={{
-        backgroundColor: scrolled ? "rgba(0, 0, 0, 0.8)" : "rgba(0, 0, 0, 0.4)",
-        backdropFilter: "blur(8px)",
+        backgroundColor: scrolled
+          ? "rgba(2, 6, 23, 0.92)"
+          : "rgba(2, 6, 23, 0.4)",
+        backdropFilter: "blur(12px)",
+        borderBottom: scrolled
+          ? "1px solid rgba(234, 179, 8, 0.12)"
+          : "1px solid rgba(255,255,255,0.04)",
+        boxShadow: scrolled
+          ? "0 4px 32px rgba(0,0,0,0.4)"
+          : "none",
       }}
       suppressHydrationWarning
     >
       <div
-        className={`w-full backdrop-blur-sm shadow-lg flex items-center justify-between transition-all duration-300 ${
-          scrolled ? "bg-black/60 h-14" : "bg-white/5 h-16"
+        className={`w-full transition-all duration-500 ${
+          scrolled ? "h-14" : "h-16"
         }`}
       >
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between w-full">
-          <Link href="/" className="flex items-center space-x-1">
-            <Image
-              src="/IMG_6640.PNG"
-              alt="Aula Virtual Logo"
-              width={50}
-              height={50}
-              priority
-              className={`transition-all duration-300 ${scrolled ? "w-5 h-5" : "w-6 h-6"}`}
-            />
-            <span className={`transition-all duration-300 ${scrolled ? "text-lg" : "text-xl"}`}>
-              <span className="font-light">CIDCA</span>
-              <span className="font-bold"> AULA VIRTUAL</span>
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 flex items-center justify-between h-full">
+
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+            <div className="relative">
+              <Image
+                src="/IMG_6639.jpeg"
+                alt="CIDCA Logo"
+                width={36}
+                height={36}
+                priority
+                className={`rounded-md object-cover transition-all duration-500 ring-1 ring-yellow-500/20 group-hover:ring-yellow-500/50 ${
+                  scrolled ? "w-7 h-7" : "w-8 h-8"
+                }`}
+              />
+            </div>
+            <span
+              className={`font-bold tracking-wide text-white transition-all duration-300 group-hover:text-yellow-400 ${
+                scrolled ? "text-base" : "text-lg"
+              }`}
+            >
+              CIDCA
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link
-              href="/"
-              className={`text-xs sm:text-sm font-medium transition-colors hover:text-primary hover:scale-105 transition-transform duration-200 ${pathname === "/" ? "text-primary" : ""} group`}
-            >
-              <span className="relative">
-                Inicio
-                <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
-              </span>
-            </Link>
-
-            {/* Menú Características */}
-            <HoverDropdownMenu
-              trigger="Nosotros"
-              isActive={pathname === "/#caracteristicas"}
-            >
-              <Link
-                href="/#cursos-ilimitados"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#cursos-ilimitados" ? "bg-white/5" : ""}`}
-              >
-                <BookOpen className="h-5 w-5 text-blue-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Cursos Ilimitados</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Acceso a miles de cursos en diferentes áreas
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/#comunidad"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#comunidad" ? "bg-white/5" : ""}`}
-              >
-                <Users className="h-5 w-5 text-green-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Comunidad Activa</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Aprende con otros estudiantes del mundo
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/#certificados"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#certificados" ? "bg-white/5" : ""}`}
-              >
-                <Award className="h-5 w-5 text-red-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Certificados Reconocidos</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Obtén certificados validados por la industria
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/#metodologia"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#metodologia" ? "bg-white/5" : ""}`}
-              >
-                <Zap className="h-5 w-5 text-purple-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Metodología Probada</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Sistema de aprendizaje interactivo y efectivo
-                  </div>
-                </div>
-              </Link>
-            </HoverDropdownMenu>
-
-            {/* Menú Revista */}
-            <HoverDropdownMenu
-              trigger="Revista"
-              isActive={pathname.includes("/como-funciona")}
-            >
-              <Link
-                href="/#registro"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#registro" ? "bg-white/5" : ""}`}
-              >
-                <Users className="h-5 w-5 text-cyan-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Registro Simple</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Únete en menos de 5 minutos
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/#elige-curso"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#elige-curso" ? "bg-white/5" : ""}`}
-              >
-                <BookOpen className="h-5 w-5 text-blue-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Elige tu Curso</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Explora y selecciona los cursos que te interesan
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/#aprende"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#aprende" ? "bg-white/5" : ""}`}
-              >
-                <BarChart3 className="h-5 w-5 text-green-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Aprende a tu Ritmo</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Estudia cuando y donde quieras
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/#certificacion"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/#certificacion" ? "bg-white/5" : ""}`}
-              >
-                <Award className="h-5 w-5 text-yellow-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Obtén tu Certificado</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Completa y certifica tus aprendizajes
-                  </div>
-                </div>
-              </Link>
-            </HoverDropdownMenu>
-
-            {/* Menú ArbitraUNT */}
-            <HoverDropdownMenu trigger="ArbitraUNT" isActive={pathname === "/arbitraunt"}>
-              <Link
-                href="/arbitraunt"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/arbitraunt" ? "bg-white/5" : ""}`}
-              >
-                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">ArbitraUNT</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Acceso limitado a cursos seleccionados
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/planes#premium"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/planes#premium" ? "bg-white/5" : ""}`}
-              >
-                <Zap className="h-5 w-5 text-blue-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Plan Premium</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Acceso ilimitado a todos los cursos
-                  </div>
-                </div>
-              </Link>
-
-              <Link
-                href="/planes#empresarial"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/planes#empresarial" ? "bg-white/5" : ""}`}
-              >
-                <BarChart3 className="h-5 w-5 text-green-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Plan Empresarial</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Soluciones personalizadas para equipos
-                  </div>
-                </div>
-              </Link>
-            </HoverDropdownMenu>
-
-            {/* Menú mootcourtUNT */}
-            <HoverDropdownMenu trigger="Moot Court UNT" isActive={pathname === "/mootcourtunt"}>
-              <Link
-                href="/mootcourtunt"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/mootcourtunt" ? "bg-white/5" : ""}`}
-              >
-                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Moot Court UNT</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Información sobre el Moot Court UNT
-                  </div>
-                </div>
-              </Link>
-            </HoverDropdownMenu> 
-
-            {/* Menú eventos */}
-            <HoverDropdownMenu trigger="Eventos" isActive={pathname === "/eventos"}>
-              <Link
-                href="/eventos"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/eventos" ? "bg-white/5" : ""}`}
-              >
-                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Eventos</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Información sobre eventos
-                  </div>
-                </div>
-              </Link>
-            </HoverDropdownMenu>
-
-            {/* Menú Alianzas */}
-            <HoverDropdownMenu trigger="Alianzas" isActive={pathname === "/alianzas"}>
-              <Link
-                href="/alianzas"
-                className={`flex items-start gap-3 rounded-lg p-3 hover:bg-white/10 transition-colors ${pathname === "/alianzas" ? "bg-white/5" : ""}`}
-              >
-                <Globe className="h-5 w-5 text-purple-400 mt-0.5" />
-                <div>
-                  <div className="font-medium">Alianzas</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Información sobre alianzas
-                  </div>
-                </div>
-              </Link>
-            </HoverDropdownMenu> 
+          <nav className="hidden lg:flex items-center gap-1">
+            {NAV_LINKS.map((link) => {
+              const isActive = pathname === link.href
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`relative px-3 py-1.5 text-sm font-medium transition-all duration-200 rounded-md group whitespace-nowrap ${
+                    isActive
+                      ? "text-yellow-400"
+                      : "text-slate-300 hover:text-white"
+                  }`}
+                >
+                  {/* Hover background pill */}
+                  <span className="absolute inset-0 rounded-md bg-white/0 group-hover:bg-white/5 transition-colors duration-200" />
+                  {link.label}
+                  {/* Active indicator / hover underline */}
+                  <span
+                    className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] bg-yellow-400 rounded-full transition-all duration-300 ${
+                      isActive
+                        ? "w-4 opacity-100"
+                        : "w-0 opacity-0 group-hover:w-4 group-hover:opacity-100"
+                    }`}
+                  />
+                </Link>
+              )
+            })}
           </nav>
 
-          {/* Desktop Auth Buttons */}
-          <div className="hidden md:block">
-            <AuthButtonsComponent scrolled={scrolled} />
+          {/* Desktop CTA */}
+          <div className="hidden lg:block shrink-0">
+            <LoginButton scrolled={scrolled} />
           </div>
 
-          {/* Mobile Menu Button */}
-          <Sheet>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="text-foreground">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">Toggle menu</span>
-              </Button>
+          {/* Mobile Menu */}
+          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+            <SheetTrigger asChild className="lg:hidden">
+              <button
+                className="relative flex items-center justify-center w-9 h-9 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-yellow-500/30 text-slate-300 hover:text-white transition-all duration-200"
+                aria-label="Abrir menú"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
             </SheetTrigger>
-            <SheetContent side="right" className="bg-background/90 backdrop-blur-sm border-white/10 w-[80vw] max-w-sm">
+
+            <SheetContent
+              side="right"
+              className="w-[80vw] max-w-[320px] border-l border-white/10 p-0"
+              style={{
+                backgroundColor: "rgba(2, 6, 23, 0.97)",
+                backdropFilter: "blur(20px)",
+              }}
+            >
               <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
-              <div className="flex flex-col h-full py-6">
-                <div className="flex items-center mb-8">
+
+              {/* Mobile Header */}
+              <div className="flex items-center justify-between px-6 py-5 border-b border-white/8">
+                <Link
+                  href="/"
+                  className="flex items-center gap-2.5"
+                  onClick={() => setMobileOpen(false)}
+                >
                   <Image
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ARTTENLOGOPNG-aKFKENDEI6HRNKJYsilR99a5pAu2Sv.png"
-                    alt="Aula Virtual Logo"
-                    width={24}
-                    height={24}
-                    className="w-6 h-6 mr-3"
+                    src="/IMG_6639.jpeg"
+                    alt="CIDCA Logo"
+                    width={28}
+                    height={28}
+                    className="rounded-md object-cover ring-1 ring-yellow-500/20"
                   />
-                  <span className="text-xl">
-                    <span className="font-light">Aula</span>
-                    <span className="font-bold">Virtual</span>
+                  <span className="font-bold text-base text-white tracking-wide">
+                    CIDCA
                   </span>
-                </div>
+                </Link>
+              </div>
 
-                <nav className="flex flex-col space-y-4 flex-1">
-                  <Link
-                    href="/"
-                    className={`text-base font-medium transition-colors hover:text-primary py-2 ${pathname === "/" ? "text-primary" : ""}`}
-                  >
-                    Inicio
-                  </Link>
+              {/* Mobile Links */}
+              <nav className="flex flex-col px-3 py-4 gap-1">
+                {NAV_LINKS.map((link) => {
+                  const isActive = pathname === link.href
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? "text-yellow-400 bg-yellow-500/10 border border-yellow-500/20"
+                          : "text-slate-300 hover:text-white hover:bg-white/6 border border-transparent"
+                      }`}
+                    >
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />
+                      )}
+                      {link.label}
+                    </Link>
+                  )
+                })}
+              </nav>
 
-                  <div className="py-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-medium">Características</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                    <div className="pl-4 space-y-2 border-l border-white/10">
-                      <Link
-                        href="/#cursos-ilimitados"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#cursos-ilimitados" ? "text-primary" : ""}`}
-                      >
-                        <BookOpen className="h-4 w-4 text-blue-400" />
-                        Cursos Ilimitados
-                      </Link>
-                      <Link
-                        href="/#comunidad"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#comunidad" ? "text-primary" : ""}`}
-                      >
-                        <Users className="h-4 w-4 text-green-400" />
-                        Comunidad Activa
-                      </Link>
-                      <Link
-                        href="/#certificados"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#certificados" ? "text-primary" : ""}`}
-                      >
-                        <Award className="h-4 w-4 text-red-400" />
-                        Certificados
-                      </Link>
-                      <Link
-                        href="/#metodologia"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#metodologia" ? "text-primary" : ""}`}
-                      >
-                        <Zap className="h-4 w-4 text-purple-400" />
-                        Metodología
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="py-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-medium">Cómo Funciona</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                    <div className="pl-4 space-y-2 border-l border-white/10">
-                      <Link
-                        href="/#registro"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#registro" ? "text-primary" : ""}`}
-                      >
-                        <Users className="h-4 w-4 text-cyan-400" />
-                        Registro
-                      </Link>
-                      <Link
-                        href="/#elige-curso"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#elige-curso" ? "text-primary" : ""}`}
-                      >
-                        <BookOpen className="h-4 w-4 text-blue-400" />
-                        Elige tu Curso
-                      </Link>
-                      <Link
-                        href="/#aprende"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#aprende" ? "text-primary" : ""}`}
-                      >
-                        <BarChart3 className="h-4 w-4 text-green-400" />
-                        Aprende
-                      </Link>
-                      <Link
-                        href="/#certificacion"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/#certificacion" ? "text-primary" : ""}`}
-                      >
-                        <Award className="h-4 w-4 text-yellow-400" />
-                        Certificación
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="py-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-base font-medium">Planes</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                    <div className="pl-4 space-y-2 border-l border-white/10">
-                      <Link
-                        href="/planes#gratuito"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/planes#gratuito" ? "text-primary" : ""}`}
-                      >
-                        <Globe className="h-4 w-4 text-purple-400" />
-                        Plan Gratuito
-                      </Link>
-                      <Link
-                        href="/planes#premium"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/planes#premium" ? "text-primary" : ""}`}
-                      >
-                        <Zap className="h-4 w-4 text-blue-400" />
-                        Plan Premium
-                      </Link>
-                      <Link
-                        href="/planes#empresarial"
-                        className={`flex items-center gap-2 text-base transition-colors hover:text-primary ${pathname === "/planes#empresarial" ? "text-primary" : ""}`}
-                      >
-                        <BarChart3 className="h-4 w-4 text-green-400" />
-                        Plan Empresarial
-                      </Link>
-                    </div>
-                  </div> 
-                </nav>
-
-                <div className="pt-4 border-t border-white/10">
-                  <div className="flex flex-col space-y-3">
-                    <AuthButtonsComponent scrolled={scrolled} />
-                  </div>
-                </div>
+              {/* Mobile CTA */}
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-4 border-t border-white/8">
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold text-sm transition-all duration-200 hover:shadow-[0_0_24px_-4px_rgba(234,179,8,0.5)] active:scale-95"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Iniciar Sesión
+                </Link>
               </div>
             </SheetContent>
           </Sheet>
@@ -444,22 +198,22 @@ export const Navbar = function Navbar() {
   )
 }
 
-// Componente para los botones de autenticación
-export function AuthButtonsComponent({ scrolled }: { scrolled: boolean }) {
+// Botón de Login premium
+function LoginButton({ scrolled }: { scrolled: boolean }) {
   return (
-    <div className="flex items-center space-x-3">
-      <Button
-        asChild
-        variant="default"
-         className={`flex items-center gap-1 transition-all duration-300 bg-accent hover:bg-accent/90 text-black font-bold ${scrolled ? "h-8 text-sm" : "h-9"}`}
-      >
-        <Link href="/login">
-          <LogIn className={`transition-all duration-300 text-black ${scrolled ? "h-3.5 w-3.5 mr-1" : "h-4 w-4 mr-1"}`} />
-          Iniciar Sesión
-        </Link>
-      </Button>
-    </div>
+    <Link
+      href="/login"
+      className={`group relative inline-flex items-center gap-2 font-semibold text-slate-950 bg-yellow-500 rounded-lg overflow-hidden transition-all duration-300
+        hover:bg-yellow-400 hover:shadow-[0_0_24px_-4px_rgba(234,179,8,0.55)] active:scale-95
+        ${scrolled ? "h-8 px-4 text-xs" : "h-9 px-5 text-sm"}`}
+    >
+      {/* Shine sweep */}
+      <span className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+      <LogIn className={`relative transition-all duration-300 ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
+      <span className="relative">Iniciar Sesión</span>
+    </Link>
   )
 }
 
+export { LoginButton as AuthButtonsComponent }
 export default Navbar

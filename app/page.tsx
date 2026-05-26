@@ -104,13 +104,12 @@ export default function Home() {
             </motion.h1>
 
             <motion.p
-              className="text-lg sm:text-xl md:text-2xl text-slate-400 max-w-[700px] font-light"
+              className="text-lg sm:text-xl md:text-2xl text-slate max-w-[700px] font-light"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              Sistema de Gestión de Aprendizaje Profesional. Eleva tu carrera
-              con tecnología educativa de vanguardia.
+              Círculo de Investigación de Derecho Civil y Arbitraje
             </motion.p>
 
             <motion.div
@@ -122,7 +121,7 @@ export default function Home() {
               <Link href="/login">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto h-14 px-8 text-base font-bold bg-yellow-500 hover:bg-yellow-400 text-slate-950 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_-5px_rgba(234,179,8,0.4)]"
+                  className="w-full sm:w-auto h-14 px-8 text-base font-bold bg-yellow-500 hover:bg-yellow-500 text-slate transition-all duration-300 hover:scale-105"
                 >
                   Ingresar al Aula <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
@@ -139,13 +138,13 @@ export default function Home() {
         <LastGenerationSection />
 
         <DashboardPreviewSection />
-
+        {/* 
         <MetricsSection />
-
+*/}
         <ConveniosSection />
-
+        {/* 
         <ReachSection />
-
+*/}
         <ContactSection />
       </main>
 

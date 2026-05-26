@@ -27,7 +27,7 @@ export default function LastGenerationSection() {
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white">
                 Tu camino hacia el éxito en <span className="text-yellow-500">3 simples pasos</span>
               </h2>
-              <p className="text-lg md:text-xl text-slate-400">
+              <p className="text-lg md:text-xl text-slate">
                 En CIDCA hacemos que tu proceso de aprendizaje sea ágil, 100% virtual y con respaldo oficial para impulsar tu carrera.
               </p>
             </div>
@@ -40,7 +40,7 @@ export default function LastGenerationSection() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg text-white mb-1">1. Elige tu especialidad</h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-slate leading-relaxed">
                     Explora nuestro catálogo y matricúlate en el curso que impulsará tu perfil profesional.
                   </p>
                 </div>
@@ -53,7 +53,7 @@ export default function LastGenerationSection() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg text-white mb-1">2. Aprende a tu ritmo</h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-slate leading-relaxed">
                     Accede a tu Aula Virtual 24/7, revisa el material, mira las clases y rinde tus evaluaciones sin presión.
                   </p>
                 </div>
@@ -66,7 +66,7 @@ export default function LastGenerationSection() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg text-white mb-1">3. Obtén tu certificado</h3>
-                  <p className="text-slate-400 leading-relaxed">
+                  <p className="text-slate leading-relaxed">
                     Al aprobar, descarga instantáneamente tu certificado digital validado con código QR.
                   </p>
                 </div>
@@ -74,7 +74,7 @@ export default function LastGenerationSection() {
             </div>
 
             <div className="pt-4">
-              <Button asChild size="lg" className="group bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold h-12 px-8">
+              <Button asChild size="lg" className="group bg-yellow-500 hover:bg-yellow-500 text-slate-950 font-bold h-12 px-8">
                 <Link href="#servicios">
                   Ver catálogo de cursos
                   <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -101,7 +101,7 @@ export default function LastGenerationSection() {
                   <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                 </div>
                 <div className="flex-1 flex justify-center">
-                  <div className="bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-400 flex items-center justify-center w-full max-w-sm truncate">
+                  <div className="bg-slate-900 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate flex items-center justify-center w-full max-w-sm truncate">
                     aula.cidca.edu.pe/curso/gestion-publica
                   </div>
                 </div>
@@ -111,7 +111,7 @@ export default function LastGenerationSection() {
               <div className="p-4 sm:p-6 flex flex-col gap-4">
                 
                 {/* Migas de pan (Breadcrumb) */}
-                <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                <div className="flex items-center gap-2 text-xs font-medium text-slate">
                   <span className="text-blue-400">Mis Cursos</span>
                   <span>/</span>
                   <span>Gestión Pública</span>
@@ -147,7 +147,7 @@ export default function LastGenerationSection() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
                   <div>
                     <h4 className="text-white font-semibold">Módulo 1: Fundamentos del Estado</h4>
-                    <p className="text-sm text-slate-400 mt-0.5">Clase 3: Contrataciones Públicas</p>
+                    <p className="text-sm text-slate mt-0.5">Clase 3: Contrataciones Públicas</p>
                   </div>
                   
                   <Button size="sm" className="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 shrink-0">
