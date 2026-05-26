@@ -139,7 +139,7 @@ export default function DashboardPreviewSection() {
                   <h1 className="text-xl sm:text-2xl font-bold text-white">
                     Bienvenido/a de nuevo,
                   </h1>
-                  <p className="text-sm text-slate-400 hidden sm:block">
+                  <p className="text-sm text-white">
                     Martes, 12 de Mayo 2026
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export default function DashboardPreviewSection() {
                     <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                       Mis Cursos
                     </h1>
-                    <p className="text-slate-400">
+                    <p className="text-white">
                       Accede a tus cursos activos y revisa tus modulos.
                     </p>
                   </div>
@@ -167,11 +167,11 @@ export default function DashboardPreviewSection() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <PreviewCursoCard
-                    title="Backend con Spring Boot"
-                    description="Aprende a crear APIs RESTful seguras y escalables con Java y Spring Boot para entornos corporativos."
+                    title="Derecho Civil"
+                    description="Explora los pilares del sistema jurídico que regula las relaciones privadas en el Perú. Domina los conceptos fundamentales del Código Civil y su aplicación práctica en el día a día."
                     students={124}
                     status="activo"
-                    imageUrl="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500&q=80"
+                    imageUrl="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80"
                   />
                   <PreviewCursoCard
                     title="Gestión Pública"
@@ -181,8 +181,8 @@ export default function DashboardPreviewSection() {
                     imageUrl="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80"
                   />
                   <PreviewCursoCard
-                    title="Inglés Técnico"
-                    description="Vocabulario especializado para ingeniería de sistemas y negocios internacionales."
+                    title="Arbitraje"
+                    description="Domina las herramientas del arbitraje nacional e internacional. Conoce los principios del arbitraje, las reglas de procedimiento y las claves para redactar laudos arbitrales sólidos y ejecutables en el Perú y el mundo."
                     students={256}
                     status="inactivo"
                     imageUrl="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&q=80"
