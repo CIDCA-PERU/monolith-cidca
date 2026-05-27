@@ -89,17 +89,17 @@ export default function ContactSection() {
               </p>
             </div>
 
-            <div className="space-y-6 bg-slate-900/50 p-6 md:p-8 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-xl">
+            <div className="space-y-6 bg-slate-900/50 p-6 md:p-8 rounded-2xl border border-slate-800 backdrop-blur-sm shadow-xl text-white">
               <div className="flex items-center gap-4 group cursor-pointer">
                 <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors shrink-0">
                   <Mail className="h-6 w-6 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500 font-medium">
+                  <p className="text-sm font-medium">
                     Correo Electrónico
                   </p>
                   <span className="text-white text-base font-medium group-hover:text-blue-400 transition-colors">
-                    informes@cidca.edu.pe
+                    cidcaunt@unitru.edu.pe
                   </span>
                 </div>
               </div>
@@ -109,7 +109,7 @@ export default function ContactSection() {
                   <MessageSquare className="h-6 w-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500 font-medium">
+                  <p className="text-sm font-medium">
                     WhatsApp (Consultas Rápidas)
                   </p>
                   <span className="text-white text-base font-medium group-hover:text-green-400 transition-colors">
@@ -123,7 +123,7 @@ export default function ContactSection() {
                   <MapPin className="h-6 w-6 text-yellow-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500 font-medium">
+                  <p className="text-sm font-medium">
                     Sede Administrativa
                   </p>
                   <span className="text-white text-base font-medium group-hover:text-yellow-500 transition-colors">
@@ -211,8 +211,8 @@ export default function ContactSection() {
                   Enviar Mensaje
                 </Button>
 
-                <p className="text-xs text-center text-slate-500 mt-4">
-                  Al enviar este formulario, aceptas nuestras políticas de
+                <p className="text-xs text-center text-white mt-4">
+                  * Al enviar este formulario, aceptas nuestras políticas de
                   privacidad.
                 </p>
               </form>

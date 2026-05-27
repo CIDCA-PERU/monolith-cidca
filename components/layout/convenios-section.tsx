@@ -210,7 +210,7 @@ export default function ConveniosSection() {
               asChild
               className="bg-slate-950 hover:bg-slate-900 text-white border-0 h-12 px-8 font-semibold rounded-md"
             >
-              <Link href="/contacto">
+              <Link href="#contacto">
                 <GraduationCap className="mr-2 h-5 w-5 text-yellow-500" />
                 <span>Capacita a tu personal corporativo</span>
               </Link>

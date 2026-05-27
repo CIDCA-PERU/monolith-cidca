@@ -104,7 +104,7 @@ export default function Home() {
             </motion.h1>
 
             <motion.p
-              className="text-lg sm:text-xl md:text-2xl text-slate max-w-[700px] font-light"
+              className="text-lg sm:text-xl md:text-2xl text-white max-w-[700px] font-light"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}

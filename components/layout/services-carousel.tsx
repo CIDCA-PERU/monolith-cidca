@@ -312,8 +312,7 @@ export default function CoursesCarousel() {
           viewport={{ once: true }}
         >
           <Button
-            variant="outline"
-            className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+            className="cursor-pointer bg-slate-800 text-white border border-slate-700 hover:bg-slate-700 hover:text-white transition-colors"
           >
             Explorar todo el catálogo <BookOpen className="ml-2 h-4 w-4" />
           </Button>

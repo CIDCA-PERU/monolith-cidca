@@ -21,13 +21,13 @@ export default function LastGenerationSection() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="space-y-8"
+            className="space-y-8 text-white"
           >
             <div className="space-y-4">
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white">
                 Tu camino hacia el éxito en <span className="text-yellow-500">3 simples pasos</span>
               </h2>
-              <p className="text-lg md:text-xl text-slate">
+              <p className="text-lg md:text-xl">
                 En CIDCA hacemos que tu proceso de aprendizaje sea ágil, 100% virtual y con respaldo oficial para impulsar tu carrera.
               </p>
             </div>
@@ -89,7 +89,7 @@ export default function LastGenerationSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="w-full max-w-xl mx-auto lg:mx-0"
+            className="w-full max-w-xl mx-auto lg:mx-0 text-white"
           >
             <div className="rounded-xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900">
               
