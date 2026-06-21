@@ -62,21 +62,14 @@ export const Navbar = function Navbar() {
               <Image
                 src="/IMG_6639.jpeg"
                 alt="CIDCA Logo"
-                width={36}
-                height={36}
+                width={60}
+                height={60}
                 priority
-                className={`rounded-md object-cover transition-all duration-500 ring-1 ring-yellow-500/20 group-hover:ring-yellow-500/50 ${
-                  scrolled ? "w-7 h-7" : "w-8 h-8"
+                className={`object-contain transition-all duration-500 ${
+                  scrolled ? "w-9 h-9" : "w-12 h-12"
                 }`}
               />
-            </div>
-            <span
-              className={`font-bold tracking-wide text-white transition-all duration-300 group-hover:text-yellow-400 ${
-                scrolled ? "text-base" : "text-lg"
-              }`}
-            >
-              CIDCA
-            </span>
+            </div> 
           </Link>
 
           {/* Desktop Navigation */}
@@ -145,9 +138,9 @@ export const Navbar = function Navbar() {
                   <Image
                     src="/IMG_6639.jpeg"
                     alt="CIDCA Logo"
-                    width={28}
-                    height={28}
-                    className="rounded-md object-cover ring-1 ring-yellow-500/20"
+                    width={40}
+                    height={40}
+                    className="object-contain"
                   />
                   <span className="font-bold text-base text-white tracking-wide">
                     CIDCA
@@ -184,10 +177,11 @@ export const Navbar = function Navbar() {
                 <Link
                   href="/login"
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold text-sm transition-all duration-200 hover:shadow-[0_0_24px_-4px_rgba(234,179,8,0.5)] active:scale-95"
+                  className="group relative flex items-center justify-center gap-2 w-full h-14 rounded-2xl text-yellow-400 bg-slate-950/80 backdrop-blur-md border border-yellow-500/30 font-bold text-sm transition-all duration-500 hover:text-slate-950 hover:bg-gradient-to-r hover:from-yellow-400 hover:to-yellow-500 hover:border-yellow-400 hover:shadow-[0_0_30px_-5px_rgba(234,179,8,0.6)] active:scale-95 overflow-hidden"
                 >
-                  <LogIn className="h-4 w-4" />
-                  Iniciar Sesión
+                  <span className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+                  <LogIn className="relative z-10 h-5 w-5 transition-transform duration-500 group-hover:-translate-x-1" />
+                  <span className="relative z-10 text-base">Iniciar Sesión</span>
                 </Link>
               </div>
             </SheetContent>
@@ -203,14 +197,12 @@ function LoginButton({ scrolled }: { scrolled: boolean }) {
   return (
     <Link
       href="/login"
-      className={`group relative inline-flex items-center gap-2 font-semibold text-slate-950 bg-yellow-500 rounded-lg overflow-hidden transition-all duration-300
-        hover:bg-yellow-400 hover:shadow-[0_0_24px_-4px_rgba(234,179,8,0.55)] active:scale-95
-        ${scrolled ? "h-8 px-4 text-xs" : "h-9 px-5 text-sm"}`}
+      className={`group relative inline-flex items-center justify-center gap-2 font-bold text-yellow-400 bg-slate-950/80 backdrop-blur-md border border-yellow-500/30 rounded-full overflow-hidden transition-all duration-500 hover:text-slate-950 hover:bg-gradient-to-r hover:from-yellow-400 hover:to-yellow-500 hover:border-yellow-400 hover:shadow-[0_0_30px_-5px_rgba(234,179,8,0.6)] active:scale-95
+        ${scrolled ? "h-9 px-5 text-xs" : "h-11 px-6 text-sm"}`}
     >
-      {/* Shine sweep */}
-      <span className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
-      <LogIn className={`relative transition-all duration-300 ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
-      <span className="relative">Iniciar Sesión</span>
+      <span className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+      <LogIn className={`relative z-10 transition-transform duration-500 group-hover:-translate-x-1 ${scrolled ? "h-3.5 w-3.5" : "h-4 w-4"}`} />
+      <span className="relative z-10">Iniciar Sesión</span>
     </Link>
   )
 }

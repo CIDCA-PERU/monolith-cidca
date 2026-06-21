@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/sidebar";
 import { logoutUser } from "@/actions/auth.actions";
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+// --- Tipos --------------------------------------------------------------------
 
 interface NavItem {
   title: string;
@@ -48,7 +48,7 @@ interface AdminSidebarProps {
   email: string;
 }
 
-// ─── Items de navegación ──────────────────────────────────────────────────────
+// --- Items de navegación ------------------------------------------------------
 
 const NAV_ITEMS: NavItem[] = [
   {
@@ -113,7 +113,7 @@ const SISTEMAS_ITEMS: NavItem[] = [
   },
 ];
 
-// ─── Componente ───────────────────────────────────────────────────────────────
+// --- Componente ---------------------------------------------------------------
 
 export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
   const pathname = usePathname();
@@ -143,30 +143,30 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
     <Sidebar
       variant="inset"
       collapsible="offcanvas"
-      className="bg-slate-950 border-r border-slate-800/60"
+      className="border-r border-sky-200 dark:border-sky-900"
     >
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <SidebarHeader className="border-b border-slate-800/60 px-4 py-5">
+      {/* -- Header ----------------------------------------------- */}
+      <SidebarHeader className="border-b border-sky-200 dark:border-sky-900 px-4 py-5">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 flex-shrink-0">
-            <GraduationCap size={18} className="text-slate-950" />
+            <GraduationCap size={18} className="text-black" />
           </div>
           <div className="flex flex-col leading-tight">
-            <span className="text-base font-bold text-white tracking-tight">
+            <span className="text-base font-bold text-black dark:text-white tracking-tight">
               CIDCA
             </span>
-            <span className="text-[11px] font-medium text-amber-400/80">
+            <span className="text-[11px] font-bold text-black dark:text-white">
               Panel de Administración
             </span>
           </div>
         </Link>
       </SidebarHeader>
 
-      {/* ── Content ────────────────────────────────────────────── */}
+      {/* -- Content ---------------------------------------------- */}
       <SidebarContent className="px-0 py-2">
         {/* Navegación principal */}
         <SidebarGroup className="px-3 py-2">
-          <SidebarGroupLabel className="px-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          <SidebarGroupLabel className="px-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-black dark:text-white">
             Gestión
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -180,10 +180,10 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
                       <Link
                         href={item.href}
                         className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group
+                          flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group font-bold
                           ${active
-                            ? "bg-amber-500/10 text-amber-300"
-                            : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
+                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-950 dark:text-blue-50 shadow-sm"
+                            : "text-blue-950/80 dark:text-blue-100/80 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 hover:text-blue-950 dark:hover:text-blue-50"
                           }
                         `}
                       >
@@ -191,21 +191,21 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
                           className={`
                             flex h-8 w-8 items-center justify-center rounded-md flex-shrink-0 transition-all duration-150
                             ${active
-                              ? "bg-amber-500/20"
-                              : "bg-slate-800/80 group-hover:bg-slate-700/80"
+                              ? "bg-blue-600 dark:bg-blue-500 shadow-md shadow-blue-500/20"
+                              : "bg-blue-100/50 dark:bg-blue-900/40 group-hover:bg-blue-200 dark:group-hover:bg-blue-800"
                             }
                           `}
                         >
                           <Icon
-                            className={`h-4 w-4 ${active ? "text-amber-400" : "text-slate-500 group-hover:text-slate-300"}`}
+                            className={`h-4 w-4 transition-colors ${active ? "text-white" : "text-blue-700 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200"}`}
                           />
                         </div>
                         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                          <span className="text-sm font-semibold leading-none">
+                          <span className="text-sm font-bold leading-none">
                             {item.title}
                           </span>
                           <span
-                            className={`text-[11px] leading-none ${active ? "text-amber-400/60" : "text-slate-600 group-hover:text-slate-500"}`}
+                            className={`text-[11px] font-bold leading-none ${active ? "text-blue-700 dark:text-blue-300" : "text-blue-950/60 dark:text-blue-100/60 group-hover:text-blue-950/80 dark:group-hover:text-blue-100/80"}`}
                           >
                             {item.description}
                           </span>
@@ -225,7 +225,7 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
         {/* Sección exclusiva SISTEMAS */}
         {sistemasItems.length > 0 && (
           <SidebarGroup className="px-3 py-2 mt-2">
-            <SidebarGroupLabel className="px-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-rose-500/70">
+            <SidebarGroupLabel className="px-1 pb-2 text-[10px] font-bold uppercase tracking-widest text-black dark:text-white">
               Sistema (Técnico)
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -239,17 +239,17 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
                         <Link
                           href={item.href}
                           className={`
-                            flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group
+                            flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 group font-bold
                             ${active
-                              ? "bg-rose-500/10 text-rose-300"
-                              : "text-slate-500 hover:text-rose-300 hover:bg-rose-500/5"
+                              ? "bg-rose-50 dark:bg-rose-900/30 text-rose-950 dark:text-rose-50 shadow-sm"
+                              : "text-blue-950/80 dark:text-blue-100/80 hover:bg-rose-50/50 dark:hover:bg-rose-900/20 hover:text-rose-950 dark:hover:text-rose-50"
                             }
                           `}
                         >
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-md flex-shrink-0 ${active ? "bg-rose-500/20" : "bg-slate-800/80"}`}>
-                            <Icon className={`h-4 w-4 ${active ? "text-rose-400" : "text-slate-600 group-hover:text-rose-400"}`} />
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-md flex-shrink-0 transition-all ${active ? "bg-rose-600 dark:bg-rose-500 shadow-md shadow-rose-500/20" : "bg-blue-100/50 dark:bg-blue-900/40 group-hover:bg-rose-200 dark:group-hover:bg-rose-800"}`}>
+                            <Icon className={`h-4 w-4 transition-colors ${active ? "text-white" : "text-blue-700 dark:text-blue-300 group-hover:text-rose-800 dark:group-hover:text-rose-200"}`} />
                           </div>
-                          <span className="text-sm font-semibold leading-none">{item.title}</span>
+                          <span className="text-sm font-bold leading-none">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -261,31 +261,31 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
         )}
       </SidebarContent>
 
-      {/* ── Footer ─────────────────────────────────────────────── */}
-      <SidebarFooter className="border-t border-slate-800/60 px-3 py-4">
+      {/* -- Footer ----------------------------------------------- */}
+      <SidebarFooter className="border-t border-sky-200 dark:border-sky-900 px-3 py-4">
         {/* Info del usuario → link al perfil */}
         <Link
           href="/dashboard/perfil"
           className={`
             flex items-center gap-3 px-2 py-2 mb-1 rounded-lg transition-all duration-150 group
             ${isActive('/dashboard/perfil')
-              ? 'bg-amber-500/10'
-              : 'hover:bg-slate-800/60'
+              ? 'bg-blue-50 dark:bg-blue-900/30 shadow-sm'
+              : 'hover:bg-blue-50/50 dark:hover:bg-blue-900/20'
             }
           `}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-500/20">
-            <span className="text-xs font-bold text-slate-950">
+            <span className="text-xs font-bold text-black">
               {nombre?.charAt(0)?.toUpperCase() ?? "?"}
             </span>
           </div>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-xs font-semibold text-slate-200 truncate">
+            <span className={`text-xs font-bold truncate ${isActive('/dashboard/perfil') ? "text-blue-950 dark:text-blue-50" : "text-blue-950/80 dark:text-blue-100/80"}`}>
               {nombre}
             </span>
-            <span className="text-[11px] text-slate-500 truncate">{email}</span>
+            <span className={`text-[11px] font-bold truncate ${isActive('/dashboard/perfil') ? "text-blue-700 dark:text-blue-300" : "text-blue-950/60 dark:text-blue-100/60"}`}>{email}</span>
           </div>
-          <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 flex-shrink-0">
+          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${isActive('/dashboard/perfil') ? "bg-amber-500 text-blue-950" : "bg-blue-100/50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"}`}>
             {rolUpper === "ADMINISTRADOR" ? "ADMIN" : rolUpper}
           </span>
         </Link>
@@ -294,12 +294,12 @@ export function AdminSidebar({ rol, nombre, email }: AdminSidebarProps) {
         <button
           onClick={handleLogout}
           disabled={isPending}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/5 transition-all duration-150 group"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-blue-950/80 dark:text-blue-100/80 font-bold hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-950 dark:hover:text-rose-50 transition-all duration-150 group"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800/80 group-hover:bg-rose-500/10 transition-all duration-150 flex-shrink-0">
-            <LogOut className="h-4 w-4 group-hover:text-rose-400 transition-colors" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-100/50 dark:bg-blue-900/40 group-hover:bg-rose-200 dark:group-hover:bg-rose-800 transition-all duration-150 flex-shrink-0">
+            <LogOut className="h-4 w-4 text-blue-700 dark:text-blue-300 group-hover:text-rose-800 dark:group-hover:text-rose-200 transition-colors" />
           </div>
-          <span className="text-sm font-semibold">
+          <span className="text-sm font-bold">
             {isPending ? "Cerrando..." : "Cerrar sesión"}
           </span>
         </button>

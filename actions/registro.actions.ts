@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import { registerService } from '@/service/auth.service'
 import { getUsuarioRol, getUsuarioByEmail, getUsuarioById, updateUsuarioPassword } from '@/repository/usuario.repository'
 import { createRecuperacionToken, findValidToken, markTokenAsUsed } from '@/repository/recuperacion.repository'
@@ -11,7 +11,7 @@ import { sendEmail, buildRecuperacionEmail, buildBienvenidaEmail } from '@/lib/e
 import { generateSessionToken, signTokenForCookie, hashTokenForDB } from '@/lib/session'
 import { createSesion } from '@/repository/sesion.repository'
 
-// ── Registro de estudiante ────────────────────────────────────────────────────
+// -- Registro de estudiante ----------------------------------------------------
 
 export async function registrarEstudiante(formData: FormData): Promise<{
   success: boolean
@@ -59,25 +59,31 @@ export async function registrarEstudiante(formData: FormData): Promise<{
     const userSession = await registerService(email, password, confirm, 4)
 
     // 2. Crear registro en tabla estudiante
-    const { data: estudianteData, error: estudianteError } = await supabase
-      .from('estudiante')
-      .insert({
-        estu_nomb_vac: nombre,
-        estu_apell_pat_vac: apellidoPat,
-        estu_apell_mat_vac: apellidoMat || null,
-        usr_id_int: userSession.usr_id_int,
-      })
-      .select('estu_id_int')
-      .single()
-
-    if (estudianteError || !estudianteData) {
+    let estudianteId = null;
+    try {
+      const rows = await sql`
+        INSERT INTO estudiante (
+          estu_nomb_vac,
+          estu_apell_pat_vac,
+          estu_apell_mat_vac,
+          usr_id_int
+        ) VALUES (
+          ${nombre},
+          ${apellidoPat},
+          ${apellidoMat || null},
+          ${userSession.usr_id_int}
+        )
+        RETURNING estu_id_int
+      `
+      estudianteId = rows[0]?.estu_id_int
+    } catch (estudianteError) {
       console.error('[registro.actions] Error al crear estudiante:', estudianteError)
     }
 
     // 3. Crear detalle_documento
-    if (estudianteData?.estu_id_int) {
+    if (estudianteId) {
       await crearDetalleDocumento(
-        estudianteData.estu_id_int,
+        estudianteId,
         docId,
         docTipo,
         docNumero
@@ -103,6 +109,8 @@ export async function registrarEstudiante(formData: FormData): Promise<{
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
+      expires: expiresAt,
       maxAge: 60 * 60 * 24 * 7,
     })
 
@@ -121,7 +129,7 @@ export async function registrarEstudiante(formData: FormData): Promise<{
   }
 }
 
-// ── Solicitar recuperación de contraseña ─────────────────────────────────────
+// -- Solicitar recuperación de contraseña -------------------------------------
 
 export async function solicitarRecuperacion(formData: FormData): Promise<{
   success: boolean
@@ -173,7 +181,7 @@ export async function solicitarRecuperacion(formData: FormData): Promise<{
   }
 }
 
-// ── Cambiar contraseña con token ──────────────────────────────────────────────
+// -- Cambiar contraseña con token ----------------------------------------------
 
 export async function cambiarPasswordConToken(formData: FormData): Promise<{
   success: boolean

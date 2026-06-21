@@ -5,138 +5,76 @@
 
 import 'server-only';
 
-import { supabase } from '@/lib/supabase';
+import { sql } from '@/lib/db';
 import { Permiso } from '@/types/db';
 
-/**
- * Obtiene todos los permisos
- */
 export async function getAllPermisos(): Promise<Permiso[]> {
   try {
-    const { data, error } = await supabase
-      .from('permiso')
-      .select('*')
-      .order('perm_cod_vac', { ascending: true });
-
-    if (error) {
-      console.error('[v0] getAllPermisos - Error:', error);
-      throw error;
-    }
-
-    return (data || []) as Permiso[];
+    const rows = await sql<Permiso[]>`
+      SELECT * FROM permiso
+      ORDER BY perm_cod_vac ASC
+    `
+    return rows;
   } catch (error) {
     console.error('[v0] getAllPermisos - Error:', error);
     throw error;
   }
 }
 
-/**
- * Obtiene un permiso por código
- */
 export async function getPermisoByCodigo(codigo: string): Promise<Permiso | null> {
   try {
-    const { data, error } = await supabase
-      .from('permiso')
-      .select('*')
-      .eq('perm_cod_vac', codigo)
-      .single();
-
-    if (error) {
-      return null;
-    }
-
-    return data as Permiso;
+    const rows = await sql<Permiso[]>`
+      SELECT * FROM permiso
+      WHERE perm_cod_vac = ${codigo}
+      LIMIT 1
+    `
+    return rows[0] || null;
   } catch (error) {
     return null;
   }
 }
 
-/**
- * Obtiene todos los permisos de un rol
- */
 export async function getPermisosByRolId(rolId: number): Promise<string[]> {
   try {
-    const { data, error } = await supabase
-      .from('rol_permiso')
-      .select('permiso:perm_id_int(perm_cod_vac)')
-      .eq('rol_id', rolId);
-
-    if (error) {
-      console.error('[v0] getPermisosByRolId - Error:', error);
-      return [];
-    }
-
-    const permisos = (data || [])
-      .map((rp: any) => rp.permiso?.perm_cod_vac)
-      .filter(Boolean);
-
-    return permisos;
+    const rows = await sql`
+      SELECT p.perm_cod_vac
+      FROM rol_permiso rp
+      JOIN permiso p ON rp.perm_id_int = p.perm_id_int
+      WHERE rp.rol_id = ${rolId}
+    `
+    return rows.map((r: any) => r.perm_cod_vac).filter(Boolean);
   } catch (error) {
     console.error('[v0] getPermisosByRolId - Error:', error);
     return [];
   }
 }
 
-/**
- * Verifica si un usuario tiene un permiso específico
- */
 export async function usuarioTienePermiso(
   usuarioId: number,
   permisoCodigo: string
 ): Promise<boolean> {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select(`
-        role:rol_id (
-          rol_permiso (
-            permiso:perm_id_int (
-              perm_cod_vac
-            )
-          )
-        )
-      `)
-      .eq('usr_id_int', usuarioId)
-      .single();
-
-    if (error) {
-      return false;
-    }
-
-    // Supabase puede retornar 'role' como objeto o como array según la relación.
-    // Normalizamos para manejar ambos casos sin error de TypeScript.
-    const roleData = Array.isArray(data?.role) ? data?.role?.[0] : data?.role
-    const rolPermisos: { permiso: { perm_cod_vac: string } | null }[] =
-      (roleData?.rol_permiso as any[]) ?? []
-
-    const permisos = rolPermisos
-      .map(rp => rp?.permiso?.perm_cod_vac)
-      .filter((cod): cod is string => typeof cod === 'string')
-
-    return permisos.includes(permisoCodigo)
+    const rows = await sql`
+      SELECT p.perm_cod_vac
+      FROM usuarios u
+      JOIN rol_permiso rp ON u.rol_id = rp.rol_id
+      JOIN permiso p ON rp.perm_id_int = p.perm_id_int
+      WHERE u.usr_id_int = ${usuarioId}
+      AND p.perm_cod_vac = ${permisoCodigo}
+      LIMIT 1
+    `
+    return rows.length > 0;
   } catch {
     return false;
   }
 }
 
-/**
- * Asigna un permiso a un rol
- */
 export async function assignPermisoToRol(rolId: number, permisoId: number) {
   try {
-    const { error } = await supabase
-      .from('rol_permiso')
-      .insert([
-        {
-          rol_id: rolId,
-          perm_id_int: permisoId,
-        },
-      ]);
-
-    if (error) {
-      console.error('[v0] assignPermisoToRol - Error:', error);
-      throw error;
-    }
+    await sql`
+      INSERT INTO rol_permiso (rol_id, perm_id_int)
+      VALUES (${rolId}, ${permisoId})
+    `
   } catch (error) {
     console.error('[v0] assignPermisoToRol - Error:', error);
     throw error;

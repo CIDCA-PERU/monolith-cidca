@@ -19,7 +19,7 @@ import {
   revokeSesionByHash,
 } from '@/repository/sesion.repository';
 
-// ─── Helpers internos ─────────────────────────────────────────────────────────
+// --- Helpers internos ---------------------------------------------------------
 
 /** Obtiene IP y User-Agent del request actual */
 async function getRequestMetadata(): Promise<{ ip: string; userAgent: string }> {
@@ -68,11 +68,13 @@ async function createAndSetSession(userId: number): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: SESSION_DURATION_MS / 1000, // en segundos
+    path: '/',
+    expires: expiresAt,
+    maxAge: SESSION_DURATION_MS / 1000,
   });
 }
 
-// ─── Server Actions ───────────────────────────────────────────────────────────
+// --- Server Actions -----------------------------------------------------------
 
 /**
  * Login: autentica credenciales y crea sesión en BD

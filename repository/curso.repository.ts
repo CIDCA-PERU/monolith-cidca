@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import { CursoDTO } from '@/dto/curso.dto'
 import { EstudianteCursoDto } from '@/dto/estudiante-curso.dto'
 
@@ -14,7 +14,7 @@ export class CursoRepository {
       estado: row.cur_est_int === 1 ? 'activo' : 'borrador',
       fecha_inicio: row.cur_fec_inic_tmp ?? '',
       fecha_fin: row.cur_fec_fin_tmp ?? '',
-      cantidad_estudiantes: (row.estudiante_curso ?? []).length,
+      cantidad_estudiantes: row.cantidad_estudiantes ?? 0,
       imagen_url: row.cur_url_vac ?? null,
       zoom_url: row.cur_zoom_url_vac ?? null,
       created_at: row.cur_cre_tmp ?? '',
@@ -22,89 +22,83 @@ export class CursoRepository {
   }
 
   static async getCursosByDocente(docenteId: string): Promise<CursoDTO[]> {
-    const { data, error } = await supabase
-      .from('curso')
-      .select(`
-        cur_uuid,
-        cur_nomb_vac,
-        cur_desc_vac,
-        cur_est_int,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp,
-        cur_url_vac,
-        cur_zoom_url_vac,
-        cur_cre_tmp,
-        usr_id_int,
-        estudiante_curso ( est_cur_id_int )
-      `)
-      .eq('usr_id_int', docenteId)
-      .order('cur_cre_tmp', { ascending: false })
+    const rows = await sql`
+      SELECT 
+        c.cur_uuid,
+        c.cur_nomb_vac,
+        c.cur_desc_vac,
+        c.cur_est_int,
+        c.cur_fec_inic_tmp,
+        c.cur_fec_fin_tmp,
+        c.cur_url_vac,
+        c.cur_zoom_url_vac,
+        c.cur_cre_tmp,
+        c.usr_id_int,
+        COUNT(ec.est_cur_id_int) as cantidad_estudiantes
+      FROM curso c
+      LEFT JOIN estudiante_curso ec ON c.cur_id_int = ec.cur_id_int
+      WHERE c.usr_id_int = ${parseInt(docenteId)}
+      GROUP BY c.cur_id_int
+      ORDER BY c.cur_cre_tmp DESC
+    `
 
-    if (error) throw error
-
-    return (data ?? []).map((c: any) => CursoRepository.mapCursoRow(c))
+    return rows.map((c: any) => CursoRepository.mapCursoRow(c))
   }
 
   static async getCursoById(cursoUuid: string): Promise<CursoDTO | null> {
-    const { data, error } = await supabase
-      .from('curso')
-      .select(`
-        cur_uuid,
-        cur_nomb_vac,
-        cur_desc_vac,
-        cur_est_int,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp,
-        cur_url_vac,
-        cur_zoom_url_vac,
-        cur_cre_tmp,
-        cur_precio_num,
-        usr_id_int,
-        estudiante_curso ( est_cur_id_int )
-      `)
-      .eq('cur_uuid', cursoUuid)
-      .single()
+    const rows = await sql`
+      SELECT 
+        c.cur_uuid,
+        c.cur_nomb_vac,
+        c.cur_desc_vac,
+        c.cur_est_int,
+        c.cur_fec_inic_tmp,
+        c.cur_fec_fin_tmp,
+        c.cur_url_vac,
+        c.cur_zoom_url_vac,
+        c.cur_cre_tmp,
+        c.cur_precio_num,
+        c.usr_id_int,
+        COUNT(ec.est_cur_id_int) as cantidad_estudiantes
+      FROM curso c
+      LEFT JOIN estudiante_curso ec ON c.cur_id_int = ec.cur_id_int
+      WHERE c.cur_uuid = ${cursoUuid}
+      GROUP BY c.cur_id_int
+      LIMIT 1
+    `
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      console.error('[getCursoById] Supabase error:', error.message)
-      throw error
-    }
-    if (!data) return null
+    if (!rows.length) return null
 
-    return CursoRepository.mapCursoRow(data as any)
+    return CursoRepository.mapCursoRow(rows[0])
   }
 
   static async createCurso(curso: Omit<CursoDTO, 'id' | 'created_at'>): Promise<CursoDTO> {
-    const { data, error } = await supabase
-      .from('curso')
-      .insert({
-        cur_nomb_vac: curso.nombre,
-        cur_desc_vac: curso.descripcion,
-        usr_id_int: curso.docente_id,
-        cur_est_int: curso.estado === 'activo' ? 1 : 0,
-        cur_fec_inic_tmp: curso.fecha_inicio,
-        cur_fec_fin_tmp: curso.fecha_fin,
-        cur_url_vac: curso.imagen_url ?? null,
-        cur_zoom_url_vac: curso.zoom_url ?? null,
-      })
-      .select(`
-        cur_uuid,
+    const rows = await sql`
+      INSERT INTO curso (
         cur_nomb_vac,
         cur_desc_vac,
+        usr_id_int,
         cur_est_int,
         cur_fec_inic_tmp,
         cur_fec_fin_tmp,
         cur_url_vac,
         cur_zoom_url_vac,
-        cur_cre_tmp,
-        usr_id_int,
-        estudiante_curso ( est_cur_id_int )
-      `)
-      .single()
+        cur_precio_num
+      ) VALUES (
+        ${curso.nombre},
+        ${curso.descripcion},
+        ${curso.docente_id},
+        ${curso.estado === 'activo' ? 1 : 0},
+        ${curso.fecha_inicio},
+        ${curso.fecha_fin},
+        ${curso.imagen_url ?? null},
+        ${curso.zoom_url ?? null},
+        ${curso.precio ?? 0}
+      )
+      RETURNING *
+    `
 
-    if (error) throw error
-    return CursoRepository.mapCursoRow(data as any)
+    return CursoRepository.mapCursoRow(rows[0])
   }
 
   static async updateCurso(
@@ -125,135 +119,105 @@ export class CursoRepository {
     if (updates.fecha_fin !== undefined) updatePayload.cur_fec_fin_tmp = updates.fecha_fin
     if (updates.imagen_url !== undefined) updatePayload.cur_url_vac = updates.imagen_url
     if (updates.zoom_url !== undefined) updatePayload.cur_zoom_url_vac = updates.zoom_url
+    if (updates.precio !== undefined) updatePayload.cur_precio_num = updates.precio
 
-    const { data, error } = await supabase
-      .from('curso')
-      .update(updatePayload)
-      .eq('cur_uuid', cursoId)
-      .select(`
-        cur_uuid,
-        cur_nomb_vac,
-        cur_desc_vac,
-        cur_est_int,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp,
-        cur_url_vac,
-        cur_zoom_url_vac,
-        cur_cre_tmp,
-        usr_id_int,
-        estudiante_curso ( est_cur_id_int )
-      `)
-      .single()
+    const rows = await sql`
+      UPDATE curso
+      SET ${sql(updatePayload)}
+      WHERE cur_uuid = ${cursoId}
+      RETURNING *
+    `
 
-    if (error) throw error
-    return CursoRepository.mapCursoRow(data as any)
+    return CursoRepository.mapCursoRow(rows[0])
   }
 
   static async deleteCurso(cursoId: string): Promise<void> {
-    const { error } = await supabase
-      .from('curso')
-      .delete()
-      .eq('cur_uuid', cursoId)
-
-    if (error) throw error
+    await sql`
+      DELETE FROM curso
+      WHERE cur_uuid = ${cursoId}
+    `
   }
 
   /**
    * Obtiene la lista de estudiantes inscritos a un curso.
-   * Usa la tabla real: estudiante_curso, con join a estudiante y usuarios.
    */
   static async getEstudiantesByCurso(cursoUuid: string): Promise<EstudianteCursoDto[]> {
-    // Primero obtener el cur_id_int a partir del uuid
-    const { data: cursoData, error: cursoError } = await supabase
-      .from('curso')
-      .select('cur_id_int')
-      .eq('cur_uuid', cursoUuid)
-      .single()
+    const cursoRows = await sql`SELECT cur_id_int FROM curso WHERE cur_uuid = ${cursoUuid} LIMIT 1`
+    if (!cursoRows.length) return []
+    const cur_id_int = cursoRows[0].cur_id_int
 
-    if (cursoError || !cursoData) return []
+    const rows = await sql`
+      SELECT 
+        ec.est_cur_id_int,
+        ec.cur_id_int,
+        ec.est_id_int,
+        ec.est_cur_estado_bol,
+        ec.est_cur_cre_tmp,
+        e.estu_id_int,
+        e.estu_uuid,
+        e.estu_nomb_vac,
+        e.estu_apell_pat_vac,
+        e.estu_apell_mat_vac,
+        u.usr_email_vac
+      FROM estudiante_curso ec
+      JOIN estudiante e ON ec.est_id_int = e.estu_id_int
+      JOIN usuarios u ON e.usr_id_int = u.usr_id_int
+      WHERE ec.cur_id_int = ${cur_id_int}
+      ORDER BY ec.est_cur_cre_tmp ASC
+    `
 
-    const { data, error } = await supabase
-      .from('estudiante_curso')
-      .select(`
-        est_cur_id_int,
-        cur_id_int,
-        est_id_int,
-        est_cur_estado_bol,
-        est_cur_cre_tmp,
-        estudiante!est_id_int (
-          estu_id_int,
-          estu_uuid,
-          estu_nomb_vac,
-          estu_apell_pat_vac,
-          estu_apell_mat_vac,
-          usuarios!usr_id_int (
-            usr_email_vac
-          )
-        )
-      `)
-      .eq('cur_id_int', cursoData.cur_id_int)
-      .order('est_cur_cre_tmp', { ascending: true })
-
-    if (error) throw error
-
-    return (data ?? []).map((row: any) => ({
+    return rows.map((row: any) => ({
       est_cur_id_int: row.est_cur_id_int,
       cur_id_int: row.cur_id_int,
       est_id_int: row.est_id_int,
       est_cur_estado_bol: row.est_cur_estado_bol,
       est_cur_cre_tmp: row.est_cur_cre_tmp,
-      estu_nomb_vac: row.estudiante?.estu_nomb_vac ?? '',
-      estu_apell_pat_vac: row.estudiante?.estu_apell_pat_vac ?? '',
-      estu_apell_mat_vac: row.estudiante?.estu_apell_mat_vac ?? '',
-      usr_email_vac: row.estudiante?.usuarios?.usr_email_vac ?? '',
-      estu_uuid: row.estudiante?.estu_uuid ?? '',
+      estu_nomb_vac: row.estu_nomb_vac ?? '',
+      estu_apell_pat_vac: row.estu_apell_pat_vac ?? '',
+      estu_apell_mat_vac: row.estu_apell_mat_vac ?? '',
+      usr_email_vac: row.usr_email_vac ?? '',
+      estu_uuid: row.estu_uuid ?? '',
     }))
   }
 
-  /**
-   * Habilita o deshabilita a un estudiante en el curso (est_cur_estado_bol).
-   */
   static async toggleEstudianteCurso(
     estCurId: number,
     estado: boolean
   ): Promise<void> {
-    const { error } = await supabase
-      .from('estudiante_curso')
-      .update({ est_cur_estado_bol: estado, est_cur_upd_tmp: new Date().toISOString() })
-      .eq('est_cur_id_int', estCurId)
-
-    if (error) throw error
+    await sql`
+      UPDATE estudiante_curso
+      SET 
+        est_cur_estado_bol = ${estado}, 
+        est_cur_upd_tmp = NOW()
+      WHERE est_cur_id_int = ${estCurId}
+    `
   }
 
-  /**
-   * Inscribe un estudiante a un curso por sus IDs enteros.
-   */
   static async addEstudianteToCurso(
     curIdInt: number,
     estIdInt: number
   ): Promise<void> {
-    const { error } = await supabase
-      .from('estudiante_curso')
-      .insert({
-        cur_id_int: curIdInt,
-        est_id_int: estIdInt,
-        est_cur_estado_bol: true,
-        est_cur_cre_tmp: new Date().toISOString(),
-        est_cur_upd_tmp: new Date().toISOString(),
-      })
-
-    if (error) throw error
+    await sql`
+      INSERT INTO estudiante_curso (
+        cur_id_int,
+        est_id_int,
+        est_cur_estado_bol,
+        est_cur_cre_tmp,
+        est_cur_upd_tmp
+      ) VALUES (
+        ${curIdInt},
+        ${estIdInt},
+        true,
+        NOW(),
+        NOW()
+      )
+    `
   }
 
-  /**
-   * Elimina la relación estudiante-curso por el ID de la relación.
-   */
   static async removeEstudianteFromCurso(estCurId: number): Promise<void> {
-    const { error } = await supabase
-      .from('estudiante_curso')
-      .delete()
-      .eq('est_cur_id_int', estCurId)
-
-    if (error) throw error
+    await sql`
+      DELETE FROM estudiante_curso
+      WHERE est_cur_id_int = ${estCurId}
+    `
   }
 }

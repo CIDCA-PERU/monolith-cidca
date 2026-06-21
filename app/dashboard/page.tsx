@@ -62,10 +62,10 @@ export default async function DashboardPage() {
   ]
 
   const colorMap: Record<string, { bg: string; icon: string; badge: string; border: string }> = {
-    amber:   { bg: 'bg-amber-50 dark:bg-amber-500/10',   icon: 'text-amber-600 dark:text-amber-400',   badge: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',   border: 'border-amber-200 dark:border-amber-500/20' },
-    blue:    { bg: 'bg-blue-50 dark:bg-blue-500/10',     icon: 'text-blue-600 dark:text-blue-400',     badge: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',     border: 'border-blue-200 dark:border-blue-500/20' },
-    emerald: { bg: 'bg-emerald-50 dark:bg-emerald-500/10', icon: 'text-emerald-600 dark:text-emerald-400', badge: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300', border: 'border-emerald-200 dark:border-emerald-500/20' },
-    violet:  { bg: 'bg-violet-50 dark:bg-violet-500/10', icon: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300', border: 'border-violet-200 dark:border-violet-500/20' },
+    amber:   { bg: 'bg-amber-50 dark:bg-amber-500/10',   icon: 'text-amber-600 dark:text-amber-400',   badge: 'bg-amber-100 dark:bg-amber-500/20 text-black dark:text-white font-bold',   border: 'border-amber-200 dark:border-amber-500/20' },
+    blue:    { bg: 'bg-blue-50 dark:bg-blue-500/10',     icon: 'text-blue-600 dark:text-blue-400',     badge: 'bg-blue-100 dark:bg-blue-500/20 text-black dark:text-white font-bold',     border: 'border-blue-200 dark:border-blue-500/20' },
+    emerald: { bg: 'bg-emerald-50 dark:bg-emerald-500/10', icon: 'text-emerald-600 dark:text-emerald-400', badge: 'bg-emerald-100 dark:bg-emerald-500/20 text-black dark:text-white font-bold', border: 'border-emerald-200 dark:border-emerald-500/20' },
+    violet:  { bg: 'bg-violet-50 dark:bg-violet-500/10', icon: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-100 dark:bg-violet-500/20 text-black dark:text-white font-bold', border: 'border-violet-200 dark:border-violet-500/20' },
   }
 
   const quickLinks = [
@@ -80,10 +80,10 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       {/* Bienvenida */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-black dark:text-white">
           Bienvenido, {user?.usr_nomb_vac?.split(' ')[0]} 👋
         </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-sm font-bold text-black dark:text-white">
           {rol === 'SISTEMAS'
             ? 'Acceso completo al sistema'
             : rol === 'ADMINISTRADOR'
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
               key={m.label}
               href={m.href}
               className={`
-                group relative overflow-hidden rounded-xl border bg-white dark:bg-slate-900
+                group relative overflow-hidden rounded-xl border bg-white dark:bg-sky-950
                 ${c.border} p-5 shadow-sm hover:shadow-md transition-all duration-200
                 hover:-translate-y-0.5
               `}
@@ -111,16 +111,16 @@ export default async function DashboardPage() {
                 <div className={`rounded-lg p-2.5 ${c.bg}`}>
                   <Icon className={`h-5 w-5 ${c.icon}`} />
                 </div>
-                <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors mt-1" />
+                <ArrowRight className="h-4 w-4 text-black dark:text-white transition-colors mt-1" />
               </div>
               <div className="mt-4">
-                <p className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                <p className="text-3xl font-bold text-black dark:text-white tracking-tight">
                   {m.value}
                 </p>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-sm font-bold text-black dark:text-white mt-0.5">
                   {m.label}
                   {m.total !== null && (
-                    <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="ml-1.5 text-xs font-bold text-black dark:text-white">
                       / {m.total} total
                     </span>
                   )}
@@ -134,8 +134,8 @@ export default async function DashboardPage() {
       {/* Accesos rápidos + Actividad reciente */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Accesos rápidos */}
-        <div className="lg:col-span-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
-          <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4">
+        <div className="lg:col-span-1 rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 p-5 shadow-sm">
+          <h2 className="text-sm font-bold text-black dark:text-white uppercase tracking-wider mb-4">
             Accesos rápidos
           </h2>
           <div className="space-y-1.5">
@@ -143,22 +143,22 @@ export default async function DashboardPage() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all duration-150 group"
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-bold text-black dark:text-white hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-all duration-150 group"
               >
                 <span>{l.label}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-amber-400 transition-colors" />
+                <ArrowRight className="h-3.5 w-3.5 text-black dark:text-white group-hover:text-amber-400 transition-colors" />
               </Link>
             ))}
           </div>
         </div>
 
         {/* Últimos cursos */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+        <div className="lg:col-span-2 rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+            <h2 className="text-sm font-bold text-black dark:text-white uppercase tracking-wider">
               Cursos recientes
             </h2>
-            <Link href="/dashboard/cursos" className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-medium">
+            <Link href="/dashboard/cursos" className="text-xs text-black dark:text-white hover:underline font-bold">
               Ver todos →
             </Link>
           </div>
@@ -166,29 +166,29 @@ export default async function DashboardPage() {
             {cursos.slice(0, 5).map((c) => (
               <div
                 key={c.cur_uuid}
-                className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{
                     backgroundColor: c.cur_est_int === 1 ? '#10b981' : '#94a3b8'
                   }} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                    <p className="text-sm font-bold text-black dark:text-white truncate">
                       {c.cur_nomb_vac}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-500 truncate">
+                    <p className="text-xs font-bold text-black dark:text-white truncate">
                       {c.docente_nombre}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <span className="text-xs text-slate-500 dark:text-slate-500">
+                  <span className="text-xs font-bold text-black dark:text-white">
                     {c.estudiantes_count} alumnos
                   </span>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                     c.cur_est_int === 1
-                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-500'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-black dark:text-white'
+                      : 'bg-transparent border border-sky-200 dark:border-sky-900 text-black dark:text-white'
                   }`}>
                     {c.cur_est_int === 1 ? 'Activo' : 'Borrador'}
                   </span>
@@ -196,7 +196,7 @@ export default async function DashboardPage() {
               </div>
             ))}
             {cursos.length === 0 && (
-              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-6">
+              <p className="text-sm font-bold text-black dark:text-white text-center py-6">
                 No hay cursos registrados
               </p>
             )}
@@ -211,17 +211,17 @@ export default async function DashboardPage() {
             <div className="flex items-center gap-3">
               <TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               <div>
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+                <p className="text-sm font-bold text-black dark:text-white">
                   {pagosPendientes} pago{pagosPendientes !== 1 ? 's' : ''} pendiente{pagosPendientes !== 1 ? 's' : ''} de revisión
                 </p>
-                <p className="text-xs text-amber-700 dark:text-amber-400/70">
+                <p className="text-xs font-bold text-black dark:text-white">
                   Revisa y aprueba los comprobantes para matricular a los estudiantes
                 </p>
               </div>
             </div>
             <Link
               href="/dashboard/pagos"
-              className="flex-shrink-0 text-sm font-semibold text-amber-700 dark:text-amber-300 hover:underline"
+              className="flex-shrink-0 text-sm font-bold text-black dark:text-white hover:underline"
             >
               Revisar →
             </Link>

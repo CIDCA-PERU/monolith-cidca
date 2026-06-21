@@ -4,8 +4,7 @@
  */
 
 import 'server-only';
-
-import { supabase } from '@/lib/supabase';
+import { sql } from '@/lib/db';
 import { Usuario } from '@/types/db';
 
 /**
@@ -13,18 +12,13 @@ import { Usuario } from '@/types/db';
  */
 export async function getUsuarioByEmail(email: string): Promise<Usuario | null> {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('usr_email_vac', email)
-      .single();
-
-    if (error) { 
-      return null;
-    }
-
-    return data as Usuario;
-  } catch (error) { 
+    const rows = await sql<Usuario[]>`
+      SELECT * FROM usuarios
+      WHERE usr_email_vac = ${email}
+      LIMIT 1
+    `;
+    return rows[0] || null;
+  } catch (error) {
     throw error;
   }
 }
@@ -34,17 +28,12 @@ export async function getUsuarioByEmail(email: string): Promise<Usuario | null> 
  */
 export async function getUsuarioById(id: number): Promise<Usuario | null> {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*')
-      .eq('usr_id_int', id)
-      .single();
-
-    if (error) {
-      return null;
-    }
-
-    return data as Usuario;
+    const rows = await sql<Usuario[]>`
+      SELECT * FROM usuarios
+      WHERE usr_id_int = ${id}
+      LIMIT 1
+    `;
+    return rows[0] || null;
   } catch (error) {
     throw error;
   }
@@ -55,30 +44,40 @@ export async function getUsuarioById(id: number): Promise<Usuario | null> {
  */
 export async function getUsuarioWithPermissions(id: number) {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select(`
-        *,
-        role:rol_id (
-          rol_id,
-          rol_nam_vc,
-          rol_permiso (
-            permiso:perm_id_int (
-              perm_id_int,
-              perm_cod_vac,
-              perm_desc_vac
-            )
+    const rows = await sql`
+      SELECT 
+        u.*,
+        r.rol_id, r.rol_nam_vc,
+        json_agg(
+          json_build_object(
+            'perm_id_int', p.perm_id_int,
+            'perm_cod_vac', p.perm_cod_vac,
+            'perm_desc_vac', p.perm_desc_vac
           )
-        )
-      `)
-      .eq('usr_id_int', id)
-      .single();
-
-    if (error) {
-      return null;
-    }
-
-    return data;
+        ) FILTER (WHERE p.perm_id_int IS NOT NULL) as permisos
+      FROM usuarios u
+      LEFT JOIN role r ON u.rol_id = r.rol_id
+      LEFT JOIN rol_permiso rp ON r.rol_id = rp.rol_id
+      LEFT JOIN permiso p ON rp.perm_id_int = p.perm_id_int
+      WHERE u.usr_id_int = ${id}
+      GROUP BY u.usr_id_int, r.rol_id
+    `;
+    
+    if (!rows.length) return null;
+    
+    const user = rows[0];
+    
+    // Mapear al formato que esperaba el frontend
+    return {
+      ...user,
+      role: {
+        rol_id: user.rol_id,
+        rol_nam_vc: user.rol_nam_vc,
+        rol_permiso: user.permisos?.map((p: any) => ({
+          permiso: p
+        })) || []
+      }
+    };
   } catch (error) {
     throw error;
   }
@@ -90,27 +89,28 @@ export async function getUsuarioWithPermissions(id: number) {
 export async function createUsuario(
   email: string,
   passwordHash: string,
-  rolId: number = 4 // 4 = ESTUDIANTE por defecto
+  rolId: number = 4, // 4 = ESTUDIANTE por defecto
+  origen: string = 'WEB'
 ): Promise<Usuario> {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .insert([
-        {
-          usr_email_vac: email,
-          usr_pass_vac: passwordHash,
-          rol_id: rolId,
-          usr_est_int: 1,
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data as Usuario;
+    const rows = await sql<Usuario[]>`
+      INSERT INTO usuarios (
+        usr_email_vac,
+        usr_pass_vac,
+        rol_id,
+        usr_est_int,
+        usr_origen_vac
+      ) VALUES (
+        ${email},
+        ${passwordHash},
+        ${rolId},
+        1,
+        ${origen}
+      )
+      RETURNING *
+    `;
+    
+    return rows[0];
   } catch (error) {
     throw error;
   }
@@ -126,20 +126,24 @@ export async function updateUsuarioPassword(
   oldPasswordHash?: string
 ) {
   try {
-    const { error } = await supabase
-      .from('usuarios')
-      .update({
-        usr_pass_vac: newPasswordHash,
-        ...(oldPasswordHash ? { usr_ant_pass_vac: oldPasswordHash } : {}),
-        usr_upd_tmp: new Date().toISOString(),
-      })
-      .eq('usr_id_int', id)
-
-    if (error) {
-      throw error
+    if (oldPasswordHash) {
+      await sql`
+        UPDATE usuarios SET 
+          usr_pass_vac = ${newPasswordHash},
+          usr_ant_pass_vac = ${oldPasswordHash},
+          usr_upd_tmp = NOW()
+        WHERE usr_id_int = ${id}
+      `;
+    } else {
+      await sql`
+        UPDATE usuarios SET 
+          usr_pass_vac = ${newPasswordHash},
+          usr_upd_tmp = NOW()
+        WHERE usr_id_int = ${id}
+      `;
     }
   } catch (error) {
-    throw error
+    throw error;
   }
 }
 
@@ -148,30 +152,15 @@ export async function updateUsuarioPassword(
  */
 export async function getUsuarioPermissions(userId: number): Promise<string[]> {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select(`
-        role:rol_id (
-          rol_permiso (
-            permiso:perm_id_int (
-              perm_cod_vac
-            )
-          )
-        )
-      `)
-      .eq('usr_id_int', userId)
-      .single();
-
-    if (error) {
-      return [];
-    }
-
-    const roleData = Array.isArray(data?.role) ? data?.role?.[0] : data?.role;
-    const permisos = roleData?.rol_permiso?.map(
-      (rp: any) => rp.permiso?.perm_cod_vac
-    ) || [];
-
-    return permisos.filter(Boolean);
+    const rows = await sql`
+      SELECT p.perm_cod_vac
+      FROM usuarios u
+      JOIN rol_permiso rp ON u.rol_id = rp.rol_id
+      JOIN permiso p ON rp.perm_id_int = p.perm_id_int
+      WHERE u.usr_id_int = ${userId}
+    `;
+    
+    return rows.map((r: any) => r.perm_cod_vac);
   } catch (error) {
     console.error('[v0] getUsuarioPermissions - Error:', error);
     return [];
@@ -183,18 +172,15 @@ export async function getUsuarioPermissions(userId: number): Promise<string[]> {
  */
 export async function getUsuarioRol(userId: number): Promise<string | null> {
   try {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('role:rol_id(rol_nam_vc)')
-      .eq('usr_id_int', userId)
-      .single();
-
-    if (error) {
-      return null;
-    }
-
-    const roleData = Array.isArray(data?.role) ? data?.role?.[0] : data?.role;
-    return roleData?.rol_nam_vc || null;
+    const rows = await sql`
+      SELECT r.rol_nam_vc
+      FROM usuarios u
+      JOIN role r ON u.rol_id = r.rol_id
+      WHERE u.usr_id_int = ${userId}
+      LIMIT 1
+    `;
+    
+    return rows[0]?.rol_nam_vc || null;
   } catch (error) {
     return null;
   }

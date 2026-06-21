@@ -1,6 +1,5 @@
 /**
- * Cliente de Supabase para operaciones server-side
- * Importar SOLO en /src/repository
+ * Cliente para operaciones server-side
  */
 
 import 'server-only';
@@ -11,7 +10,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(
-    'Credenciales son requeridas'
+    'Credenciales de Supabase son requeridas (solo para Storage)'
   );
 }
 

@@ -89,6 +89,11 @@ export default function CoursesCarousel() {
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Determinar cuántos cards mostrar según la pantalla
   useEffect(() => {
@@ -218,37 +223,41 @@ export default function CoursesCarousel() {
         </motion.div>
 
         <div className="relative">
-          <motion.div
-            className="absolute top-1/2 left-0 -translate-y-1/2 z-20 hidden sm:block"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:bg-yellow-500/20 hover:text-yellow-500 transition-all shadow-xl h-12 w-12"
-              onClick={handlePrev}
-              disabled={activeIndex === 0}
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-          </motion.div>
+          {mounted && (
+            <>
+              <motion.div
+                className="absolute top-1/2 left-0 -translate-y-1/2 z-20 hidden sm:block"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:bg-yellow-500/20 hover:text-yellow-500 transition-all shadow-xl h-12 w-12"
+                  onClick={handlePrev}
+                  disabled={activeIndex === 0}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+              </motion.div>
 
-          <motion.div
-            className="absolute top-1/2 right-0 -translate-y-1/2 z-20 hidden sm:block"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:bg-yellow-500/20 hover:text-yellow-500 transition-all shadow-xl h-12 w-12"
-              onClick={handleNext}
-              disabled={activeIndex >= courses.length - visibleCount}
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
-          </motion.div>
+              <motion.div
+                className="absolute top-1/2 right-0 -translate-y-1/2 z-20 hidden sm:block"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:bg-yellow-500/20 hover:text-yellow-500 transition-all shadow-xl h-12 w-12"
+                  onClick={handleNext}
+                  disabled={activeIndex >= courses.length - visibleCount}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </motion.div>
+            </>
+          )}
 
           <div
             className="overflow-hidden px-4 sm:px-12"

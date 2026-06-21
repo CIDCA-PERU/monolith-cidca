@@ -14,11 +14,10 @@ import {
   Link as LinkIcon,
   Video,
   ClipboardList,
-  Play,
-  CheckCircle,
   FileArchive,
-  Sparkles,
+  Info,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   getApartadosByModulo,
   getApartadosByModuloIds,
@@ -182,7 +181,7 @@ export default async function AulaModuloPage({
   // URL de Zoom viene directo del campo cur_zoom_url_vac del curso
   const zoomUrl = curso.cur_zoom_url_vac ?? null
 
-  // ── Calcular día actual en hora Lima (UTC-5) ─────────────────────────────
+  // -- Calcular día actual en hora Lima (UTC-5) -----------------------------
   // JS getDay(): 0=domingo,1=lunes,...,6=sábado
   // BD hor_cur_dia_int: 1=lunes,...,6=sábado,7=domingo
   const ahoraUtc = new Date()
@@ -281,26 +280,55 @@ export default async function AulaModuloPage({
                 <div className="space-y-4">
                   {apartados.map((apartado) => (
                     <div key={apartado.apar_id_int} className="space-y-2 mb-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-yellow-400 flex-shrink-0" />
-                        <span className="text-sm font-semibold text-foreground truncate">
-                          {apartado.apar_nomb_vac || "Apartado"}
-                        </span>
+                      <div className="flex flex-col gap-1.5 mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center w-6 h-6 rounded bg-yellow-100 dark:bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 flex-shrink-0">
+                            <div className="h-2 w-2 rounded-full bg-current" />
+                          </div>
+                          <span className="text-[15px] font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+                            {apartado.apar_nomb_vac || "Apartado"}
+                          </span>
+                          {apartado.apar_desc_vac && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none ml-1">
+                                  <Info className="h-4 w-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[320px] p-3.5 text-sm font-medium leading-relaxed bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-lg">
+                                {apartado.apar_desc_vac}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </div>
-                      <ul className="space-y-1.5 ml-4">
+                      <ul className="space-y-2 ml-4">
                         {(itemsAllByApartado[apartado.apar_id_int] || []).map(
                           (item) => {
                             // SEPARADOR
                             if (isSeparator(item.item_apar_tipo_vac)) {
                               return (
-                                <li key={item.item_apar_id_int} className="list-none">
-                                  <div className="flex items-center gap-2 py-2 mt-1">
-                                    <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
-                                    <span className="flex items-center gap-1 text-[10px] font-bold text-slate-700 dark:text-white uppercase tracking-widest px-2.5 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
-                                      <Sparkles className="h-2.5 w-2.5" />
-                                      {item.item_apar_titulo_vac || item.item_apar_url_vac || 'Sección'}
-                                    </span>
-                                    <div className="h-px flex-1 bg-gradient-to-l from-accent/40 to-transparent" />
+                                <li key={item.item_apar_id_int} className="list-none w-full">
+                                  <div className="flex flex-col py-3 w-full">
+                                    <div className="w-full flex items-center gap-3">
+                                      <div className="h-px flex-1 bg-gradient-to-r from-slate-200 dark:from-slate-800 to-transparent" />
+                                      <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                        {item.item_apar_titulo_vac || "SECCIÓN"}
+                                        {item.item_apar_url_vac && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none">
+                                                <Info className="h-3.5 w-3.5" />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="max-w-[300px] p-3 text-sm normal-case tracking-normal font-medium leading-relaxed bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-lg">
+                                              {item.item_apar_url_vac}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                      </span>
+                                      <div className="h-px flex-1 bg-gradient-to-l from-slate-200 dark:from-slate-800 to-transparent" />
+                                    </div>
                                   </div>
                                 </li>
                               );
@@ -417,27 +445,54 @@ export default async function AulaModuloPage({
                             key={apartado.apar_id_int}
                             className="space-y-2 mb-3"
                           >
-                            <div className="flex items-center gap-1.5">
-                              <div className="h-2 w-2 rounded-full bg-yellow-400 flex-shrink-0" />
-                              <span className="text-sm font-semibold text-foreground truncate">
-                                {apartado.apar_nomb_vac || "Apartado"}
-                              </span>
+                            <div className="flex flex-col gap-0.5 mb-2.5 mt-1">
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-yellow-400 flex-shrink-0" />
+                                <span className="text-xs font-bold text-foreground truncate">
+                                  {apartado.apar_nomb_vac || "Apartado"}
+                                </span>
+                                {apartado.apar_desc_vac && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none ml-1">
+                                        <Info className="h-3.5 w-3.5" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[260px] p-3 text-xs font-medium leading-relaxed bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-lg">
+                                      {apartado.apar_desc_vac}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
                             </div>
-                            <ul className="space-y-1.5 ml-4">
+                            <ul className="space-y-1.5 ml-3">
                               {(
                                 itemsAllByApartado[apartado.apar_id_int] || []
                               ).map((item) => {
                                 // SEPARADOR
                                 if (isSeparator(item.item_apar_tipo_vac)) {
                                   return (
-                                    <li key={item.item_apar_id_int} className="list-none">
-                                      <div className="flex items-center gap-1.5 py-1.5 mt-0.5">
-                                        <div className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
-                                        <span className="flex items-center gap-1 text-[10px] font-bold text-slate-700 dark:text-white uppercase tracking-widest px-2 py-0.5 bg-accent/10 rounded-full border border-accent/20 whitespace-nowrap">
-                                          <Sparkles className="h-2 w-2" />
-                                          {item.item_apar_titulo_vac || item.item_apar_url_vac || 'Sección'}
-                                        </span>
-                                        <div className="h-px flex-1 bg-gradient-to-l from-accent/40 to-transparent" />
+                                    <li key={item.item_apar_id_int} className="list-none w-full">
+                                      <div className="flex flex-col w-full py-1.5 my-1">
+                                        <div className="w-full flex items-center gap-1.5">
+                                          <div className="h-px flex-1 bg-gradient-to-r from-slate-200 dark:from-slate-800 to-transparent" />
+                                          <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                            {item.item_apar_titulo_vac || "SECCIÓN"}
+                                            {item.item_apar_url_vac && (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors focus:outline-none ml-0.5">
+                                                    <Info className="h-3 w-3" />
+                                                  </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" className="max-w-[260px] p-3 text-xs normal-case tracking-normal font-medium leading-relaxed bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-lg">
+                                                  {item.item_apar_url_vac}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            )}
+                                          </span>
+                                          <div className="h-px flex-1 bg-gradient-to-l from-slate-200 dark:from-slate-800 to-transparent" />
+                                        </div>
                                       </div>
                                     </li>
                                   );

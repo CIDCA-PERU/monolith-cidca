@@ -1,27 +1,20 @@
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import { SesionClaseDto, AsistenciaRegistroDto, ReporteAsistenciaDto } from '@/dto/asistencia.dto'
 
 export class AsistenciaRepository {
 
   /**
    * Obtiene las sesiones de clase de un curso usando cur_id_int.
-   * La sesion_clase se relaciona con curso via cur_id_int (entero), no uuid.
    */
   static async getSesionesByCurso(cursoUuid: string): Promise<SesionClaseDto[]> {
-    // Primero obtener cur_id_int del uuid
-    const { data: cursoData, error: cursoError } = await supabase
-      .from('curso')
-      .select('cur_id_int')
-      .eq('cur_uuid', cursoUuid)
-      .single()
+    const cursoRows = await sql`SELECT cur_id_int FROM curso WHERE cur_uuid = ${cursoUuid} LIMIT 1`
+    if (!cursoRows.length) return []
+    const cur_id_int = cursoRows[0].cur_id_int
 
-    if (cursoError || !cursoData) return []
-
-    const { data, error } = await supabase
-      .from('sesion_clase')
-      .select(`
+    const rows = await sql`
+      SELECT 
         ses_id_int,
         asist_uuid,
         ses_fecha_dat,
@@ -30,16 +23,17 @@ export class AsistenciaRepository {
         ses_estado_vac,
         cur_id_int,
         hor_cur_id_int
-      `)
-      .eq('cur_id_int', cursoData.cur_id_int)
-      .order('ses_fecha_dat', { ascending: false })
+      FROM sesion_clase
+      WHERE cur_id_int = ${cur_id_int}
+      ORDER BY ses_fecha_dat DESC
+    `
 
-    if (error) throw error
-
-    return (data || []).map((sesion: any) => ({
+    return rows.map((sesion: any) => ({
       ses_id_int: sesion.ses_id_int,
       asist_uuid: sesion.asist_uuid,
-      ses_fecha_dat: sesion.ses_fecha_dat,
+      ses_fecha_dat: (sesion.ses_fecha_dat && typeof sesion.ses_fecha_dat.toISOString === 'function') 
+        ? sesion.ses_fecha_dat.toISOString().split('T')[0] 
+        : String(sesion.ses_fecha_dat).split('T')[0],
       ses_hora_inic_tmp: sesion.ses_hora_inic_tmp,
       ses_hora_fin_tmp: sesion.ses_hora_fin_tmp,
       ses_estado_vac: sesion.ses_estado_vac ?? 'PROGRAMADA',
@@ -50,28 +44,28 @@ export class AsistenciaRepository {
   }
 
   static async getSesionById(sesionId: number): Promise<SesionClaseDto | null> {
-    const { data, error } = await supabase
-      .from('sesion_clase')
-      .select(`
+    const rows = await sql`
+      SELECT 
         ses_id_int,
         asist_uuid,
         ses_fecha_dat,
         ses_hora_inic_tmp,
         ses_hora_fin_tmp,
         ses_estado_vac
-      `)
-      .eq('ses_id_int', sesionId)
-      .single()
+      FROM sesion_clase
+      WHERE ses_id_int = ${sesionId}
+      LIMIT 1
+    `
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
+    if (!rows.length) return null
+    const data = rows[0]
 
     return {
       ses_id_int: data.ses_id_int,
       asist_uuid: data.asist_uuid,
-      ses_fecha_dat: data.ses_fecha_dat,
+      ses_fecha_dat: (data.ses_fecha_dat && typeof data.ses_fecha_dat.toISOString === 'function') 
+        ? data.ses_fecha_dat.toISOString().split('T')[0] 
+        : String(data.ses_fecha_dat).split('T')[0],
       ses_hora_inic_tmp: data.ses_hora_inic_tmp,
       ses_hora_fin_tmp: data.ses_hora_fin_tmp,
       ses_estado_vac: data.ses_estado_vac ?? 'PROGRAMADA',
@@ -83,47 +77,38 @@ export class AsistenciaRepository {
 
   /**
    * Obtiene las asistencias de una sesión con datos del estudiante.
-   * Ruta: asistencia → usuarios (FK) → estudiante (FK inversa, devuelve array → usar [0])
    */
   static async getAsistenciaBySesion(sesionId: number): Promise<AsistenciaRegistroDto[]> {
-    const { data, error } = await supabase
-      .from('asistencia')
-      .select(`
-        asist_id_int,
-        asist_uuid,
-        asist_est_int,
-        ses_id_int,
-        asist_cre_tmp,
-        usuarios!usr_id_int (
-          usr_id_int,
-          estudiante!usr_id_int (
-            estu_nomb_vac,
-            estu_apell_pat_vac,
-            estu_apell_mat_vac
-          )
-        )
-      `)
-      .eq('ses_id_int', sesionId)
+    const rows = await sql`
+      SELECT 
+        a.asist_id_int,
+        a.asist_uuid,
+        a.asist_est_int,
+        a.ses_id_int,
+        a.asist_cre_tmp,
+        u.usr_uuid,
+        e.estu_nomb_vac,
+        e.estu_apell_pat_vac,
+        e.estu_apell_mat_vac
+      FROM asistencia a
+      JOIN usuarios u ON a.usr_id_int = u.usr_id_int
+      LEFT JOIN estudiante e ON u.usr_id_int = e.usr_id_int
+      WHERE a.ses_id_int = ${sesionId}
+    `
 
-    if (error) throw error
-
-    return (data || []).map((registro: any) => {
-      // PostgREST devuelve estudiante como ARRAY (no hay UNIQUE en usr_id_int)
-      const est = Array.isArray(registro.usuarios?.estudiante)
-        ? registro.usuarios.estudiante[0]
-        : registro.usuarios?.estudiante
-
-      return {
-        asist_id_int:       registro.asist_id_int,
-        asist_uuid:         registro.asist_uuid,
-        asist_est_int:      registro.asist_est_int,
-        ses_id_int:         registro.ses_id_int,
-        estu_nomb_vac:      est?.estu_nomb_vac      ?? '',
-        estu_apell_pat_vac: est?.estu_apell_pat_vac ?? '',
-        estu_apell_mat_vac: est?.estu_apell_mat_vac ?? '',
-        asist_cre_tmp:      registro.asist_cre_tmp,
-      }
-    })
+    return rows.map((registro: any) => ({
+      asist_id_int:       registro.asist_id_int,
+      asist_uuid:         registro.asist_uuid,
+      usr_uuid:           registro.usr_uuid,
+      asist_est_int:      registro.asist_est_int,
+      ses_id_int:         registro.ses_id_int,
+      estu_nomb_vac:      registro.estu_nomb_vac      ?? '',
+      estu_apell_pat_vac: registro.estu_apell_pat_vac ?? '',
+      estu_apell_mat_vac: registro.estu_apell_mat_vac ?? '',
+      asist_cre_tmp: (registro.asist_cre_tmp && typeof registro.asist_cre_tmp.toISOString === 'function')
+        ? registro.asist_cre_tmp.toISOString()
+        : String(registro.asist_cre_tmp),
+    }))
   }
 
   /**
@@ -136,27 +121,33 @@ export class AsistenciaRepository {
     valorAnterior: string,
     valorNuevo: string
   ): Promise<void> {
-    const { error: updateError } = await supabase
-      .from('asistencia')
-      .update({
-        asist_est_int: nuevoEstado,
-        asist_upd_tmp: new Date().toISOString(),
-      })
-      .eq('asist_id_int', asistenciaId)
+    await sql.begin(async sql => {
+      await sql`
+        UPDATE asistencia
+        SET 
+          asist_est_int = ${nuevoEstado},
+          asist_upd_tmp = NOW()
+        WHERE asist_id_int = ${asistenciaId}
+      `
 
-    if (updateError) throw updateError
-
-    // Registrar en historial
-    await supabase
-      .from('historial_asistencia')
-      .insert({
-        asist_id_int: asistenciaId,
-        usr_id_int: usuarioId,
-        hist_asist_acc_vac: 'UPDATE',
-        hist_asist_old_val_vac: valorAnterior,
-        hist_asist_new_val_vac: valorNuevo,
-        hist_asist_cre_tmp: new Date().toISOString(),
-      })
+      await sql`
+        INSERT INTO historial_asistencia (
+          asist_id_int,
+          usr_id_int,
+          hist_asist_acc_vac,
+          hist_asist_old_val_vac,
+          hist_asist_new_val_vac,
+          hist_asist_cre_tmp
+        ) VALUES (
+          ${asistenciaId},
+          ${usuarioId},
+          'UPDATE',
+          ${valorAnterior},
+          ${valorNuevo},
+          NOW()
+        )
+      `
+    })
   }
 
   /**
@@ -195,20 +186,49 @@ export class AsistenciaRepository {
     horaFin: string,
     horCurIdInt?: number
   ): Promise<number> {
-    const { data, error } = await supabase
-      .from('sesion_clase')
-      .insert({
-        cur_id_int: curIdInt,
-        ses_fecha_dat: fecha,
-        ses_hora_inic_tmp: horaInicio,
-        ses_hora_fin_tmp: horaFin,
-        ses_estado_vac: 'PROGRAMADA',
-        hor_cur_id_int: horCurIdInt ?? null,
-      })
-      .select('ses_id_int')
-      .single()
+    return await sql.begin(async (sql) => {
+      const rows = await sql`
+        INSERT INTO sesion_clase (
+          cur_id_int,
+          ses_fecha_dat,
+          ses_hora_inic_tmp,
+          ses_hora_fin_tmp,
+          ses_estado_vac,
+          hor_cur_id_int
+        ) VALUES (
+          ${curIdInt},
+          ${fecha},
+          ${horaInicio},
+          ${horaFin},
+          'PROGRAMADA',
+          ${horCurIdInt ?? null}
+        )
+        RETURNING ses_id_int
+      `
+      const sesId = rows[0].ses_id_int
 
-    if (error) throw error
-    return data.ses_id_int
+      await sql`
+        INSERT INTO asistencia (
+          ses_id_int,
+          usr_id_int,
+          asist_est_int,
+          asist_cre_tmp,
+          asist_upd_tmp
+        )
+        SELECT 
+          ${sesId},
+          e.usr_id_int,
+          0,
+          NOW(),
+          NOW()
+        FROM estudiante_curso ec
+        JOIN estudiante e ON ec.est_id_int = e.estu_id_int
+        WHERE ec.cur_id_int = ${curIdInt} 
+          AND ec.est_cur_estado_bol = true
+          AND e.usr_id_int IS NOT NULL
+      `
+
+      return sesId
+    })
   }
 }

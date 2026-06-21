@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase } from '@/lib/supabase';
+import { sql } from '@/lib/db';
+import { supabase } from '@/lib/supabase'; // Solo para Storage, temporal
 import { assertAuthenticated, assertEstudiante, assertAdminOrCoordinador } from '@/lib/auth-guards';
 import {
   acceptPagoOrder,
@@ -29,36 +30,16 @@ function generateVoucherFilename(
   const cleanApe1 = apellido1.toUpperCase().replace(/[^A-Z0-9-]/g, '');
   const cleanApe2 = (apellido2 || '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
   const cleanCurso = cursNomb.toUpperCase().substring(0, 20).replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, '');
-  const montoStr = monto.toFixed(0);
+  const montoStr = Number(monto).toFixed(0);
 
   return `${cleanApe1}-${cleanApe2}-${cleanNombre}-${cleanCurso}-${montoStr}-${dd}-${mm}-${yyyy}-${hh}-${mins}-${ss}-${ms}.${ext}`;
 }
 
-interface PagoConCurso {
-  pago_id_int: number;
-  pago_uuid: string;
-  estu_id_int: number;
-  cur_id_int: number;
-  pago_mont_num: number;
-  pago_estad_vac: string;
-  pago_url_vac: string | null;
-  pago_obs_vac: string | null;
-  pago_cre_tmp: string;
-  pago_upd_tmp: string;
-  curso: Array<{ cur_id_int: number; cur_nomb_vac: string }>;
-}
-
-/**
- * Sube el comprobante de pago a Supabase.
- * Solo ESTUDIANTE puede subir su propio comprobante.
- */
 export async function uploadVoucher(formData: FormData) {
   try {
-    // 1. Solo estudiantes suben comprobantes
     const user = await assertAuthenticated();
     assertEstudiante(user);
 
-    // 2. Extraer datos del FormData
     const file = formData.get('file') as File | null;
     const pagoIdString = formData.get('pagoId') as string | null;
 
@@ -68,80 +49,57 @@ export async function uploadVoucher(formData: FormData) {
 
     const pagoId = parseInt(pagoIdString, 10);
 
-    // 3. Obtener datos de la orden
-    const { data: orden, error: orderError } = await supabase
-      .from('pago')
-      .select(`
-        pago_id_int,
-        estu_id_int,
-        pago_mont_num,
-        pago_estad_vac,
-        pago_url_vac,
-        curso:cur_id_int ( cur_nomb_vac )
-      `)
-      .eq('pago_id_int', pagoId)
-      .single();
+    const ordenes = await sql`
+      SELECT p.pago_id_int, p.estu_id_int, p.pago_mont_num, p.pago_estad_vac, p.pago_url_vac,
+             c.cur_nomb_vac
+      FROM pago p
+      LEFT JOIN curso c ON p.cur_id_int = c.cur_id_int
+      WHERE p.pago_id_int = ${pagoId}
+    `;
 
-    if (orderError || !orden) {
+    if (ordenes.length === 0) {
       return { success: false, error: 'Orden no encontrada' };
     }
+    const orden = ordenes[0];
 
-    // 4. Verificar que el pago pertenezca al estudiante autenticado
-    const { data: estudianteUser } = await supabase
-      .from('estudiante')
-      .select('estu_id_int, usr_id_int')
-      .eq('estu_id_int', orden.estu_id_int)
-      .single();
+    const estudiantes = await sql`
+      SELECT estu_id_int, usr_id_int, estu_nomb_vac, estu_apell_pat_vac, estu_apell_mat_vac
+      FROM estudiante
+      WHERE estu_id_int = ${orden.estu_id_int}
+    `;
 
-    if (!estudianteUser || estudianteUser.usr_id_int !== user.usr_id_int) {
+    if (estudiantes.length === 0 || estudiantes[0].usr_id_int !== user.usr_id_int) {
       return { success: false, error: 'No tienes permiso para subir archivos a este pago' };
     }
+    const usuarioDatos = estudiantes[0];
 
-    // 5. Validar estado del pago
     if (orden.pago_estad_vac === 'PAGADO' || orden.pago_estad_vac === 'ACEPTADO') {
       return { success: false, error: 'Este pago ya ha sido verificado y no se puede modificar' };
     }
 
-    // 6. Validar tipo de archivo (MIME)
     const allowedTypes = ['image/jpeg', 'image/png'];
     if (!allowedTypes.includes(file.type)) {
       return { success: false, error: 'Solo se permiten imágenes (JPG o PNG)' };
     }
 
-    // 7. Validar tamaño (máx 5MB)
     if (file.size > 5 * 1024 * 1024) {
       return { success: false, error: 'El archivo no debe exceder 5MB' };
     }
 
-    // 8. Obtener datos del estudiante para el nombre de archivo
-    const { data: usuarioDatos, error: usuarioError } = await supabase
-      .from('estudiante')
-      .select('estu_id_int, estu_nomb_vac, estu_apell_pat_vac, estu_apell_mat_vac')
-      .eq('estu_id_int', orden.estu_id_int)
-      .single();
-
-    if (usuarioError || !usuarioDatos) {
-      return { success: false, error: 'No se encontraron datos del estudiante' };
-    }
-
-    // 9. Generar nombre de archivo con extensión correcta
     const ext = file.type === 'image/png' ? 'png' : 'jpg';
-    const cursoNombre = (orden.curso && orden.curso.length > 0)
-      ? orden.curso[0].cur_nomb_vac
-      : 'CURSO';
+    const cursoNombre = orden.cur_nomb_vac || 'CURSO';
 
     const filename = generateVoucherFilename(
       usuarioDatos.estu_apell_pat_vac || '',
       usuarioDatos.estu_apell_mat_vac || '',
       usuarioDatos.estu_nomb_vac || '',
-      cursoNombre || 'CURSO',
+      cursoNombre,
       orden.pago_mont_num,
       ext
     );
 
     const path = `vouchers/${filename}`;
 
-    // 10. Eliminar archivo anterior si existe
     if (orden.pago_url_vac) {
       try {
         await supabase.storage.from('student-private').remove([orden.pago_url_vac]);
@@ -150,7 +108,6 @@ export async function uploadVoucher(formData: FormData) {
       }
     }
 
-    // 11. Subir a Supabase Storage
     const { error } = await supabase.storage
       .from('student-private')
       .upload(path, file, { cacheControl: '3600', upsert: true });
@@ -159,19 +116,13 @@ export async function uploadVoucher(formData: FormData) {
       return { success: false, error: `Error al subir archivo: ${error.message}` };
     }
 
-    // 12. Actualizar registro en BD con el path
-    const { error: updateError } = await supabase
-      .from('pago')
-      .update({
-        pago_url_vac: path,
-        pago_estad_vac: 'ENVIADO',
-        pago_upd_tmp: new Date().toISOString(),
-      })
-      .eq('pago_id_int', pagoId);
-
-    if (updateError) {
-      return { success: false, error: 'Error al guardar datos del comprobante' };
-    }
+    await sql`
+      UPDATE pago
+      SET pago_url_vac = ${path},
+          pago_estad_vac = 'ENVIADO',
+          pago_upd_tmp = NOW()
+      WHERE pago_id_int = ${pagoId}
+    `;
 
     return { success: true, message: 'Comprobante enviado exitosamente', url: path };
   } catch (error) {
@@ -183,27 +134,20 @@ export async function uploadVoucher(formData: FormData) {
   }
 }
 
-/**
- * Acepta un pago (ENVIADO → ACEPTADO) y matricula al estudiante.
- * Solo ADMIN o COORDINADOR.
- */
 export async function acceptPago(pagoId: number): Promise<{
   success: boolean;
   message?: string;
   error?: string;
 }> {
   try {
-    // 1. Solo admins o coordinadores pueden aceptar pagos
     const user = await assertAuthenticated();
     assertAdminOrCoordinador(user);
 
-    // 2. Obtener datos del pago
     const pago = await getOrdenById(pagoId);
     if (!pago) {
       return { success: false, error: 'Orden de pago no encontrada' };
     }
 
-    // 3. Validar que el pago esté en estado ENVIADO o PAGADO
     if (pago.pago_estad_vac !== 'ENVIADO' && pago.pago_estad_vac !== 'PAGADO') {
       return {
         success: false,
@@ -211,13 +155,11 @@ export async function acceptPago(pagoId: number): Promise<{
       };
     }
 
-    // 4. Aceptar el pago
     const pagoActualizado = await acceptPagoOrder(pagoId);
     if (!pagoActualizado) {
       return { success: false, error: 'Error al actualizar el estado del pago' };
     }
 
-    // 5. Crear la relación estudiante_curso
     const estudianteCursoCreado = await createEstudianteCursoFromPago(
       pago.estu_id_int,
       pago.cur_id_int

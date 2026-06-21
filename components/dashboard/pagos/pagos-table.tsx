@@ -18,13 +18,24 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
   CreditCard, ExternalLink, FileImage, CheckCircle2,
   Clock, AlertCircle, Loader2, ImageOff,
   Pencil, Trash2, Hash, DollarSign, TriangleAlert,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-// ─── Badge de estado ──────────────────────────────────────────────────────────
+// --- Badge de estado ----------------------------------------------------------
 
 function EstadoBadge({ estado }: { estado: string }) {
   const map: Record<string, { label: string; className: string; icon: React.ElementType }> = {
@@ -51,7 +62,7 @@ function formatDate(iso: string) {
   })
 }
 
-// ─── Previsualización del comprobante ─────────────────────────────────────────
+// --- Previsualización del comprobante -----------------------------------------
 
 function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher: boolean }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null)
@@ -70,15 +81,15 @@ function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher
   }, [pagoUuid, hasVoucher])
 
   if (!hasVoucher) return (
-    <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-slate-400">
+    <div className="flex flex-col items-center justify-center gap-2 h-40 rounded-xl border border-dashed border-sky-200 dark:border-sky-900 text-black dark:text-white">
       <ImageOff className="h-8 w-8" />
       <p className="text-xs">Sin comprobante adjunto</p>
     </div>
   )
 
   if (loading) return (
-    <div className="flex items-center justify-center h-40 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-      <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+    <div className="flex items-center justify-center h-40 rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950">
+      <Loader2 className="h-6 w-6 animate-spin text-black dark:text-white" />
     </div>
   )
 
@@ -98,7 +109,7 @@ function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher
         href={signedUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors"
+        className="flex items-center gap-2 px-4 py-3 rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors"
       >
         <FileImage className="h-4 w-4 flex-shrink-0" />
         Ver comprobante PDF
@@ -109,7 +120,7 @@ function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher
 
   return (
     <div className="space-y-2">
-      <div className="relative w-full h-64 rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+      <div className="relative w-full h-64 rounded-xl overflow-hidden border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950">
         <Image
           src={signedUrl}
           alt="Comprobante de pago"
@@ -131,7 +142,7 @@ function VoucherPreview({ pagoUuid, hasVoucher }: { pagoUuid: string; hasVoucher
   )
 }
 
-// ─── Sheet de detalle / edición ───────────────────────────────────────────────
+// --- Sheet de detalle / edición -----------------------------------------------
 
 function PagoSheet({
   pago,
@@ -166,7 +177,7 @@ function PagoSheet({
 
   const esPendiente = pago.pago_estad_vac === 'PENDIENTE'
 
-  // ── Cambiar estado ───────────────────────────────────────────────────────────
+  // -- Cambiar estado -----------------------------------------------------------
   const handleEstado = (nuevoEstado: 'ACEPTADO' | 'OBSERVADO' | 'PENDIENTE') => {
     start(async () => {
       const res = await actualizarEstadoPago(pago.pago_uuid, nuevoEstado, obs || undefined)
@@ -180,7 +191,7 @@ function PagoSheet({
     })
   }
 
-  // ── Guardar cambios de datos ──────────────────────────────────────────────────
+  // -- Guardar cambios de datos --------------------------------------------------
   const handleGuardar = () => {
     startSave(async () => {
       const res = await editarPagoAdmin(pago.pago_uuid, {
@@ -202,7 +213,7 @@ function PagoSheet({
     })
   }
 
-  // ── Eliminar ──────────────────────────────────────────────────────────────────
+  // -- Eliminar ------------------------------------------------------------------
   const handleEliminar = () => {
     startDel(async () => {
       const res = await eliminarPagoAdmin(pago.pago_uuid)
@@ -219,29 +230,29 @@ function PagoSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-y-auto">
-        <SheetHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
-          <SheetTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+      <SheetContent className="w-full sm:max-w-lg bg-white dark:bg-sky-950 border-sky-200 dark:border-sky-900 overflow-y-auto">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-sky-200 dark:border-sky-900">
+          <SheetTitle className="text-black dark:text-white flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-amber-500" />
             Gestión de pago
           </SheetTitle>
-          <SheetDescription className="text-slate-500 dark:text-slate-400">
+          <SheetDescription className="text-black dark:text-white">
             {pago.estudiante_apellidos} {pago.estudiante_nombre} — {pago.curso_nombre}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-6 py-5">
+        <div className="space-y-6 px-6 py-5">
 
-          {/* ── Editar datos ─────────────────────────────────────────────── */}
+          {/* -- Editar datos ----------------------------------------------- */}
           <div className="space-y-4">
-            <p className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
               <Pencil className="h-3.5 w-3.5" />
               Datos del pago
             </p>
 
             {/* Monto */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-black dark:text-white uppercase tracking-wider">
                 <DollarSign className="h-3 w-3" />
                 Monto (S/)
               </label>
@@ -250,13 +261,13 @@ function PagoSheet({
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition"
+                className="w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 px-4 py-2.5 text-sm text-black dark:text-white placeholder:text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition"
               />
             </div>
 
             {/* Nro. orden */}
             <div className="space-y-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-black dark:text-white uppercase tracking-wider">
                 <Hash className="h-3 w-3" />
                 Nro. de orden
               </label>
@@ -265,13 +276,13 @@ function PagoSheet({
                 value={nro}
                 onChange={(e) => setNro(e.target.value)}
                 placeholder="OP-2025-001"
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 font-mono transition"
+                className="w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 px-4 py-2.5 text-sm text-black dark:text-white placeholder:text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 font-mono transition"
               />
             </div>
 
             {/* Observaciones */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+              <label className="text-xs font-semibold text-black dark:text-white uppercase tracking-wider block">
                 Observaciones
               </label>
               <textarea
@@ -279,14 +290,14 @@ function PagoSheet({
                 value={obs}
                 onChange={(e) => setObs(e.target.value)}
                 placeholder="Notas internas..."
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
+                className="w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 px-4 py-2.5 text-sm text-black dark:text-white placeholder:text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
               />
             </div>
 
             <button
               onClick={handleGuardar}
               disabled={isSaving}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-40 text-white font-semibold text-sm transition-all"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-sky-100 dark:bg-sky-900 dark:bg-sky-950 hover:bg-sky-50 dark:hover:bg-sky-900/40 disabled:opacity-40 text-white font-semibold text-sm transition-all"
             >
               {isSaving
                 ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>
@@ -295,53 +306,80 @@ function PagoSheet({
             </button>
           </div>
 
-          {/* ── Comprobante ─────────────────────────────────────────────────── */}
+          {/* -- Comprobante --------------------------------------------------- */}
           <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+            <p className="text-xs font-bold text-black dark:text-white uppercase tracking-wider mb-2">
               Comprobante de pago
             </p>
             <VoucherPreview pagoUuid={pago.pago_uuid} hasVoucher={Boolean(pago.pago_url_vac)} />
           </div>
 
-          {/* ── Cambiar estado ───────────────────────────────────────────────── */}
-          <div>
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-              Cambiar estado
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => handleEstado('ACEPTADO')}
-                disabled={isPending || pago.pago_estad_vac === 'ACEPTADO'}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                <CheckCircle2 className="h-5 w-5" />
-                Aceptar
-              </button>
-              <button
-                onClick={() => handleEstado('PENDIENTE')}
-                disabled={isPending || pago.pago_estad_vac === 'PENDIENTE'}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                <Clock className="h-5 w-5" />
-                Pendiente
-              </button>
-              <button
-                onClick={() => handleEstado('OBSERVADO')}
-                disabled={isPending || pago.pago_estad_vac === 'OBSERVADO'}
-                className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                <AlertCircle className="h-5 w-5" />
-                Observar
-              </button>
-            </div>
-            {isPending && (
-              <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando...
+          {/* -- Cambiar estado ------------------------------------------------- */}
+          {pago.pago_estad_vac !== 'ACEPTADO' && (
+            <div>
+              <p className="text-xs font-bold text-black dark:text-white uppercase tracking-wider mb-3">
+                Cambiar estado
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      disabled={isPending}
+                      className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <CheckCircle2 className="h-5 w-5" />
+                      Aceptar
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="sm:max-w-[425px]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-5 w-5" />
+                        Confirmar aceptación
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-sm pt-2">
+                        ¿Estás seguro de que deseas aceptar el pago de <strong>{pago.estudiante_nombre} {pago.estudiante_apellidos}</strong>?
+                        <br /><br />
+                        Esto le dará acceso inmediato al curso. <span className="font-semibold text-red-500 dark:text-red-400">Esta acción no se puede deshacer.</span>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4">
+                      <AlertDialogCancel className="border-slate-200 dark:border-slate-700">Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleEstado('ACEPTADO')}
+                        className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white transition-colors"
+                      >
+                        Sí, aceptar pago
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <button
+                  onClick={() => handleEstado('PENDIENTE')}
+                  disabled={isPending || pago.pago_estad_vac === 'PENDIENTE'}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-semibold hover:bg-sky-50 dark:hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <Clock className="h-5 w-5" />
+                  Pendiente
+                </button>
+                <button
+                  onClick={() => handleEstado('OBSERVADO')}
+                  disabled={isPending || pago.pago_estad_vac === 'OBSERVADO'}
+                  className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                  <AlertCircle className="h-5 w-5" />
+                  Observar
+                </button>
               </div>
-            )}
-          </div>
+              {isPending && (
+                <div className="flex items-center justify-center gap-2 mt-3 text-xs text-black dark:text-white">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando...
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* ── Zona de peligro: Eliminar ────────────────────────────────────── */}
+          {/* -- Zona de peligro: Eliminar -------------------------------------- */}
           {esPendiente && (
             <div className="rounded-xl border border-red-200 dark:border-red-500/20 p-4 space-y-3">
               <p className="flex items-center gap-1.5 text-xs font-bold text-red-500 uppercase tracking-wider">
@@ -365,7 +403,7 @@ function PagoSheet({
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setConfirmDel(false)}
-                      className="py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                      className="py-2 rounded-lg border border-sky-200 dark:border-sky-900 text-black dark:text-white text-xs font-semibold hover:bg-sky-50 dark:hover:bg-sky-900/40 transition"
                     >
                       Cancelar
                     </button>
@@ -382,7 +420,7 @@ function PagoSheet({
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-400 text-center">
+              <p className="text-[11px] text-black dark:text-white text-center">
                 Solo eliminable si no hay inscripción activa en el curso.
               </p>
             </div>
@@ -393,12 +431,16 @@ function PagoSheet({
   )
 }
 
-// ─── Tabla principal ──────────────────────────────────────────────────────────
+// --- Tabla principal ----------------------------------------------------------
 
 export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
   const [pagos, setPagos] = useState(initialPagos)
   const [selected, setSelected] = useState<PagoAdminDto | null>(null)
   const [filter, setFilter] = useState<string>('TODOS')
+
+  useEffect(() => {
+    setPagos(initialPagos)
+  }, [initialPagos])
 
   const handleUpdate = (uuid: string, changes: Partial<PagoAdminDto>) => {
     setPagos((prev) =>
@@ -436,8 +478,8 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
               onClick={() => setFilter(f)}
               className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all ${
                 filter === f
-                  ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-sm'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/40'
+                  ? 'bg-amber-500 text-black dark:text-white border-amber-500 shadow-sm'
+                  : 'bg-white dark:bg-sky-950 text-black dark:text-white border-sky-200 dark:border-sky-900 hover:border-amber-300 dark:hover:border-amber-500/40'
               }`}
             >
               {f === 'TODOS' ? 'Todos' : f.charAt(0) + f.slice(1).toLowerCase()}
@@ -445,20 +487,14 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
             </button>
           ))}
         </div>
-
-        {/* Botón nuevo pago */}
-        <NuevoPagoSheet
-          pagosExistentes={pagos}
-          onCreado={(nuevo) => setPagos((prev) => [nuevo, ...prev])}
-        />
       </div>
 
       {/* Tabla */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 shadow-sm overflow-hidden">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <CreditCard className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
+            <CreditCard className="h-12 w-12 text-black dark:text-white mb-4" />
+            <p className="text-black dark:text-white font-medium">
               No hay pagos {filter !== 'TODOS' ? `con estado ${filter.toLowerCase()}` : 'registrados'}
             </p>
           </div>
@@ -466,15 +502,15 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-left px-5 py-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nro / Fecha</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estudiante</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Curso</th>
-                  <th className="text-right px-4 py-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monto</th>
-                  <th className="text-center px-4 py-3.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Estado</th>
+                <tr className="border-b border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950">
+                  <th className="text-left px-5 py-3.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">Nro / Fecha</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">Estudiante</th>
+                  <th className="text-left px-4 py-3.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider hidden md:table-cell">Curso</th>
+                  <th className="text-right px-4 py-3.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">Monto</th>
+                  <th className="text-center px-4 py-3.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">Estado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-sky-200 dark:divide-sky-900 dark:divide-sky-200 dark:divide-sky-900">
                 {filtered.map((pago) => (
                   <tr
                     key={pago.pago_uuid}
@@ -482,28 +518,28 @@ export function PagosTable({ pagos: initialPagos }: { pagos: PagoAdminDto[] }) {
                     className="hover:bg-amber-50/50 dark:hover:bg-amber-500/5 cursor-pointer transition-colors"
                   >
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      <p className="font-semibold text-black dark:text-white">
                         {pago.pago_nro_vac ?? '—'}
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                      <p className="text-xs text-black dark:text-white">
                         {new Date(pago.pago_cre_tmp).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="font-medium text-slate-700 dark:text-slate-300">
+                      <p className="font-medium text-black dark:text-white">
                         {pago.estudiante_apellidos}
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                      <p className="text-xs text-black dark:text-white">
                         {pago.estudiante_nombre}
                       </p>
                     </td>
                     <td className="px-4 py-4 hidden md:table-cell">
-                      <span className="text-slate-600 dark:text-slate-400 text-sm">
+                      <span className="text-black dark:text-white text-sm">
                         {pago.curso_nombre}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                      <span className="font-bold text-black dark:text-white">
                         S/ {Number(pago.pago_mont_num).toFixed(2)}
                       </span>
                     </td>
