@@ -81,10 +81,26 @@ export async function createCurso(request: CreateCursoRequest): Promise<{
     const user = await assertAuthenticated()
     assertDashboard(user)
 
-    const curso = await CursoService.createCurso(
-      request,
-      user.usr_id_int.toString()
-    )
+    const rol = user.rol_nam_vc?.toUpperCase()
+    const isStaffAdmin = rol === 'SISTEMAS' || rol === 'ADMINISTRADOR'
+
+    const curso = isStaffAdmin
+      ? await (await import('@/repository/curso.repository')).CursoRepository.createCurso({
+          nombre: request.nombre,
+          descripcion: request.descripcion,
+          docente_id: user.usr_id_int.toString(),
+          estado: 'activo',
+          fecha_inicio: request.fecha_inicio,
+          fecha_fin: request.fecha_fin,
+          cantidad_estudiantes: 0,
+          imagen_url: request.imagen_url,
+          zoom_url: request.zoom_url,
+          precio: request.precio
+        })
+      : await CursoService.createCurso(
+          request,
+          user.usr_id_int.toString()
+        )
     return { success: true, data: curso }
   } catch (error) {
     const message = error instanceof AppError ? error.message : 'Error desconocido'
@@ -202,7 +218,7 @@ export async function removeEstudianteFromCurso(
   }
 }
 
-// ─── Gestión de Estudiantes del Curso ──────────────────────────────────────────
+// --- Gestión de Estudiantes del Curso ------------------------------------------
 
 /**
  * Obtiene la lista de estudiantes inscritos al curso.

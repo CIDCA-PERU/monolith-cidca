@@ -26,7 +26,7 @@ export default async function CertificadosCursoPage({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex items-center gap-2 text-sm text-black dark:text-white mb-1">
             <Link
               href="/dashboard/certificados"
               className="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
@@ -35,15 +35,15 @@ export default async function CertificadosCursoPage({
               Certificados
             </Link>
             <span>/</span>
-            <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-xs">
+            <span className="text-black dark:text-white font-medium truncate max-w-xs">
               {cursoNombre}
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-black dark:text-white flex items-center gap-2">
             <Award className="h-6 w-6 text-amber-500" />
             {cursoNombre}
           </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-sm text-black dark:text-white">
             {estudiantes.length} alumno{estudiantes.length !== 1 ? 's' : ''} inscrito{estudiantes.length !== 1 ? 's' : ''}
           </p>
         </div>

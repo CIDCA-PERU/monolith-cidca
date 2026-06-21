@@ -12,7 +12,17 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Upload, ImageIcon, Link2, X, Loader2, Plus, Trash2, Clock } from 'lucide-react'
+import { UploadCloud, CheckCircle2, AlertCircle, X, Loader2, ArrowLeft, Image as ImageIcon, Plus, Trash2, AlertTriangle, Link2, Upload, Clock } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface CursoFormProps {
   curso?: CursoDTO
@@ -35,7 +45,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isPending, startTransition] = useTransition()
 
-  // ── Horarios ─────────────────────────────────────────────────────────────────
+  // -- Horarios -----------------------------------------------------------------
   const [horarios, setHorarios] = useState<HorarioLocal[]>([])
   const initialHorariosRef = useRef<HorarioLocal[]>([])
   const [loadingHorarios, setLoadingHorarios] = useState(false)
@@ -62,8 +72,9 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
   const [formData, setFormData] = useState({
     nombre: curso?.nombre || '',
     descripcion: curso?.descripcion || '',
-    fecha_inicio: curso?.fecha_inicio?.split('T')[0] || '',
-    fecha_fin: curso?.fecha_fin?.split('T')[0] || '',
+    precio: curso?.precio?.toString() || '',
+    fecha_inicio: curso?.fecha_inicio ? new Date(curso.fecha_inicio).toISOString().split('T')[0] : '',
+    fecha_fin: curso?.fecha_fin ? new Date(curso.fecha_fin).toISOString().split('T')[0] : '',
     zoom_url: curso?.zoom_url || '',
     imagen_url: curso?.imagen_url || '',
   })
@@ -80,20 +91,21 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
     setHasUnsavedChanges(hasFieldChanges || hasHorarioChanges)
   }, [formData, horarios])
 
+  const unsavedRef = useRef(hasUnsavedChanges)
+  useEffect(() => { unsavedRef.current = hasUnsavedChanges }, [hasUnsavedChanges])
+
   // Warn user on browser/tab close or refresh
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (!hasUnsavedChanges) return
+      if (!unsavedRef.current) return
       e.preventDefault()
       e.returnValue = ''
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [hasUnsavedChanges])
+  }, [])
 
-  // Intercept ALL internal link clicks when there are unsaved changes
-  const unsavedRef = useRef(hasUnsavedChanges)
-  useEffect(() => { unsavedRef.current = hasUnsavedChanges }, [hasUnsavedChanges])
+  const [pendingLeave, setPendingLeave] = useState<string | null>(null)
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -106,11 +118,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
       if (anchor.target === '_blank') return
       e.preventDefault()
       e.stopPropagation()
-      const confirmed = window.confirm('Tienes cambios sin guardar. ¿Estás seguro de salir?')
-      if (confirmed) {
-        unsavedRef.current = false
-        window.location.href = anchor.href
-      }
+      setPendingLeave(anchor.href)
     }
     document.addEventListener('click', handleClick, true)
     return () => document.removeEventListener('click', handleClick, true)
@@ -139,7 +147,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
     setErrors((prev) => ({ ...prev, [name]: '' }))
   }
 
-  // ── Imagen: estado local (NO se sube al bucket hasta guardar) ─────────────────
+  // -- Imagen: estado local (NO se sube al bucket hasta guardar) -----------------
 
   // Archivo pendiente de subir (se sube al presionar Actualizar/Crear)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -201,7 +209,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
   const displayImageUrl = previewUrl || (formData.imagen_url !== '__pending_upload__' ? formData.imagen_url : '')
   const hasImage = Boolean(displayImageUrl)
 
-  // ── Submit ────────────────────────────────────────────────────────────────────
+  // -- Submit --------------------------------------------------------------------
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -313,15 +321,15 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
   }
 
   return (
-    <Card className="w-full p-6 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">
+    <Card className="w-full p-6 border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950">
+      <h2 className="text-xl font-bold text-black dark:text-white mb-6">
         {curso ? 'Editar Curso' : 'Crear Nuevo Curso'}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Nombre */}
         <div>
-          <Label htmlFor="nombre" className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+          <Label htmlFor="nombre" className="text-sm font-semibold text-black dark:text-white mb-1.5 block">
             Nombre del Curso
           </Label>
           <Input
@@ -330,7 +338,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
             value={formData.nombre}
             onChange={handleChange}
             placeholder="Ej: Introducción a Python"
-            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+            className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
             required
           />
           {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
@@ -338,7 +346,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
 
         {/* Descripción */}
         <div>
-          <Label htmlFor="descripcion" className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+          <Label htmlFor="descripcion" className="text-sm font-semibold text-black dark:text-white mb-1.5 block">
             Descripción
           </Label>
           <Textarea
@@ -347,7 +355,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
             value={formData.descripcion}
             onChange={handleChange}
             placeholder="Descripción del curso"
-            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none"
+            className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 resize-none"
             rows={3}
             required
           />
@@ -356,7 +364,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
         {/* Fechas */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="fecha_inicio" className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+            <Label htmlFor="fecha_inicio" className="text-sm font-semibold text-black dark:text-white mb-1.5 block">
               Fecha Inicio
             </Label>
             <Input
@@ -365,12 +373,12 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
               type="date"
               value={formData.fecha_inicio}
               onChange={handleChange}
-              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+              className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
               required
             />
           </div>
           <div>
-            <Label htmlFor="fecha_fin" className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+            <Label htmlFor="fecha_fin" className="text-sm font-semibold text-black dark:text-white mb-1.5 block">
               Fecha Fin
             </Label>
             <Input
@@ -379,15 +387,15 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
               type="date"
               value={formData.fecha_fin}
               onChange={handleChange}
-              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+              className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
               required
             />
           </div>
         </div>
 
-        {/* ── Enlace de Zoom ───────────────────────────────────────────────── */}
+        {/* -- Enlace de Zoom ------------------------------------------------- */}
         <div>
-          <Label htmlFor="zoom_url" className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+          <Label htmlFor="zoom_url" className="text-sm font-semibold text-black dark:text-white mb-1.5 flex items-center gap-1.5">
             <Link2 className="h-3.5 w-3.5 text-blue-500" />
             Enlace de la Reunión
           </Label>
@@ -398,17 +406,17 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
             value={formData.zoom_url}
             onChange={handleChange}
             placeholder="https://zoom.us/j/..."
-            className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+            className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
           />
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p className="text-xs text-black dark:text-white mt-1">
             Los alumnos verán este botón en el aula virtual para unirse a la clase.
           </p>
         </div>
 
-        {/* ── Horarios de Clase ────────────────────────────────────────────── */}
+        {/* -- Horarios de Clase ---------------------------------------------- */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Label className="text-sm font-semibold text-black dark:text-white flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-amber-500" />
               Horarios de Clase
             </Label>
@@ -432,9 +440,9 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando horarios...
             </div>
           ) : horarios.length === 0 ? (
-            <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 py-5 text-center">
-              <Clock className="h-6 w-6 text-slate-300 dark:text-slate-600 mx-auto mb-1" />
-              <p className="text-xs text-slate-400 dark:text-slate-500">
+            <div className="rounded-xl border-2 border-dashed border-sky-200 dark:border-sky-900 py-5 text-center">
+              <Clock className="h-6 w-6 text-black dark:text-white mx-auto mb-1" />
+              <p className="text-xs text-black dark:text-white">
                 Sin horarios definidos. Añade uno con el botón de arriba.
               </p>
             </div>
@@ -443,7 +451,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
               {horarios.map((h, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700"
+                  className="flex items-center gap-2 bg-white dark:bg-sky-950 rounded-lg px-3 py-2 border border-sky-200 dark:border-sky-900"
                 >
                   {/* Día */}
                   <select
@@ -455,7 +463,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                         )
                       )
                     }
-                    className="flex-1 min-w-0 text-xs h-8 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-2 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                    className="flex-1 min-w-0 text-xs h-8 rounded-md border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 text-black dark:text-white px-2 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
                   >
                     <option value={1}>Lunes</option>
                     <option value={2}>Martes</option>
@@ -467,7 +475,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                   </select>
 
                   {/* Hora inicio */}
-                  <span className="text-xs text-slate-400 shrink-0">De</span>
+                  <span className="text-xs text-black dark:text-white shrink-0">De</span>
                   <Input
                     type="time"
                     value={h.hor_cur_inic_tmp}
@@ -478,11 +486,11 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                         )
                       )
                     }
-                    className="w-28 h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    className="w-28 h-8 text-xs border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
                   />
 
                   {/* Hora fin */}
-                  <span className="text-xs text-slate-400 shrink-0">a</span>
+                  <span className="text-xs text-black dark:text-white shrink-0">a</span>
                   <Input
                     type="time"
                     value={h.hor_cur_fin_tmp}
@@ -493,14 +501,14 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                         )
                       )
                     }
-                    className="w-28 h-8 text-xs border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    className="w-28 h-8 text-xs border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
                   />
 
                   {/* Eliminar */}
                   <button
                     type="button"
                     onClick={() => setHorarios((prev) => prev.filter((_, i) => i !== idx))}
-                    className="cursor-pointer shrink-0 p-1.5 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                    className="cursor-pointer shrink-0 p-1.5 rounded-md text-black dark:text-white hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                     title="Eliminar horario"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -511,9 +519,9 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
           )}
         </div>
 
-        {/* ── Imagen del curso ───────────────────────────────────────────── */}
+        {/* -- Imagen del curso --------------------------------------------- */}
         <div>
-          <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+          <Label className="text-sm font-semibold text-black dark:text-white mb-1.5 block">
             Imagen del Curso
           </Label>
 
@@ -538,7 +546,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                 flex flex-col items-center justify-center gap-2 py-6
                 ${dragOver
                   ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10'
-                  : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-amber-300 dark:hover:border-amber-500/50 hover:bg-amber-50/50 dark:hover:bg-amber-500/5'
+                  : 'border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 hover:border-amber-300 dark:hover:border-amber-500/50 hover:bg-amber-50/50 dark:hover:bg-amber-500/5'
                 }
               `}
             >
@@ -553,10 +561,10 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                     <Upload className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <p className="text-sm font-semibold text-black dark:text-white">
                       Arrastra una imagen o <span className="text-amber-600 dark:text-amber-400">haz clic para seleccionar</span>
                     </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                    <p className="text-xs text-black dark:text-white mt-0.5">
                       JPG, PNG o WebP — máx 5MB
                     </p>
                   </div>
@@ -567,7 +575,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
 
           {/* Preview */}
           {hasImage && (
-            <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="mt-3 relative rounded-xl overflow-hidden border border-sky-200 dark:border-sky-900">
               <div className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-black/50 text-white text-[10px] font-semibold flex items-center gap-1">
                 <ImageIcon className="h-3 w-3" /> Preview
               </div>
@@ -608,7 +616,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
                 <button
                   type="button"
                   onClick={() => setShowModal(true)}
-                  className="cursor-pointer px-2 py-1 bg-slate-700 text-white rounded hover:bg-slate-800 transition text-xs"
+                  className="cursor-pointer px-2 py-1 bg-sky-100 dark:bg-sky-900 text-white rounded hover:bg-sky-100 dark:bg-sky-900 transition text-xs"
                 >
                   Ampliar
                 </button>
@@ -641,7 +649,7 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
             <Button
               type="submit"
               disabled={loading || uploading}
-              className=" cursor-pointer bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold shadow-sm"
+              className=" cursor-pointer bg-amber-500 hover:bg-amber-600 text-black dark:text-white font-semibold shadow-sm"
             >
               {loading ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...</>
@@ -653,17 +661,49 @@ export function CursoForm({ curso, onSuccess }: CursoFormProps) {
             variant="outline"
             onClick={() => {
               if (hasUnsavedChanges) {
-                const confirmLeave = window.confirm('Tienes cambios pendientes. ¿Estás seguro de salir?');
-                if (!confirmLeave) return;
+                setPendingLeave('BACK')
+              } else {
+                router.back();
               }
-              router.back();
             }}
-            className="cursor-pointer border-slate-200 dark:border-slate-700"
+            className="cursor-pointer border-sky-200 dark:border-sky-900"
           >
             Cancelar
           </Button>
         </div>
       </form>
+
+      <AlertDialog open={!!pendingLeave} onOpenChange={(open) => !open && setPendingLeave(null)}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Cambios sin guardar
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios pendientes. Si sales ahora, perderás todo lo que has modificado. ¿Estás seguro de salir?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100">Quedarme</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                unsavedRef.current = false;
+                setHasUnsavedChanges(false);
+                if (pendingLeave === 'BACK') {
+                  router.back()
+                } else if (pendingLeave) {
+                  window.location.href = pendingLeave
+                }
+                setPendingLeave(null)
+              }} 
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Sí, salir sin guardar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

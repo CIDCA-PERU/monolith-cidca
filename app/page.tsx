@@ -121,9 +121,13 @@ export default function Home() {
               <Link href="/login">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto h-14 px-8 text-base font-bold bg-yellow-500 hover:bg-yellow-500 text-slate transition-all duration-300 hover:scale-105"
+                  className="group relative w-full sm:w-auto h-16 px-10 text-lg font-bold text-slate-950 bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 border-none shadow-[0_0_20px_rgba(234,179,8,0.4)] hover:shadow-[0_0_35px_rgba(234,179,8,0.6)] transition-all duration-500 hover:scale-[1.03] active:scale-95 overflow-hidden"
                 >
-                  Ingresar al Aula <ArrowRight className="ml-2 h-5 w-5" />
+                  <span className="relative z-10 flex items-center">
+                    Ingresar al Aula <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                  </span>
+                  {/* Sweep animation */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out pointer-events-none" />
                 </Button>
               </Link>
             </motion.div>

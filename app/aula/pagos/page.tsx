@@ -62,7 +62,12 @@ export default async function AulaPagosPage({
               <Card key={pago.pago_id_int} className="p-4 space-y-4 flex flex-col h-full">
                 <div className="flex-1 space-y-3">
                   <div>
-                    <div className="text-xs text-slate-500 dark:text-slate-300">Orden de pago</div>
+                    <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-300 mb-1">
+                      <span>Orden de pago</span>
+                      <span className="font-mono font-medium bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
+                        #{pago.pago_nro_vac || pago.pago_id_int}
+                      </span>
+                    </div>
                     <div className="text-base font-semibold line-clamp-2">
                       {cursoNombre}
                     </div>

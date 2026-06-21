@@ -74,7 +74,8 @@ export async function registerService(
   email: string,
   password: string,
   passwordConfirm: string,
-  rolId: number = 4 // 4 = ESTUDIANTE
+  rolId: number = 4, // 4 = ESTUDIANTE
+  origen: string = 'WEB'
 ): Promise<UserSessionDto> {
   validateEmail(email);
   validatePassword(password);
@@ -86,7 +87,7 @@ export async function registerService(
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  const nuevoUsuario = await createUsuario(email, passwordHash, rolId);
+  const nuevoUsuario = await createUsuario(email, passwordHash, rolId, origen);
   const permisos = await getPermisosByRolId(rolId);
 
   return {
@@ -115,15 +116,17 @@ export async function getUsuarioCompleteService(
 
   const permisos = await getUsuarioPermissions(usuarioId);
 
+  const usr = usuarioConPermisos as any;
+
   return {
-    usr_id_int: usuarioConPermisos.usr_id_int,
-    usr_uuid: usuarioConPermisos.usr_uuid,
-    usr_email_vac: usuarioConPermisos.usr_email_vac,
-    usr_nomb_vac: usuarioConPermisos.usr_nomb_vac,
-    rol_id: usuarioConPermisos.rol_id,
-    rol_nam_vc: usuarioConPermisos.role?.rol_nam_vc || '',
+    usr_id_int: usr.usr_id_int,
+    usr_uuid: usr.usr_uuid,
+    usr_email_vac: usr.usr_email_vac,
+    usr_nomb_vac: usr.usr_nomb_vac,
+    rol_id: usr.rol_id,
+    rol_nam_vc: usr.role?.rol_nam_vc || '',
     permiso_cod_vac: permisos,
-    usr_mod_bol: (usuarioConPermisos as any).usr_mod_bol ?? false,
+    usr_mod_bol: usr.usr_mod_bol ?? false,
   };
 }
 

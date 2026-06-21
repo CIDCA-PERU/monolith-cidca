@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import {
   ExamenListDto,
   ExamenDetailDto,
@@ -12,54 +12,60 @@ import {
 
 export class ExamenRepository {
   static async getExamenesByCurso(cursoId: string): Promise<ExamenListDto[]> {
-    const { data, error } = await supabase
-      .from('examen')
-      .select(`
+    const rows = await sql<ExamenListDto[]>`
+      SELECT 
         exam_id_int,
         exam_uuid,
         exam_durac_int,
         exam_puntaj_int,
         exam_desc_vac
-      `)
-      .eq('curso_id', cursoId)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return data as ExamenListDto[]
+      FROM examen
+      WHERE curso_id = ${cursoId}
+      ORDER BY exam_cre_tmp DESC
+    `
+    return rows
   }
 
   static async getExamenById(examenId: string): Promise<ExamenDetailDto | null> {
-    const { data, error } = await supabase
-      .from('examen')
-      .select(`
-        exam_id_int,
-        exam_uuid,
-        exam_durac_int,
-        exam_puntaj_int,
-        exam_desc_vac,
-        preguntas:pregunta(
-          preg_id_int,
-          preg_uuid,
-          preg_tipo_vac,
-          preg_enun_vac,
-          preg_url_vac,
-          preg_puntaj_int,
-          opciones:opcion_pregunta(
-            opc_pre_id_int,
-            opc_pre_uuid,
-            opc_pre_text_vac
-          )
-        )
-      `)
-      .eq('exam_uuid', examenId)
-      .single()
+    const rows = await sql`
+      SELECT 
+        e.exam_id_int,
+        e.exam_uuid,
+        e.exam_durac_int,
+        e.exam_puntaj_int,
+        e.exam_desc_vac,
+        (
+          SELECT COALESCE(json_agg(
+            json_build_object(
+              'preg_id_int', p.preg_id_int,
+              'preg_uuid', p.preg_uuid,
+              'preg_tipo_vac', p.preg_tipo_vac,
+              'preg_enun_vac', p.preg_enun_vac,
+              'preg_url_vac', p.preg_url_vac,
+              'preg_puntaj_int', p.preg_puntaj_int,
+              'opciones', (
+                SELECT COALESCE(json_agg(
+                  json_build_object(
+                    'opc_pre_id_int', o.opc_pre_id_int,
+                    'opc_pre_uuid', o.opc_pre_uuid,
+                    'opc_pre_text_vac', o.opc_pre_text_vac
+                  )
+                ), '[]'::json)
+                FROM opcion_pregunta o 
+                WHERE o.preg_id_int = p.preg_id_int
+              )
+            )
+          ), '[]'::json)
+          FROM pregunta p 
+          WHERE p.exam_id_int = e.exam_id_int
+        ) as preguntas
+      FROM examen e
+      WHERE e.exam_uuid = ${examenId}
+      LIMIT 1
+    `
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-
-    return data as ExamenDetailDto | null
+    if (!rows.length) return null
+    return rows[0] as ExamenDetailDto
   }
 
   static async createExamen(examen: {
@@ -68,41 +74,47 @@ export class ExamenRepository {
     exam_durac_int: number
     exam_puntaj_int: number
   }): Promise<ExamenListDto> {
-    const { data, error } = await supabase
-      .from('examen')
-      .insert({
-        curso_id: examen.curso_id,
-        exam_desc_vac: examen.exam_desc_vac,
-        exam_durac_int: examen.exam_durac_int,
-        exam_puntaj_int: examen.exam_puntaj_int,
-      })
-      .select(`
+    const rows = await sql<ExamenListDto[]>`
+      INSERT INTO examen (
+        curso_id,
+        exam_desc_vac,
+        exam_durac_int,
+        exam_puntaj_int
+      ) VALUES (
+        ${examen.curso_id},
+        ${examen.exam_desc_vac},
+        ${examen.exam_durac_int},
+        ${examen.exam_puntaj_int}
+      )
+      RETURNING 
         exam_id_int,
         exam_uuid,
         exam_durac_int,
         exam_puntaj_int,
         exam_desc_vac
-      `)
-      .single()
-
-    if (error) throw error
-    return data as ExamenListDto
+    `
+    return rows[0]
   }
 
   static async createIntento(
     estudianteId: string,
     examenId: string
   ): Promise<IntentoExamenDto> {
-    const { data, error } = await supabase
-      .from('intento_examen')
-      .insert({
-        estudiante_id: estudianteId,
-        examen_id: examenId,
-        int_exam_inic_tmp: new Date().toISOString(),
-        int_exam_estad_tmp: 'EN_PROGRESO',
-        int_exam_ult_hrtbeat_tmp: new Date().toISOString(),
-      })
-      .select(`
+    const rows = await sql`
+      INSERT INTO intento_examen (
+        estudiante_id,
+        examen_id,
+        int_exam_inic_tmp,
+        int_exam_estad_tmp,
+        int_exam_ult_hrtbeat_tmp
+      ) VALUES (
+        ${estudianteId},
+        ${examenId},
+        NOW(),
+        'EN_PROGRESO',
+        NOW()
+      )
+      RETURNING 
         int_exam_id_int,
         int_exam_uuid,
         int_exam_inic_tmp,
@@ -110,52 +122,48 @@ export class ExamenRepository {
         int_exam_nota_auto_tmp,
         int_exam_nota_man_tmp,
         int_exam_estad_tmp,
-        int_exam_ult_hrtbeat_tmp,
-        infracciones:infraccion_examen(
-          inf_exam_id_int,
-          inf_exam_uuid,
-          inf_exam_tipo_vac,
-          inf_exam_salid_tmp,
-          inf_exam_retorn_tmp,
-          inf_exam_durac_tmp
-        )
-      `)
-      .single()
-
-    if (error) throw error
-    return data as IntentoExamenDto
+        int_exam_ult_hrtbeat_tmp
+    `
+    
+    // An intento has 0 infracciones initially
+    return {
+      ...(rows[0] as any),
+      infracciones: []
+    } as IntentoExamenDto
   }
 
   static async getIntentoByUuid(uuid: string): Promise<IntentoExamenDto | null> {
-    const { data, error } = await supabase
-      .from('intento_examen')
-      .select(`
-        int_exam_id_int,
-        int_exam_uuid,
-        int_exam_inic_tmp,
-        int_exam_fin_tmp,
-        int_exam_nota_auto_tmp,
-        int_exam_nota_man_tmp,
-        int_exam_estad_tmp,
-        int_exam_ult_hrtbeat_tmp,
-        infracciones:infraccion_examen(
-          inf_exam_id_int,
-          inf_exam_uuid,
-          inf_exam_tipo_vac,
-          inf_exam_salid_tmp,
-          inf_exam_retorn_tmp,
-          inf_exam_durac_tmp
-        )
-      `)
-      .eq('int_exam_uuid', uuid)
-      .single()
+    const rows = await sql`
+      SELECT 
+        i.int_exam_id_int,
+        i.int_exam_uuid,
+        i.int_exam_inic_tmp,
+        i.int_exam_fin_tmp,
+        i.int_exam_nota_auto_tmp,
+        i.int_exam_nota_man_tmp,
+        i.int_exam_estad_tmp,
+        i.int_exam_ult_hrtbeat_tmp,
+        (
+          SELECT COALESCE(json_agg(
+            json_build_object(
+              'inf_exam_id_int', inf.inf_exam_id_int,
+              'inf_exam_uuid', inf.inf_exam_uuid,
+              'inf_exam_tipo_vac', inf.inf_exam_tipo_vac,
+              'inf_exam_salid_tmp', inf.inf_exam_salid_tmp,
+              'inf_exam_retorn_tmp', inf.inf_exam_retorn_tmp,
+              'inf_exam_durac_tmp', inf.inf_exam_durac_tmp
+            )
+          ), '[]'::json)
+          FROM infraccion_examen inf
+          WHERE inf.intento_examen_id = i.int_exam_id_int
+        ) as infracciones
+      FROM intento_examen i
+      WHERE i.int_exam_uuid = ${uuid}
+      LIMIT 1
+    `
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-
-    return data as IntentoExamenDto | null
+    if (!rows.length) return null
+    return rows[0] as IntentoExamenDto
   }
 
   static async registerInfraction(
@@ -163,27 +171,27 @@ export class ExamenRepository {
     tipo: string,
     duracion: number
   ): Promise<void> {
-    const { error } = await supabase
-      .from('infraccion_examen')
-      .insert({
-        intento_examen_id: intentoId,
-        inf_exam_tipo_vac: tipo,
-        inf_exam_salid_tmp: new Date().toISOString(),
-        inf_exam_durac_tmp: duracion,
-      })
-
-    if (error) throw error
+    await sql`
+      INSERT INTO infraccion_examen (
+        intento_examen_id,
+        inf_exam_tipo_vac,
+        inf_exam_salid_tmp,
+        inf_exam_durac_tmp
+      ) VALUES (
+        ${intentoId},
+        ${tipo},
+        NOW(),
+        ${duracion}
+      )
+    `
   }
 
   static async updateHeartbeat(intentoId: string): Promise<void> {
-    const { error } = await supabase
-      .from('intento_examen')
-      .update({
-        int_exam_ult_hrtbeat_tmp: new Date().toISOString(),
-      })
-      .eq('int_exam_id_int', parseInt(intentoId))
-
-    if (error) throw error
+    await sql`
+      UPDATE intento_examen
+      SET int_exam_ult_hrtbeat_tmp = NOW()
+      WHERE int_exam_id_int = ${parseInt(intentoId)}
+    `
   }
 
   static async submitExamen(
@@ -191,71 +199,57 @@ export class ExamenRepository {
     respuestas: RespuestaEstudianteDto[],
     infracciones: { tipo: string; duracion: number }[]
   ): Promise<void> {
-    // Guardar respuestas
-    const respuestasData = respuestas.map((r) => ({
-      intento_examen_id: intentoId,
-      pregunta_id: r.preg_id_int,
-      opcion_pregunta_id: r.opc_pre_id_int,
-      rpta_estu_text_vac: r.rpta_estu_text_vac,
-      rpta_estu_num: r.rpta_estu_num,
-    }))
-
-    const { error: respuestasError } = await supabase
-      .from('respuesta_estudiante')
-      .insert(respuestasData)
-
-    if (respuestasError) throw respuestasError
-
-    // Guardar infracciones (máx 50 para prevenir DoS)
-    const infraccionesLimitadas = infracciones.slice(0, 50)
-    for (const infraccion of infraccionesLimitadas) {
-      const { error } = await supabase
-        .from('infraccion_examen')
-        .insert({
+    await sql.begin(async sql => {
+      if (respuestas.length > 0) {
+        const insertData = respuestas.map(r => ({
           intento_examen_id: intentoId,
-          inf_exam_tipo_vac: infraccion.tipo,
-          inf_exam_salid_tmp: new Date().toISOString(),
-          inf_exam_durac_tmp: infraccion.duracion,
-        })
+          pregunta_id: r.preg_id_int,
+          opcion_pregunta_id: r.opc_pre_id_int,
+          rpta_estu_text_vac: r.rpta_estu_text_vac,
+          rpta_estu_num: r.rpta_estu_num,
+        }))
+        await sql`INSERT INTO respuesta_estudiante ${sql(insertData)}`
+      }
 
-      if (error) throw error
-    }
+      const infraccionesLimitadas = infracciones.slice(0, 50)
+      if (infraccionesLimitadas.length > 0) {
+        const infData = infraccionesLimitadas.map(inf => ({
+          intento_examen_id: intentoId,
+          inf_exam_tipo_vac: inf.tipo,
+          inf_exam_salid_tmp: new Date().toISOString(), // Usar ISO desde Node para el array
+          inf_exam_durac_tmp: inf.duracion
+        }))
+        await sql`INSERT INTO infraccion_examen ${sql(infData)}`
+      }
 
-    // Marcar como completado
-    const { error: updateError } = await supabase
-      .from('intento_examen')
-      .update({
-        int_exam_fin_tmp: new Date().toISOString(),
-        int_exam_estad_tmp: infracciones.length > 0 ? 'FRAUDE' : 'COMPLETADO',
-      })
-      .eq('int_exam_id_int', parseInt(intentoId))
-
-    if (updateError) throw updateError
+      await sql`
+        UPDATE intento_examen
+        SET 
+          int_exam_fin_tmp = NOW(),
+          int_exam_estad_tmp = ${infracciones.length > 0 ? 'FRAUDE' : 'COMPLETADO'}
+        WHERE int_exam_id_int = ${parseInt(intentoId)}
+      `
+    })
   }
 
   static async getRespuestasByIntento(
     intentoId: string
   ): Promise<RespuestaEstudianteDto[]> {
-    const { data, error } = await supabase
-      .from('respuesta_estudiante')
-      .select('*')
-      .eq('intento_examen_id', intentoId)
-
-    if (error) throw error
-    return data as RespuestaEstudianteDto[]
+    const rows = await sql<RespuestaEstudianteDto[]>`
+      SELECT * FROM respuesta_estudiante
+      WHERE intento_examen_id = ${intentoId}
+    `
+    return rows
   }
 
   static async calificarExamen(
     intentoId: string,
     nota: number
   ): Promise<void> {
-    const { error } = await supabase
-      .from('intento_examen')
-      .update({
-        int_exam_nota_auto_tmp: nota,
-      })
-      .eq('int_exam_id_int', parseInt(intentoId))
-
-    if (error) throw error
+    await sql`
+      UPDATE intento_examen
+      SET int_exam_nota_auto_tmp = ${nota}
+      WHERE int_exam_id_int = ${parseInt(intentoId)}
+    `
   }
 }

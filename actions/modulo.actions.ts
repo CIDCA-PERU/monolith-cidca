@@ -5,7 +5,7 @@ import { assertAuthenticated, assertDashboard } from '@/lib/auth-guards'
 import { ModuloDTO, ApartadoDTO, CreateModuloRequest, CreateApartadoRequest } from '@/dto/modulo.dto'
 import { AppError } from '@/lib/errors'
 
-// ─── Módulos ──────────────────────────────────────────────────────────────────
+// --- Módulos ------------------------------------------------------------------
 
 /**
  * Obtiene los módulos de un curso.
@@ -129,7 +129,7 @@ export async function deleteModulo(moduloId: string): Promise<{
   }
 }
 
-// ─── Apartados ────────────────────────────────────────────────────────────────
+// --- Apartados ----------------------------------------------------------------
 
 /**
  * Obtiene los apartados de un módulo.

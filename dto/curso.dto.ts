@@ -14,6 +14,7 @@ export interface CursoDTO {
   cantidad_estudiantes: number;
   imagen_url?: string | null;
   zoom_url?: string | null;
+  precio?: number | null;
   created_at: string;
 }
 
@@ -24,6 +25,7 @@ export interface CreateCursoRequest {
   fecha_fin: string;
   imagen_url?: string | null;
   zoom_url?: string | null;
+  precio?: number | null;
 }
 
 export interface CursoListDto {

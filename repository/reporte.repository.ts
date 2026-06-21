@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import {
   CalificacionesReporteDTO,
   DesempenoEstudianteDTO,
@@ -12,56 +12,43 @@ export class ReporteRepository {
   static async getCalificacionesByCurso(
     cursoId: string
   ): Promise<CalificacionesReporteDTO[]> {
-    const { data, error } = await supabase
-      .from('calificaciones_reporte')
-      .select('*')
-      .eq('curso_id', cursoId)
-      .order('promedio_examenes', { ascending: false })
-
-    if (error) throw error
-    return (data || []) as CalificacionesReporteDTO[]
+    const rows = await sql<CalificacionesReporteDTO[]>`
+      SELECT * FROM calificaciones_reporte
+      WHERE curso_id = ${cursoId}
+      ORDER BY promedio_examenes DESC
+    `
+    return rows
   }
 
   static async getDesempenoEstudiante(
     estudianteId: string,
     cursoId: string
   ): Promise<DesempenoEstudianteDTO | null> {
-    const { data, error } = await supabase
-      .from('desempen_estudiante_view')
-      .select('*')
-      .eq('estudiante_id', estudianteId)
-      .eq('curso_id', cursoId)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-
-    return data as DesempenoEstudianteDTO | null
+    const rows = await sql<DesempenoEstudianteDTO[]>`
+      SELECT * FROM desempen_estudiante_view
+      WHERE estudiante_id = ${estudianteId}
+      AND curso_id = ${cursoId}
+      LIMIT 1
+    `
+    return rows[0] || null
   }
 
   static async getReporteCurso(cursoId: string): Promise<ReporteCursoDTO | null> {
-    const { data, error } = await supabase
-      .from('reporte_curso_general')
-      .select('*')
-      .eq('curso_id', cursoId)
-      .single()
+    const rows = await sql`
+      SELECT * FROM reporte_curso_general
+      WHERE curso_id = ${cursoId}
+      LIMIT 1
+    `
+    if (!rows.length) return null
 
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-
-    // Obtener estudiantes del curso
-    const { data: estudiantes } = await supabase
-      .from('desempen_estudiante_view')
-      .select('*')
-      .eq('curso_id', cursoId)
+    const estudiantes = await sql<DesempenoEstudianteDTO[]>`
+      SELECT * FROM desempen_estudiante_view
+      WHERE curso_id = ${cursoId}
+    `
 
     return {
-      ...(data as any),
-      estudiantes: (estudiantes || []) as DesempenoEstudianteDTO[],
+      ...(rows[0] as any),
+      estudiantes,
     }
   }
 
@@ -74,91 +61,83 @@ export class ReporteRepository {
   }): Promise<CertificadoDTO> {
     const codigo = this.generarCodigoVerificacion()
 
-    const { data, error } = await supabase
-      .from('certificado')
-      .insert({
-        estudiante_id: certificado.estudiante_id,
-        curso_id: certificado.curso_id,
-        docente_id: certificado.docente_id,
-        fecha_emision: new Date().toISOString(),
-        nota_final: certificado.nota_final,
-        asistencia_porcentaje: certificado.asistencia_porcentaje,
-        codigo_verificacion: codigo,
-        estado: 'emitido',
-      })
-      .select('*')
-      .single()
-
-    if (error) throw error
-    return data as CertificadoDTO
+    const rows = await sql<CertificadoDTO[]>`
+      INSERT INTO certificado (
+        estudiante_id,
+        curso_id,
+        docente_id,
+        fecha_emision,
+        nota_final,
+        asistencia_porcentaje,
+        codigo_verificacion,
+        estado
+      ) VALUES (
+        ${certificado.estudiante_id},
+        ${certificado.curso_id},
+        ${certificado.docente_id},
+        NOW(),
+        ${certificado.nota_final},
+        ${certificado.asistencia_porcentaje},
+        ${codigo},
+        'emitido'
+      )
+      RETURNING *
+    `
+    return rows[0]
   }
 
   static async getCertificadoByEstudiante(
     estudianteId: string,
     cursoId: string
   ): Promise<CertificadoDTO | null> {
-    const { data, error } = await supabase
-      .from('certificado')
-      .select('*')
-      .eq('estudiante_id', estudianteId)
-      .eq('curso_id', cursoId)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-
-    return data as CertificadoDTO | null
+    const rows = await sql<CertificadoDTO[]>`
+      SELECT * FROM certificado
+      WHERE estudiante_id = ${estudianteId}
+      AND curso_id = ${cursoId}
+      LIMIT 1
+    `
+    return rows[0] || null
   }
 
   static async getCertificadoByCode(codigo: string): Promise<CertificadoDTO | null> {
-    const { data, error } = await supabase
-      .from('certificado')
-      .select('*')
-      .eq('codigo_verificacion', codigo)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-
-    return data as CertificadoDTO | null
+    const rows = await sql<CertificadoDTO[]>`
+      SELECT * FROM certificado
+      WHERE codigo_verificacion = ${codigo}
+      LIMIT 1
+    `
+    return rows[0] || null
   }
 
   static async getCertificadosByDocente(docenteId: string): Promise<CertificadoDTO[]> {
-    const { data, error } = await supabase
-      .from('certificado')
-      .select('*')
-      .eq('docente_id', docenteId)
-      .order('fecha_emision', { ascending: false })
-
-    if (error) throw error
-    return (data || []) as CertificadoDTO[]
+    const rows = await sql<CertificadoDTO[]>`
+      SELECT * FROM certificado
+      WHERE docente_id = ${docenteId}
+      ORDER BY fecha_emision DESC
+    `
+    return rows
   }
 
   static async updateCertificado(
     certificadoId: string,
     updates: Partial<CertificadoDTO>
   ): Promise<void> {
-    const { error } = await supabase
-      .from('certificado')
-      .update(updates)
-      .eq('certificado_id', certificadoId)
+    const columns = Object.keys(updates)
+    if (columns.length === 0) return
 
-    if (error) throw error
+    await sql`
+      UPDATE certificado
+      SET ${sql(updates as any)}
+      WHERE certificado_id = ${certificadoId}
+    `
   }
 
   static async getEstadisticasGenerales(fechaInicio: string, fechaFin: string) {
-    const { data, error } = await supabase
-      .from('estadisticas_generales')
-      .select('*')
-      .gte('fecha', fechaInicio)
-      .lte('fecha', fechaFin)
-
-    if (error) throw error
-    return data
+    const rows = await sql`
+      SELECT * FROM estadisticas_generales
+      WHERE fecha >= ${fechaInicio}
+      AND fecha <= ${fechaFin}
+    `
+    return rows
   }
 
   private static generarCodigoVerificacion(): string {

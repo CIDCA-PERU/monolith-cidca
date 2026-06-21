@@ -7,7 +7,17 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Search, UserCheck, UserX, Users } from 'lucide-react'
+import { Search, UserCheck, UserX, Users, AlertTriangle } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface EstudiantesManagerProps {
   cursoId: string
@@ -19,6 +29,8 @@ export function EstudiantesManager({ cursoId, initialEstudiantes }: EstudiantesM
   const [busqueda, setBusqueda] = useState('')
   const [loadingId, setLoadingId] = useState<number | null>(null)
 
+  const [confirmToggle, setConfirmToggle] = useState<{ estCurId: number, estadoActual: boolean } | null>(null)
+
   const filtered = estudiantes.filter((e) => {
     const nombre = `${e.estu_nomb_vac} ${e.estu_apell_pat_vac} ${e.estu_apell_mat_vac}`.toLowerCase()
     const email = e.usr_email_vac.toLowerCase()
@@ -26,12 +38,12 @@ export function EstudiantesManager({ cursoId, initialEstudiantes }: EstudiantesM
     return nombre.includes(q) || email.includes(q)
   })
 
-  const handleToggle = async (estCurId: number, estadoActual: boolean) => {
+  const executeToggle = async () => {
+    if (!confirmToggle) return
+    const { estCurId, estadoActual } = confirmToggle
     const nuevoEstado = !estadoActual
-    const accion = nuevoEstado ? 'habilitar' : 'deshabilitar'
-    const confirmed = window.confirm(`¿Estás seguro de ${accion} a este estudiante?`)
-    if (!confirmed) return
-
+    
+    setConfirmToggle(null)
     setLoadingId(estCurId)
     try {
       const result = await toggleEstudianteCurso(estCurId, nuevoEstado)
@@ -135,7 +147,7 @@ export function EstudiantesManager({ cursoId, initialEstudiantes }: EstudiantesM
                         size="sm"
                         variant="outline"
                         disabled={loadingId === est.est_cur_id_int}
-                        onClick={() => handleToggle(est.est_cur_id_int, est.est_cur_estado_bol)}
+                        onClick={() => setConfirmToggle({ estCurId: est.est_cur_id_int, estadoActual: est.est_cur_estado_bol })}
                         className={`cursor-pointer text-xs ${
                           est.est_cur_estado_bol
                             ? 'border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-500/10'
@@ -154,6 +166,30 @@ export function EstudiantesManager({ cursoId, initialEstudiantes }: EstudiantesM
           </table>
         </div>
       </Card>
+
+      <AlertDialog open={!!confirmToggle} onOpenChange={(open) => !open && setConfirmToggle(null)}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirmar acción
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que deseas {confirmToggle && (!confirmToggle.estadoActual ? 'habilitar' : 'deshabilitar')} a este estudiante?
+              <br/><br/>
+              {confirmToggle && (!confirmToggle.estadoActual 
+                ? 'El estudiante recuperará el acceso al curso.' 
+                : 'El estudiante perderá el acceso al curso inmediatamente.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeToggle} className="bg-sky-600 hover:bg-sky-700 text-white">
+              Sí, confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

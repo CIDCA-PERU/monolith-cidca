@@ -7,8 +7,18 @@ import { CursoForm } from '@/components/dashboard/cursos/nuevo/curso-form'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
-import { ArrowLeft, Users, CalendarCheck, Power, PowerOff } from 'lucide-react'
+import { ArrowLeft, Users, CalendarCheck, Power, PowerOff, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface CursoDetailPageProps {
   params: Promise<{
@@ -21,6 +31,7 @@ export default function CursoDetailPage({ params }: CursoDetailPageProps) {
   const [curso, setCurso] = useState<CursoDTO | null>(null)
   const [loading, setLoading] = useState(true)
   const [togglingEstado, setTogglingEstado] = useState(false)
+  const [confirmEstado, setConfirmEstado] = useState<{nuevoEstado: string, accion: string} | null>(null)
 
   useEffect(() => {
     loadCurso()
@@ -46,10 +57,13 @@ export default function CursoDetailPage({ params }: CursoDetailPageProps) {
     const nuevoEstado = curso.estado === 'activo' ? 'borrador' : 'activo'
     const accion = nuevoEstado === 'activo' ? 'habilitar' : 'deshabilitar'
 
-    const confirmed = window.confirm(
-      `¿Estás seguro de ${accion} el curso "${curso.nombre}"?`
-    )
-    if (!confirmed) return
+    setConfirmEstado({ nuevoEstado, accion })
+  }
+
+  const executeToggleEstado = async () => {
+    if (!curso || !confirmEstado) return
+    const { nuevoEstado } = confirmEstado
+    setConfirmEstado(null)
 
     setTogglingEstado(true)
     try {
@@ -212,6 +226,30 @@ export default function CursoDetailPage({ params }: CursoDetailPageProps) {
 
         </div>
       </div>
+
+      <AlertDialog open={!!confirmEstado} onOpenChange={(open) => !open && setConfirmEstado(null)}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirmar acción
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de {confirmEstado?.accion} el curso <strong>&quot;{curso?.nombre}&quot;</strong>?
+              <br/><br/>
+              {confirmEstado?.nuevoEstado === 'activo' 
+                ? 'El curso volverá a estar visible y accesible para los estudiantes.' 
+                : 'El curso se ocultará y los estudiantes no podrán acceder a él.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeToggleEstado} className="bg-sky-600 hover:bg-sky-700 text-white">
+              Sí, confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

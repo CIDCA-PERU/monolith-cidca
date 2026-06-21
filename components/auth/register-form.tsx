@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { registrarEstudiante } from '@/actions/registro.actions'
 import type { TipoDocumento } from '@/repository/documento.repository'
 
-// ── Indicador de fortaleza de contraseña ─────────────────────────────────────
+// -- Indicador de fortaleza de contraseña -------------------------------------
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -44,7 +44,7 @@ function PasswordStrength({ password }: { password: string }) {
   )
 }
 
-// ── Formulario de registro ────────────────────────────────────────────────────
+// -- Formulario de registro ----------------------------------------------------
 
 export function RegisterForm({ tiposDocumento = [] }: { tiposDocumento?: TipoDocumento[] }) {
   const router = useRouter()
@@ -165,6 +165,11 @@ export function RegisterForm({ tiposDocumento = [] }: { tiposDocumento?: TipoDoc
                 disabled={isPending}
                 required
                 maxLength={selectedDocTipo === 'DNI' ? 8 : selectedDocTipo === 'RUC' ? 11 : 20}
+                onChange={(e) => {
+                  if (selectedDocTipo === 'DNI') {
+                    e.target.value = e.target.value.replace(/\D/g, '')
+                  }
+                }}
                 className="flex-1 bg-black/30 border-white/20 text-white placeholder:text-white/30 h-9 text-sm uppercase"
               />
             </div>

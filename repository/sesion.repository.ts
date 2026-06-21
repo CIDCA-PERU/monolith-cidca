@@ -5,7 +5,7 @@
 
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 
 export interface SesionRecord {
   ses_uuid: string
@@ -26,24 +26,28 @@ export async function createSesion(data: {
   userAgent: string
   expiresAt: Date
 }): Promise<{ ses_uuid: string } | null> {
-  const { data: sesion, error } = await supabase
-    .from('sesiones')
-    .insert({
-      ses_token_hash:  data.tokenHash,
-      usr_id_int:      data.userId,
-      ses_ip_vac:      data.ip,
-      ses_ua_vac:      data.userAgent,
-      ses_exp_tmp:     data.expiresAt.toISOString(), // UTC
-    })
-    .select('ses_uuid')
-    .single()
-
-  if (error) {
+  try {
+    const rows = await sql<{ ses_uuid: string }[]>`
+      INSERT INTO sesiones (
+        ses_token_hash,
+        usr_id_int,
+        ses_ip_vac,
+        ses_ua_vac,
+        ses_exp_tmp
+      ) VALUES (
+        ${data.tokenHash},
+        ${data.userId},
+        ${data.ip},
+        ${data.userAgent},
+        ${data.expiresAt.toISOString()}
+      )
+      RETURNING ses_uuid
+    `
+    return rows[0] || null
+  } catch (error: any) {
     console.error('[sesion.repository] createSesion - Error:', error.message)
     return null
   }
-
-  return sesion
 }
 
 /**
@@ -53,26 +57,34 @@ export async function createSesion(data: {
 export async function findActiveSesionByHash(
   tokenHash: string
 ): Promise<SesionRecord | null> {
-  const { data, error } = await supabase
-    .from('sesiones')
-    .select('ses_uuid, usr_id_int, ses_exp_tmp, ses_act_bol, ses_ult_act_tmp')
-    .eq('ses_token_hash', tokenHash)
-    .eq('ses_act_bol', true)
-    .single()
+  try {
+    const rows = await sql<SesionRecord[]>`
+      SELECT ses_uuid, usr_id_int, ses_exp_tmp, ses_act_bol, ses_ult_act_tmp
+      FROM sesiones
+      WHERE ses_token_hash = ${tokenHash}
+      AND ses_act_bol = true
+      LIMIT 1
+    `
 
-  if (error || !data) return null
+    if (!rows.length) return null
+    const data = rows[0]
 
-  // Verificar expiración (comparación UTC)
-  if (new Date(data.ses_exp_tmp) < new Date()) {
-    // Marcar como inactiva en segundo plano
-    await supabase
-      .from('sesiones')
-      .update({ ses_act_bol: false })
-      .eq('ses_uuid', data.ses_uuid)
+    // Verificar expiración (comparación UTC)
+    if (new Date(data.ses_exp_tmp) < new Date()) {
+      // Marcar como inactiva en segundo plano
+      sql`
+        UPDATE sesiones
+        SET ses_act_bol = false
+        WHERE ses_uuid = ${data.ses_uuid}
+      `.catch(console.error)
+      
+      return null
+    }
+
+    return data
+  } catch (error) {
     return null
   }
-
-  return data as SesionRecord
 }
 
 /**
@@ -80,20 +92,30 @@ export async function findActiveSesionByHash(
  * Llamar en cada request autenticado para mantener la sesión viva.
  */
 export async function updateSesionLastActivity(sesUuid: string): Promise<void> {
-  await supabase
-    .from('sesiones')
-    .update({ ses_ult_act_tmp: new Date().toISOString() }) // UTC
-    .eq('ses_uuid', sesUuid)
+  try {
+    await sql`
+      UPDATE sesiones
+      SET ses_ult_act_tmp = NOW()
+      WHERE ses_uuid = ${sesUuid}
+    `
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 /**
  * Revoca una sesión específica por su hash (logout).
  */
 export async function revokeSesionByHash(tokenHash: string): Promise<void> {
-  await supabase
-    .from('sesiones')
-    .update({ ses_act_bol: false })
-    .eq('ses_token_hash', tokenHash)
+  try {
+    await sql`
+      UPDATE sesiones
+      SET ses_act_bol = false
+      WHERE ses_token_hash = ${tokenHash}
+    `
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 /**
@@ -101,25 +123,33 @@ export async function revokeSesionByHash(tokenHash: string): Promise<void> {
  * Usar al bloquear usuario, cambiar contraseña o por el admin.
  */
 export async function revokeAllUserSesiones(userId: number): Promise<void> {
-  await supabase
-    .from('sesiones')
-    .update({ ses_act_bol: false })
-    .eq('usr_id_int', userId)
-    .eq('ses_act_bol', true)
+  try {
+    await sql`
+      UPDATE sesiones
+      SET ses_act_bol = false
+      WHERE usr_id_int = ${userId}
+      AND ses_act_bol = true
+    `
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 /**
  * Lista las sesiones activas de un usuario (para panel "mis dispositivos").
  */
 export async function getActiveSesionesByUser(userId: number) {
-  const { data, error } = await supabase
-    .from('sesiones')
-    .select('ses_uuid, ses_ip_vac, ses_ua_vac, ses_cre_tmp, ses_ult_act_tmp, ses_exp_tmp')
-    .eq('usr_id_int', userId)
-    .eq('ses_act_bol', true)
-    .gt('ses_exp_tmp', new Date().toISOString())
-    .order('ses_ult_act_tmp', { ascending: false })
-
-  if (error) return []
-  return data || []
+  try {
+    const rows = await sql`
+      SELECT ses_uuid, ses_ip_vac, ses_ua_vac, ses_cre_tmp, ses_ult_act_tmp, ses_exp_tmp
+      FROM sesiones
+      WHERE usr_id_int = ${userId}
+      AND ses_act_bol = true
+      AND ses_exp_tmp > NOW()
+      ORDER BY ses_ult_act_tmp DESC
+    `
+    return rows
+  } catch (error) {
+    return []
+  }
 }

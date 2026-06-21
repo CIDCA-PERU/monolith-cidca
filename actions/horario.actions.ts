@@ -1,22 +1,25 @@
 'use server'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import { assertAuthenticated, assertDashboard } from '@/lib/auth-guards'
-import { AppError } from '@/lib/errors'
 import { HorarioDto } from '@/dto/curso.dto'
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// --- Helpers -------------------------------------------------------------------
 
 async function getCurIdInt(cursoUuid: string): Promise<number | null> {
-  const { data } = await supabase
-    .from('curso')
-    .select('cur_id_int')
-    .eq('cur_uuid', cursoUuid)
-    .single()
-  return data?.cur_id_int ?? null
+  try {
+    const rows = await sql`
+      SELECT cur_id_int FROM curso
+      WHERE cur_uuid = ${cursoUuid}
+      LIMIT 1
+    `
+    return rows.length > 0 ? rows[0].cur_id_int : null
+  } catch (error) {
+    return null
+  }
 }
 
-// ─── Obtener horarios de un curso ──────────────────────────────────────────────
+// --- Obtener horarios de un curso ----------------------------------------------
 
 export async function getHorariosByCurso(cursoUuid: string): Promise<{
   success: boolean
@@ -29,18 +32,16 @@ export async function getHorariosByCurso(cursoUuid: string): Promise<{
     const curIdInt = await getCurIdInt(cursoUuid)
     if (!curIdInt) return { success: false, error: 'Curso no encontrado' }
 
-    const { data, error } = await supabase
-      .from('horario_curso')
-      .select('hor_cur_id_int, hor_cur_dia_int, hor_cur_inic_tmp, hor_cur_fin_tmp')
-      .eq('cur_id_int', curIdInt)
-      .order('hor_cur_dia_int', { ascending: true })
+    const data = await sql`
+      SELECT hor_cur_id_int, hor_cur_dia_int, hor_cur_inic_tmp, hor_cur_fin_tmp
+      FROM horario_curso
+      WHERE cur_id_int = ${curIdInt}
+      ORDER BY hor_cur_dia_int ASC
+    `
 
-    if (error) throw error
-
-    const mapped: HorarioDto[] = (data ?? []).map((row: any) => ({
+    const mapped: HorarioDto[] = data.map((row: any) => ({
       hor_cur_id_int: row.hor_cur_id_int,
       hor_cur_dia_int: row.hor_cur_dia_int,
-      // Supabase devuelve "HH:MM:SS" para columnas time → normalizar a "HH:MM"
       hor_cur_inic_tmp: (row.hor_cur_inic_tmp as string)?.slice(0, 5) ?? '',
       hor_cur_fin_tmp:  (row.hor_cur_fin_tmp as string)?.slice(0, 5) ?? '',
     }))
@@ -52,16 +53,8 @@ export async function getHorariosByCurso(cursoUuid: string): Promise<{
   }
 }
 
-// ─── Guardar horarios (upsert + soft-delete seguro con FK) ─────────────────────
+// --- Guardar horarios (upsert + soft-delete seguro con FK) ---------------------
 
-/**
- * Estrategia segura con FK:
- * - Rows que ya existen (tienen hor_cur_id_int): UPDATE
- * - Rows nuevas (sin id):                        INSERT
- * - Rows eliminadas (tenían id pero ya no están):
- *     1. NULL out hor_cur_id_int en sesion_clase
- *     2. DELETE el horario
- */
 export async function saveHorariosByCurso(
   cursoUuid: string,
   horarios: Array<{
@@ -78,82 +71,63 @@ export async function saveHorariosByCurso(
     const curIdInt = await getCurIdInt(cursoUuid)
     if (!curIdInt) return { success: false, error: 'Curso no encontrado' }
 
-    // Horarios actuales en BD
-    const { data: existingRows, error: fetchError } = await supabase
-      .from('horario_curso')
-      .select('hor_cur_id_int')
-      .eq('cur_id_int', curIdInt)
+    await sql.begin(async sql => {
+      const existingRows = await sql`
+        SELECT hor_cur_id_int
+        FROM horario_curso
+        WHERE cur_id_int = ${curIdInt}
+      `
 
-    if (fetchError) throw fetchError
+      const existingIds = new Set(existingRows.map((r: any) => r.hor_cur_id_int as number))
+      const incomingIds = new Set(
+        horarios.filter((h) => h.hor_cur_id_int != null).map((h) => h.hor_cur_id_int as number)
+      )
 
-    const existingIds = new Set((existingRows ?? []).map((r: any) => r.hor_cur_id_int as number))
-    const incomingIds = new Set(
-      horarios.filter((h) => h.hor_cur_id_int != null).map((h) => h.hor_cur_id_int as number)
-    )
+      const toDeleteIds = [...existingIds].filter((id) => !incomingIds.has(id))
 
-    // IDs a eliminar = estaban en BD pero ya no vienen en el form
-    const toDeleteIds = [...existingIds].filter((id) => !incomingIds.has(id))
-
-    // 1. Para los eliminados: nullear FK en sesion_clase antes de borrar
-    for (const horId of toDeleteIds) {
-      const { error: nullErr } = await supabase
-        .from('sesion_clase')
-        .update({ hor_cur_id_int: null })
-        .eq('hor_cur_id_int', horId)
-
-      if (nullErr) {
-        console.error('[saveHorariosByCurso] Error nulling sesion_clase FK:', nullErr)
-        throw nullErr
+      for (const horId of toDeleteIds) {
+        await sql`
+          UPDATE sesion_clase
+          SET hor_cur_id_int = null
+          WHERE hor_cur_id_int = ${horId}
+        `
+        await sql`
+          DELETE FROM horario_curso
+          WHERE hor_cur_id_int = ${horId}
+        `
       }
 
-      const { error: delErr } = await supabase
-        .from('horario_curso')
-        .delete()
-        .eq('hor_cur_id_int', horId)
-
-      if (delErr) {
-        console.error('[saveHorariosByCurso] DELETE error:', delErr)
-        throw delErr
+      const toUpdate = horarios.filter((h) => h.hor_cur_id_int != null)
+      for (const h of toUpdate) {
+        await sql`
+          UPDATE horario_curso
+          SET 
+            hor_cur_dia_int = ${h.hor_cur_dia_int},
+            hor_cur_inic_tmp = ${h.hor_cur_inic_tmp},
+            hor_cur_fin_tmp = ${h.hor_cur_fin_tmp}
+          WHERE hor_cur_id_int = ${h.hor_cur_id_int!}
+        `
       }
-    }
 
-    // 2. UPDATE los que ya existen
-    const toUpdate = horarios.filter((h) => h.hor_cur_id_int != null)
-    for (const h of toUpdate) {
-      const { error: updErr } = await supabase
-        .from('horario_curso')
-        .update({
-          hor_cur_dia_int:  h.hor_cur_dia_int,
-          hor_cur_inic_tmp: h.hor_cur_inic_tmp,
-          hor_cur_fin_tmp:  h.hor_cur_fin_tmp,
-        })
-        .eq('hor_cur_id_int', h.hor_cur_id_int!)
-
-      if (updErr) {
-        console.error('[saveHorariosByCurso] UPDATE error:', updErr)
-        throw updErr
+      const toInsert = horarios.filter((h) => h.hor_cur_id_int == null)
+      if (toInsert.length > 0) {
+        for (const h of toInsert) {
+          await sql`
+            INSERT INTO horario_curso (
+              cur_id_int,
+              hor_cur_dia_int,
+              hor_cur_inic_tmp,
+              hor_cur_fin_tmp
+            ) VALUES (
+              ${curIdInt},
+              ${h.hor_cur_dia_int},
+              ${h.hor_cur_inic_tmp},
+              ${h.hor_cur_fin_tmp}
+            )
+          `
+        }
       }
-    }
-
-    // 3. INSERT los nuevos (sin id)
-    const toInsert = horarios.filter((h) => h.hor_cur_id_int == null)
-    if (toInsert.length > 0) {
-      const rows = toInsert.map((h) => ({
-        cur_id_int:       curIdInt,
-        hor_cur_dia_int:  h.hor_cur_dia_int,
-        hor_cur_inic_tmp: h.hor_cur_inic_tmp,
-        hor_cur_fin_tmp:  h.hor_cur_fin_tmp,
-      }))
-
-      const { error: insErr } = await supabase
-        .from('horario_curso')
-        .insert(rows)
-
-      if (insErr) {
-        console.error('[saveHorariosByCurso] INSERT error:', insErr)
-        throw insErr
-      }
-    }
+    })
 
     return { success: true }
   } catch (error: any) {

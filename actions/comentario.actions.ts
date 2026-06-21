@@ -1,13 +1,9 @@
 'use server'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { revalidatePath } from 'next/cache'
 
-/**
- * Crea un comentario en un apartado del aula.
- * Solo ESTUDIANTE puede comentar (los comentarios son parte de la experiencia del aula).
- */
 export async function crearComentario(formData: FormData): Promise<{
   success: boolean
   message?: string
@@ -33,16 +29,19 @@ export async function crearComentario(formData: FormData): Promise<{
       return { success: false, error: 'Apartado no válido' }
     }
 
-    const { error } = await supabase
-      .from('comentarios_curso')
-      .insert({
-        com_cur_text_vac: texto,
-        apar_id_int: aparId,
-        usr_id_int: user.usr_id_int,
-        com_cur_cre_tmp: new Date().toISOString(),
-      })
-
-    if (error) {
+    try {
+      await sql`
+        INSERT INTO comentarios_curso (
+          com_cur_text_vac,
+          apar_id_int,
+          usr_id_int
+        ) VALUES (
+          ${texto},
+          ${aparId},
+          ${user.usr_id_int}
+        )
+      `
+    } catch (error) {
       console.error('[comentario.actions] crearComentario - Error:', error)
       return { success: false, error: 'Error al guardar el comentario' }
     }

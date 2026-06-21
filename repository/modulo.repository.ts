@@ -1,173 +1,169 @@
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 import { ModuloDTO, ApartadoDTO } from '@/dto/modulo.dto'
 
 export class ModuloRepository {
   static async getModulosByCurso(cursoId: string): Promise<ModuloDTO[]> {
-    const { data, error } = await supabase
-      .from('modulo')
-      .select('*')
-      .eq('curso_id', cursoId)
-      .order('orden', { ascending: true })
-
-    if (error) throw error
-    return data as ModuloDTO[]
+    const rows = await sql<ModuloDTO[]>`
+      SELECT * FROM modulo
+      WHERE curso_id = ${cursoId}
+      ORDER BY orden ASC
+    `
+    return rows
   }
 
   static async getModuloById(moduloId: string): Promise<ModuloDTO | null> {
-    const { data, error } = await supabase
-      .from('modulo')
-      .select('*')
-      .eq('id', moduloId)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-    return data as ModuloDTO | null
+    const rows = await sql<ModuloDTO[]>`
+      SELECT * FROM modulo
+      WHERE id = ${moduloId}
+      LIMIT 1
+    `
+    return rows[0] || null
   }
 
   static async createModulo(
     cursoId: string,
     modulo: Omit<ModuloDTO, 'id' | 'created_at' | 'numero'>
   ): Promise<ModuloDTO> {
-    // Obtener el siguiente número de módulo
-    const { data: lastModulo } = await supabase
-      .from('modulo')
-      .select('numero')
-      .eq('curso_id', cursoId)
-      .order('numero', { ascending: false })
-      .limit(1)
-      .single()
+    const lastRows = await sql`
+      SELECT numero FROM modulo
+      WHERE curso_id = ${cursoId}
+      ORDER BY numero DESC
+      LIMIT 1
+    `
+    const numero = (lastRows[0]?.numero || 0) + 1
 
-    const numero = (lastModulo?.numero || 0) + 1
-
-    const { data, error } = await supabase
-      .from('modulo')
-      .insert({
-        curso_id: cursoId,
+    const rows = await sql<ModuloDTO[]>`
+      INSERT INTO modulo (
+        curso_id,
         numero,
-        titulo: modulo.titulo,
-        descripcion: modulo.descripcion,
-        estado: modulo.estado,
-        fecha_inicio: modulo.fecha_inicio,
-        fecha_fin: modulo.fecha_fin,
-        orden: modulo.orden,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-    return data as ModuloDTO
+        titulo,
+        descripcion,
+        estado,
+        fecha_inicio,
+        fecha_fin,
+        orden
+      ) VALUES (
+        ${cursoId},
+        ${numero},
+        ${modulo.titulo},
+        ${modulo.descripcion},
+        ${modulo.estado},
+        ${modulo.fecha_inicio},
+        ${modulo.fecha_fin},
+        ${modulo.orden}
+      )
+      RETURNING *
+    `
+    return rows[0]
   }
 
   static async updateModulo(
     moduloId: string,
     updates: Partial<ModuloDTO>
   ): Promise<ModuloDTO> {
-    const { data, error } = await supabase
-      .from('modulo')
-      .update(updates)
-      .eq('id', moduloId)
-      .select()
-      .single()
+    const columns = Object.keys(updates)
+    if (columns.length === 0) {
+      const rows = await sql<ModuloDTO[]>`SELECT * FROM modulo WHERE id = ${moduloId}`
+      return rows[0]
+    }
 
-    if (error) throw error
-    return data as ModuloDTO
+    const rows = await sql<ModuloDTO[]>`
+      UPDATE modulo
+      SET ${sql(updates as any)}
+      WHERE id = ${moduloId}
+      RETURNING *
+    `
+    return rows[0]
   }
 
   static async deleteModulo(moduloId: string): Promise<void> {
-    const { error } = await supabase
-      .from('modulo')
-      .delete()
-      .eq('id', moduloId)
-
-    if (error) throw error
+    await sql`
+      DELETE FROM modulo
+      WHERE id = ${moduloId}
+    `
   }
 
   // Apartados
   static async getApartadosByModulo(moduloId: string): Promise<ApartadoDTO[]> {
-    const { data, error } = await supabase
-      .from('apartado')
-      .select('*')
-      .eq('modulo_id', moduloId)
-      .order('orden', { ascending: true })
-
-    if (error) throw error
-    return data as ApartadoDTO[]
+    const rows = await sql<ApartadoDTO[]>`
+      SELECT * FROM apartado
+      WHERE modulo_id = ${moduloId}
+      ORDER BY orden ASC
+    `
+    return rows
   }
 
   static async getApartadoById(apartadoId: string): Promise<ApartadoDTO | null> {
-    const { data, error } = await supabase
-      .from('apartado')
-      .select('*')
-      .eq('id', apartadoId)
-      .single()
-
-    if (error) {
-      if (error.code === 'PGRST116') return null
-      throw error
-    }
-    return data as ApartadoDTO | null
+    const rows = await sql<ApartadoDTO[]>`
+      SELECT * FROM apartado
+      WHERE id = ${apartadoId}
+      LIMIT 1
+    `
+    return rows[0] || null
   }
 
   static async createApartado(
     moduloId: string,
     apartado: Omit<ApartadoDTO, 'id' | 'created_at' | 'numero'>
   ): Promise<ApartadoDTO> {
-    // Obtener el siguiente número de apartado
-    const { data: lastApartado } = await supabase
-      .from('apartado')
-      .select('numero')
-      .eq('modulo_id', moduloId)
-      .order('numero', { ascending: false })
-      .limit(1)
-      .single()
+    const lastRows = await sql`
+      SELECT numero FROM apartado
+      WHERE modulo_id = ${moduloId}
+      ORDER BY numero DESC
+      LIMIT 1
+    `
+    const numero = (lastRows[0]?.numero || 0) + 1
 
-    const numero = (lastApartado?.numero || 0) + 1
-
-    const { data, error } = await supabase
-      .from('apartado')
-      .insert({
-        modulo_id: moduloId,
+    const rows = await sql`
+      INSERT INTO apartado (
+        modulo_id,
         numero,
-        titulo: apartado.titulo,
-        contenido: apartado.contenido,
-        tipo: apartado.tipo,
-        orden: apartado.orden,
-        duracion_estimada: apartado.duracion_estimada,
-        url_recurso: apartado.url_recurso,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-    return data as ApartadoDTO
+        titulo,
+        contenido,
+        tipo,
+        orden,
+        duracion_estimada,
+        url_recurso
+      ) VALUES (
+        ${moduloId},
+        ${numero},
+        ${apartado.titulo ?? null},
+        ${apartado.contenido ?? null},
+        ${apartado.tipo ?? null},
+        ${apartado.orden ?? numero},
+        ${apartado.duracion_estimada ?? null},
+        ${apartado.url_recurso ?? null}
+      )
+      RETURNING *
+    `
+    return rows[0] as unknown as ApartadoDTO
   }
 
   static async updateApartado(
     apartadoId: string,
     updates: Partial<ApartadoDTO>
   ): Promise<ApartadoDTO> {
-    const { data, error } = await supabase
-      .from('apartado')
-      .update(updates)
-      .eq('id', apartadoId)
-      .select()
-      .single()
+    const columns = Object.keys(updates)
+    if (columns.length === 0) {
+      const rows = await sql<ApartadoDTO[]>`SELECT * FROM apartado WHERE id = ${apartadoId}`
+      return rows[0]
+    }
 
-    if (error) throw error
-    return data as ApartadoDTO
+    const rows = await sql<ApartadoDTO[]>`
+      UPDATE apartado
+      SET ${sql(updates as any)}
+      WHERE id = ${apartadoId}
+      RETURNING *
+    `
+    return rows[0]
   }
 
   static async deleteApartado(apartadoId: string): Promise<void> {
-    const { error } = await supabase
-      .from('apartado')
-      .delete()
-      .eq('id', apartadoId)
-
-    if (error) throw error
+    await sql`
+      DELETE FROM apartado
+      WHERE id = ${apartadoId}
+    `
   }
 }

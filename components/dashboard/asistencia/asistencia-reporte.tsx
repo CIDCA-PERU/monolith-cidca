@@ -37,7 +37,7 @@ export function AsistenciaReporte({
       case 1:  return 'bg-green-900 text-green-100'
       case 2:  return 'bg-yellow-900 text-yellow-100'
       case 0:  return 'bg-red-900 text-red-100'
-      default: return 'bg-gray-700 text-gray-100'
+      default: return 'bg-sky-100 dark:bg-sky-900 text-black dark:text-white'
     }
   }
 

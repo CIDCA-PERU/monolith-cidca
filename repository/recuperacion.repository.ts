@@ -1,5 +1,5 @@
 import 'server-only'
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 
 export type Recuperacion = {
   rec_id_int: number
@@ -11,66 +11,71 @@ export type Recuperacion = {
   rec_cre_tmp: string
 }
 
-/**
- * Crea un nuevo token de recuperación para el usuario.
- * Invalida los anteriores pendientes del mismo usuario.
- */
 export async function createRecuperacionToken(
   usrId: number,
   token: string,
   expiresAt: Date
 ): Promise<Recuperacion | null> {
-  // Invalida tokens anteriores pendientes del mismo usuario
-  await supabase
-    .from('recuperacion')
-    .update({ rec_est_int: 2 }) // 2 = invalidado
-    .eq('usr_id_int', usrId)
-    .eq('rec_est_int', 0)
-
-  const { data, error } = await supabase
-    .from('recuperacion')
-    .insert({
-      rec_tok_vac: token,
-      usr_id_int: usrId,
-      rec_est_int: 0,
-      rec_exp_tmp: expiresAt.toISOString(),
+  try {
+    await sql.begin(async sql => {
+      await sql`
+        UPDATE recuperacion
+        SET rec_est_int = 2
+        WHERE usr_id_int = ${usrId}
+        AND rec_est_int = 0
+      `
     })
-    .select()
-    .single()
 
-  if (error) {
+    const rows = await sql<Recuperacion[]>`
+      INSERT INTO recuperacion (
+        rec_tok_vac,
+        usr_id_int,
+        rec_est_int,
+        rec_exp_tmp
+      ) VALUES (
+        ${token},
+        ${usrId},
+        0,
+        ${expiresAt.toISOString()}
+      )
+      RETURNING *
+    `
+
+    return rows[0]
+  } catch (error) {
     console.error('[recuperacion.repository] createRecuperacionToken - Error:', error)
     return null
   }
-
-  return data as Recuperacion
 }
 
-/**
- * Busca un token válido (pendiente y no expirado).
- */
 export async function findValidToken(token: string): Promise<Recuperacion | null> {
-  const { data, error } = await supabase
-    .from('recuperacion')
-    .select('*')
-    .eq('rec_tok_vac', token)
-    .eq('rec_est_int', 0)
-    .single()
+  try {
+    const rows = await sql<Recuperacion[]>`
+      SELECT * FROM recuperacion
+      WHERE rec_tok_vac = ${token}
+      AND rec_est_int = 0
+      LIMIT 1
+    `
 
-  if (error || !data) return null
+    if (!rows.length) return null
+    const data = rows[0]
 
-  // Verificar expiración en código (doble seguridad)
-  if (new Date(data.rec_exp_tmp) < new Date()) return null
+    if (new Date(data.rec_exp_tmp) < new Date()) return null
 
-  return data as Recuperacion
+    return data
+  } catch (error) {
+    return null
+  }
 }
 
-/**
- * Marca un token como usado (rec_est_int = 1).
- */
 export async function markTokenAsUsed(recId: number): Promise<void> {
-  await supabase
-    .from('recuperacion')
-    .update({ rec_est_int: 1 })
-    .eq('rec_id_int', recId)
+  try {
+    await sql`
+      UPDATE recuperacion
+      SET rec_est_int = 1
+      WHERE rec_id_int = ${recId}
+    `
+  } catch (error) {
+    console.error(error)
+  }
 }

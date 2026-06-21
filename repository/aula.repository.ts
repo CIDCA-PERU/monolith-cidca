@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { supabase } from '@/lib/supabase'
+import { sql } from '@/lib/db'
 
 export type AulaCurso = {
   cur_id_int: number
@@ -73,15 +73,6 @@ export type AulaCertificado = {
   curso?: Pick<AulaCurso, 'cur_id_int' | 'cur_nomb_vac'> | null
 }
 
-function normalizeCurso(
-  curso: AulaPago['curso'] | AulaCertificado['curso'] | any
-): AulaPago['curso'] | AulaCertificado['curso'] | null {
-  if (!curso) {
-    return null
-  }
-  return Array.isArray(curso) ? (curso[0] || null) : curso
-}
-
 export type TipoDocumento = {
   doc_id_int: number
   doc_tipo_vac: string | null
@@ -89,238 +80,185 @@ export type TipoDocumento = {
 }
 
 export async function getEstudianteByUserId(userId: number) {
-  const { data, error } = await supabase
-    .from('estudiante')
-    .select(
-      `
-      estu_id_int,
-      estu_nomb_vac,
-      estu_apell_pat_vac,
-      estu_apell_mat_vac,
-      estu_gen_vac,
-      usr_id_int,
-      detalle_documento (
-        dtdoc_num_vac,
-        doc_id_int
-      ),
-      telefono (
-        tel_cod_pai_int,
-        tel_num_int
-      )
-      `
-    )
-    .eq('usr_id_int', userId)
-    .single()
+  const rows = await sql`
+    SELECT 
+      e.estu_id_int,
+      e.estu_nomb_vac,
+      e.estu_apell_pat_vac,
+      e.estu_apell_mat_vac,
+      e.estu_gen_vac,
+      e.usr_id_int,
+      (
+        SELECT COALESCE(json_agg(json_build_object('dtdoc_num_vac', d.dtdoc_num_vac, 'doc_id_int', d.doc_id_int)), '[]'::json)
+        FROM detalle_documento d WHERE d.estu_id_int = e.estu_id_int
+      ) as detalle_documento,
+      (
+        SELECT COALESCE(json_agg(json_build_object('tel_cod_pai_int', t.tel_cod_pai_int, 'tel_num_int', t.tel_num_int)), '[]'::json)
+        FROM telefono t WHERE t.estu_id_int = e.estu_id_int
+      ) as telefono
+    FROM estudiante e
+    WHERE e.usr_id_int = ${userId}
+    LIMIT 1
+  `
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  return data
+  if (!rows.length) return null
+  return rows[0]
 }
 
 export async function getCursosByEstudiante(estuId: number): Promise<AulaCurso[]> {
-  const { data, error } = await supabase
-    .from('estudiante_curso')
-    .select(
-      `
-      cur_id_int,
-      curso:cur_id_int (
-        cur_id_int,
-        cur_uuid,
-        cur_nomb_vac,
-        cur_desc_vac,
-        cur_url_vac,
-        cur_zoom_url_vac,
-        cur_est_int,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp
-      )
-    `
-    )
-    .eq('est_id_int', estuId)
-    .eq('est_cur_estado_bol', true)
-
-  if (error) throw error
-
-  return (data || [])
-    .map((row: any) => row.curso)
-    .filter((curso: any) => Boolean(curso) && curso.cur_est_int === 1) as AulaCurso[]
+  const rows = await sql`
+    SELECT 
+      c.cur_id_int,
+      c.cur_uuid,
+      c.cur_nomb_vac,
+      c.cur_desc_vac,
+      c.cur_url_vac,
+      c.cur_zoom_url_vac,
+      c.cur_est_int,
+      c.cur_fec_inic_tmp,
+      c.cur_fec_fin_tmp
+    FROM estudiante_curso ec
+    JOIN curso c ON ec.cur_id_int = c.cur_id_int
+    WHERE ec.est_id_int = ${estuId}
+    AND ec.est_cur_estado_bol = true
+    AND c.cur_est_int = 1
+  `
+  return rows as unknown as AulaCurso[]
 }
 
 export async function getCursoById(curId: number): Promise<AulaCurso | null> {
-  const { data, error } = await supabase
-    .from('curso')
-    .select(
-      'cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_url_vac, cur_zoom_url_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp'
-    )
-    .eq('cur_id_int', curId)
-    .single()
+  const rows = await sql`
+    SELECT 
+      cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_url_vac, 
+      cur_zoom_url_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp
+    FROM curso
+    WHERE cur_id_int = ${curId}
+    LIMIT 1
+  `
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  // Si el curso está inactivo (cur_est_int = 0), tratarlo como no encontrado para los estudiantes
-  if (data.cur_est_int === 0) return null
-
-  return data as AulaCurso
+  if (!rows.length || rows[0].cur_est_int === 0) return null
+  return rows[0] as AulaCurso
 }
 
 export async function getCursoByUuid(curUuid: string): Promise<AulaCurso | null> {
-  if (!curUuid) {
-    return null
-  }
-  const { data, error } = await supabase
-    .from('curso')
-    .select(
-      'cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_url_vac, cur_zoom_url_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp'
-    )
-    .eq('cur_uuid', curUuid)
-    .single()
+  if (!curUuid) return null
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
+  const rows = await sql`
+    SELECT 
+      cur_id_int, cur_uuid, cur_nomb_vac, cur_desc_vac, cur_url_vac, 
+      cur_zoom_url_vac, cur_est_int, cur_fec_inic_tmp, cur_fec_fin_tmp
+    FROM curso
+    WHERE cur_uuid = ${curUuid}
+    LIMIT 1
+  `
 
-  // Si el curso está inactivo (cur_est_int = 0), no mostrarlo al estudiante
-  if (data.cur_est_int === 0) return null
-
-  return data as AulaCurso
+  if (!rows.length || rows[0].cur_est_int === 0) return null
+  return rows[0] as AulaCurso
 }
 
 export async function getModulosByCurso(curId: number): Promise<AulaModulo[]> {
-  const { data, error } = await supabase
-    .from('modulo')
-    .select('mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int')
-    .eq('cur_id_int', curId)
-    .eq('mod_est_int', 1)
-    .order('mod_id_int', { ascending: true })
-
-  if (error) throw error
-  return (data || []) as AulaModulo[]
+  const rows = await sql<AulaModulo[]>`
+    SELECT mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int
+    FROM modulo
+    WHERE cur_id_int = ${curId}
+    AND mod_est_int = 1
+    ORDER BY mod_id_int ASC
+  `
+  return rows
 }
 
 export async function getModuloById(modId: number): Promise<AulaModulo | null> {
-  const { data, error } = await supabase
-    .from('modulo')
-    .select('mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int')
-    .eq('mod_id_int', modId)
-    .single()
-
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  return data as AulaModulo
+  const rows = await sql<AulaModulo[]>`
+    SELECT mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int
+    FROM modulo
+    WHERE mod_id_int = ${modId}
+    LIMIT 1
+  `
+  return rows[0] || null
 }
 
 export async function getModuloByUuid(modUuid: string): Promise<AulaModulo | null> {
-  if (!modUuid) {
-    return null
-  }
-  const { data, error } = await supabase
-    .from('modulo')
-    .select('mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int')
-    .eq('mod_uuid', modUuid)
-    .single()
+  if (!modUuid) return null
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  return data as AulaModulo
+  const rows = await sql<AulaModulo[]>`
+    SELECT mod_id_int, mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, cur_id_int
+    FROM modulo
+    WHERE mod_uuid = ${modUuid}
+    LIMIT 1
+  `
+  return rows[0] || null
 }
 
 export async function getApartadosByModulo(modId: number): Promise<AulaApartado[]> {
-  const { data, error } = await supabase
-    .from('apartado')
-    .select('apar_id_int, apar_nomb_vac, apar_desc_vac, apar_est_int, mod_id_int')
-    .eq('mod_id_int', modId)
-    .eq('apar_est_int', 1)
-    .order('apar_ordn_int', { ascending: true })
-    .order('apar_id_int', { ascending: true })
-
-  if (error) throw error
-  return (data || []) as AulaApartado[]
+  const rows = await sql<AulaApartado[]>`
+    SELECT apar_id_int, apar_nomb_vac, apar_desc_vac, apar_est_int, mod_id_int
+    FROM apartado
+    WHERE mod_id_int = ${modId}
+    AND apar_est_int = 1
+    ORDER BY apar_ordn_int ASC, apar_id_int ASC
+  `
+  return rows
 }
 
 export async function getApartadosByModuloIds(
   moduloIds: number[]
 ): Promise<AulaApartado[]> {
-  if (moduloIds.length === 0) {
-    return []
-  }
+  if (moduloIds.length === 0) return []
 
-  const { data, error } = await supabase
-    .from('apartado')
-    .select('apar_id_int, apar_nomb_vac, apar_desc_vac, apar_est_int, mod_id_int')
-    .in('mod_id_int', moduloIds)
-    .eq('apar_est_int', 1)
-    .order('apar_ordn_int', { ascending: true })
-    .order('apar_id_int', { ascending: true })
-
-  if (error) throw error
-  return (data || []) as AulaApartado[]
+  const rows = await sql<AulaApartado[]>`
+    SELECT apar_id_int, apar_nomb_vac, apar_desc_vac, apar_est_int, mod_id_int
+    FROM apartado
+    WHERE mod_id_int IN ${sql(moduloIds)}
+    AND apar_est_int = 1
+    ORDER BY apar_ordn_int ASC, apar_id_int ASC
+  `
+  return rows
 }
 
 export async function getItemsByApartados(
   apartadosIds: number[]
 ): Promise<AulaItemApartado[]> {
-  if (apartadosIds.length === 0) {
-    return []
-  }
+  if (apartadosIds.length === 0) return []
 
-  const { data, error } = await supabase
-    .from('item_apartado')
-    .select(
-      'item_apar_id_int, item_apar_tipo_vac, item_apar_titulo_vac, item_apar_url_vac, item_apar_ordn_inte, apar_id_int'
-    )
-    .in('apar_id_int', apartadosIds)
-    .eq('item_apar_est_int', 1)
-    .order('item_apar_ordn_inte', { ascending: true })
-
-  if (error) throw error
-  return (data || []) as AulaItemApartado[]
+  const rows = await sql<AulaItemApartado[]>`
+    SELECT item_apar_id_int, item_apar_tipo_vac, item_apar_titulo_vac, item_apar_url_vac, item_apar_ordn_inte, apar_id_int
+    FROM item_apartado
+    WHERE apar_id_int IN ${sql(apartadosIds)}
+    AND item_apar_est_int = 1
+    ORDER BY item_apar_ordn_inte ASC
+  `
+  return rows
 }
 
 export async function getComentariosByApartados(
   apartadosIds: number[]
 ): Promise<AulaComentario[]> {
-  if (apartadosIds.length === 0) {
-    return []
-  }
+  if (apartadosIds.length === 0) return []
 
-  const { data, error } = await supabase
-    .from('comentarios_curso')
-    .select(`
-      com_cur_id_int, 
-      com_cur_text_vac, 
-      com_cur_cre_tmp, 
-      apar_id_int,
-      usr_id_int, 
-      usuarios:usr_id_int (
-        usr_nomb_vac,
-        estudiante:estudiante(estu_nomb_vac, estu_apell_pat_vac)
-      )
-    `)
-    .in('apar_id_int', apartadosIds)
-    .order('com_cur_cre_tmp', { ascending: false });
+  const rows = await sql`
+    SELECT 
+      c.com_cur_id_int, 
+      c.com_cur_text_vac, 
+      c.com_cur_cre_tmp, 
+      c.apar_id_int,
+      c.usr_id_int, 
+      u.usr_nomb_vac,
+      e.estu_nomb_vac,
+      e.estu_apell_pat_vac
+    FROM comentarios_curso c
+    JOIN usuarios u ON c.usr_id_int = u.usr_id_int
+    LEFT JOIN estudiante e ON u.usr_id_int = e.usr_id_int
+    WHERE c.apar_id_int IN ${sql(apartadosIds)}
+    ORDER BY c.com_cur_cre_tmp DESC
+  `
 
-  if (error) throw error;
-  const comentarios: AulaComentario[] = (data || []).map((row: any) => {
-    const estudianteData = row.usuarios?.estudiante?.[0];
-    let autor = "Usuario CIDCA"; // Variable directa
+  return rows.map((row: any) => {
+    let autor = "Usuario CIDCA"
     
-    if (estudianteData && estudianteData.estu_nomb_vac) {
-      autor = `${estudianteData.estu_nomb_vac} ${estudianteData.estu_apell_pat_vac || ''}`.trim();
-    } else if (row.usuarios?.usr_nomb_vac) {
-      autor = row.usuarios.usr_nomb_vac;
+    if (row.estu_nomb_vac) {
+      autor = `${row.estu_nomb_vac} ${row.estu_apell_pat_vac || ''}`.trim()
+    } else if (row.usr_nomb_vac) {
+      autor = row.usr_nomb_vac
     }
 
     return {
@@ -330,158 +268,126 @@ export async function getComentariosByApartados(
       apar_id_int: row.apar_id_int,
       usr_id_int: row.usr_id_int,
       autor_nombre: autor
-    };
-  });
-
-  return comentarios;
+    }
+  })
 }
 
 export async function getPagosByEstudiante(estuId: number): Promise<AulaPago[]> {
-  const { data, error } = await supabase
-    .from('pago')
-    .select(
-      `
-      pago_id_int,
-      pago_uuid,
-      pago_nro_vac,
-      pago_url_vac,
-      pago_estad_vac,
-      pago_obs_vac,
-      pago_mont_num,
-      cur_id_int,
-      curso:cur_id_int (
-        cur_id_int,
-        cur_nomb_vac,
-        cur_precio_num,
-        cur_desc_vac,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp
-      )
-    `
-    )
-    .eq('estu_id_int', estuId)
-    .order('pago_cre_tmp', { ascending: false })
+  const rows = await sql`
+    SELECT 
+      p.pago_id_int,
+      p.pago_uuid,
+      p.pago_nro_vac,
+      p.pago_url_vac,
+      p.pago_estad_vac,
+      p.pago_obs_vac,
+      p.pago_mont_num,
+      p.cur_id_int,
+      json_build_object(
+        'cur_id_int', c.cur_id_int,
+        'cur_nomb_vac', c.cur_nomb_vac,
+        'cur_precio_num', c.cur_precio_num,
+        'cur_desc_vac', c.cur_desc_vac,
+        'cur_fec_inic_tmp', c.cur_fec_inic_tmp,
+        'cur_fec_fin_tmp', c.cur_fec_fin_tmp
+      ) as curso
+    FROM pago p
+    LEFT JOIN curso c ON p.cur_id_int = c.cur_id_int
+    WHERE p.estu_id_int = ${estuId}
+    ORDER BY p.pago_cre_tmp DESC
+  `
 
-  if (error) throw error
-  return ((data || []) as any[]).map((row: any) => ({
-    ...row,
-    curso: normalizeCurso(row.curso)
-  })) as AulaPago[]
+  return rows as unknown as AulaPago[]
 }
 
 export async function getPagoById(pagoId: number): Promise<AulaPago | null> {
-  const { data, error } = await supabase
-    .from('pago')
-    .select(
-      `
-      pago_id_int,
-      pago_uuid,
-      pago_nro_vac,
-      pago_url_vac,
-      pago_estad_vac,
-      pago_obs_vac,
-      pago_mont_num,
-      cur_id_int,
-      curso:cur_id_int (
-        cur_id_int,
-        cur_nomb_vac,
-        cur_precio_num,
-        cur_desc_vac,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp
-      )
-    `
-    )
-    .eq('pago_id_int', pagoId)
-    .single()
+  const rows = await sql`
+    SELECT 
+      p.pago_id_int,
+      p.pago_uuid,
+      p.pago_nro_vac,
+      p.pago_url_vac,
+      p.pago_estad_vac,
+      p.pago_obs_vac,
+      p.pago_mont_num,
+      p.cur_id_int,
+      json_build_object(
+        'cur_id_int', c.cur_id_int,
+        'cur_nomb_vac', c.cur_nomb_vac,
+        'cur_precio_num', c.cur_precio_num,
+        'cur_desc_vac', c.cur_desc_vac,
+        'cur_fec_inic_tmp', c.cur_fec_inic_tmp,
+        'cur_fec_fin_tmp', c.cur_fec_fin_tmp
+      ) as curso
+    FROM pago p
+    LEFT JOIN curso c ON p.cur_id_int = c.cur_id_int
+    WHERE p.pago_id_int = ${pagoId}
+    LIMIT 1
+  `
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  return {
-    ...(data as any),
-    curso: normalizeCurso((data as any)?.curso)
-  } as AulaPago
+  if (!rows.length) return null
+  return rows[0] as AulaPago
 }
 
 export async function getPagoByUuid(pagoUuid: string): Promise<AulaPago | null> {
-  if (!pagoUuid) {
-    return null
-  }
+  if (!pagoUuid) return null
 
-  const { data, error } = await supabase
-    .from('pago')
-    .select(
-      `
-      pago_id_int,
-      pago_uuid,
-      pago_nro_vac,
-      pago_url_vac,
-      pago_estad_vac,
-      pago_obs_vac,
-      pago_mont_num,
-      cur_id_int,
-      curso:cur_id_int (
-        cur_id_int,
-        cur_nomb_vac,
-        cur_precio_num,
-        cur_desc_vac,
-        cur_fec_inic_tmp,
-        cur_fec_fin_tmp
-      )
-    `
-    )
-    .eq('pago_uuid', pagoUuid)
-    .single()
+  const rows = await sql`
+    SELECT 
+      p.pago_id_int,
+      p.pago_uuid,
+      p.pago_nro_vac,
+      p.pago_url_vac,
+      p.pago_estad_vac,
+      p.pago_obs_vac,
+      p.pago_mont_num,
+      p.cur_id_int,
+      json_build_object(
+        'cur_id_int', c.cur_id_int,
+        'cur_nomb_vac', c.cur_nomb_vac,
+        'cur_precio_num', c.cur_precio_num,
+        'cur_desc_vac', c.cur_desc_vac,
+        'cur_fec_inic_tmp', c.cur_fec_inic_tmp,
+        'cur_fec_fin_tmp', c.cur_fec_fin_tmp
+      ) as curso
+    FROM pago p
+    LEFT JOIN curso c ON p.cur_id_int = c.cur_id_int
+    WHERE p.pago_uuid = ${pagoUuid}
+    LIMIT 1
+  `
 
-  if (error) {
-    if (error.code === 'PGRST116') return null
-    throw error
-  }
-
-  return {
-    ...(data as any),
-    curso: normalizeCurso((data as any)?.curso)
-  } as AulaPago
+  if (!rows.length) return null
+  return rows[0] as AulaPago
 }
 
 export async function getCertificadosByEstudiante(
   estuId: number
 ): Promise<AulaCertificado[]> {
-  const { data, error } = await supabase
-    .from('certificado')
-    .select(
-      `
-      cert_id_int,
-      cert_uuid,
-      cert_cod_vac,
-      cert_fec_emi_tmp,
-      cert_url_vac,
-      cur_id_int,
-      curso:cur_id_int (
-        cur_id_int,
-        cur_nomb_vac
-      )
-    `
-    )
-    .eq('estu_id_int', estuId)
-    .order('cert_fec_emi_tmp', { ascending: false })
-
-  if (error) throw error
-  return ((data || []) as any[]).map((row: any) => ({
-    ...row,
-    curso: normalizeCurso(row.curso)
-  })) as AulaCertificado[]
+  const rows = await sql`
+    SELECT 
+      c.cert_id_int,
+      c.cert_uuid,
+      c.cert_cod_vac,
+      c.cert_fec_emi_tmp,
+      c.cert_url_vac,
+      c.cur_id_int,
+      json_build_object(
+        'cur_id_int', cu.cur_id_int,
+        'cur_nomb_vac', cu.cur_nomb_vac
+      ) as curso
+    FROM certificado c
+    LEFT JOIN curso cu ON c.cur_id_int = cu.cur_id_int
+    WHERE c.estu_id_int = ${estuId}
+    ORDER BY c.cert_fec_emi_tmp DESC
+  `
+  return rows as unknown as AulaCertificado[]
 }
 
 export async function getTiposDocumento(): Promise<TipoDocumento[]> {
-  const { data, error } = await supabase
-    .from('documento')
-    .select('doc_id_int, doc_tipo_vac, doc_desc_vac')
-    .order('doc_tipo_vac', { ascending: true })
-
-  if (error) throw error
-  return (data || []) as TipoDocumento[]
+  const rows = await sql<TipoDocumento[]>`
+    SELECT doc_id_int, doc_tipo_vac, doc_desc_vac
+    FROM documento
+    ORDER BY doc_tipo_vac ASC
+  `
+  return rows
 }
