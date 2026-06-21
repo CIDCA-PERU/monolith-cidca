@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-// ─── Combobox simple (búsqueda en lista) ──────────────────────────────────────
+// --- Combobox simple (búsqueda en lista) --------------------------------------
 
 function SearchSelect({
   label,
@@ -63,7 +63,7 @@ function SearchSelect({
 
   return (
     <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+      <label className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
         <Icon className="h-3.5 w-3.5" />
         {label} <span className="text-red-500 ml-0.5">*</span>
       </label>
@@ -72,29 +72,29 @@ function SearchSelect({
           type="button"
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 disabled:opacity-50"
+          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 disabled:opacity-50"
         >
-          <span className={selected ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}>
+          <span className={selected ? 'text-black dark:text-white' : 'text-black dark:text-white'}>
             {selected ? selected.label : placeholder}
           </span>
-          <Search className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+          <Search className="h-3.5 w-3.5 text-black dark:text-white flex-shrink-0" />
         </button>
 
         {open && (
-          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
-            <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 shadow-xl overflow-hidden">
+            <div className="p-2 border-b border-sky-200 dark:border-sky-900">
               <input
                 autoFocus
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar..."
-                className="w-full px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                className="w-full px-3 py-1.5 text-sm bg-white dark:bg-sky-950 rounded-lg border border-sky-200 dark:border-sky-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
               />
             </div>
             <ul className="max-h-48 overflow-y-auto">
               {filtered.length === 0 ? (
-                <li className="px-4 py-3 text-sm text-slate-400 text-center">Sin resultados</li>
+                <li className="px-4 py-3 text-sm text-black dark:text-white text-center">Sin resultados</li>
               ) : (
                 filtered.map((item) => (
                   <li
@@ -103,7 +103,7 @@ function SearchSelect({
                     className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${
                       item.id === value
                         ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        : 'text-black dark:text-white hover:bg-sky-50 dark:hover:bg-sky-900/40'
                     }`}
                   >
                     {item.label}
@@ -118,15 +118,18 @@ function SearchSelect({
   )
 }
 
-// ─── Sheet de nuevo pago ──────────────────────────────────────────────────────
+import { useRouter } from 'next/navigation'
+
+// --- Sheet de nuevo pago ------------------------------------------------------
 
 export function NuevoPagoSheet({
   pagosExistentes,
   onCreado,
 }: {
   pagosExistentes: PagoAdminDto[]   // para validar duplicados en cliente
-  onCreado: (nuevoPago: PagoAdminDto) => void
+  onCreado?: (nuevoPago: PagoAdminDto) => void
 }) {
+  const router = useRouter()
   const [open, setOpen]           = useState(false)
   const [loading, setLoading]     = useState(false)
   const [isPending, start]        = useTransition()
@@ -192,26 +195,30 @@ export function NuevoPagoSheet({
       })
       if (res.success) {
         toast.success('Pago registrado correctamente')
-        // Construir el objeto para actualizar la lista local
-        const est  = estudiantes.find((e) => e.estu_id_int === estuId)
-        const cur  = cursos.find((c) => c.cur_id_int === curId)
-        const parts = est?.nombre_completo.split(' ') ?? []
-        onCreado({
-          pago_uuid:           crypto.randomUUID(),
-          pago_id_int:         0,
-          estu_id_int:         estuId,
-          cur_id_int:          curId,
-          pago_nro_vac:        nro.trim() || null,
-          pago_mont_num:       Number(monto) || 0,
-          pago_estad_vac:      estado,
-          pago_url_vac:        null,
-          pago_obs_vac:        obs.trim() || null,
-          pago_cre_tmp:        new Date().toISOString(),
-          pago_upd_tmp:        new Date().toISOString(),
-          estudiante_nombre:   parts[0] ?? '',
-          estudiante_apellidos: parts.slice(1).join(' '),
-          curso_nombre:        cur?.cur_nomb_vac ?? '—',
-        })
+        if (onCreado) {
+          // Construir el objeto para actualizar la lista local
+          const est  = estudiantes.find((e) => e.estu_id_int === estuId)
+          const cur  = cursos.find((c) => c.cur_id_int === curId)
+          const parts = est?.nombre_completo.split(' ') ?? []
+          onCreado({
+            pago_uuid:           crypto.randomUUID(),
+            pago_id_int:         0,
+            estu_id_int:         estuId,
+            cur_id_int:          curId,
+            pago_nro_vac:        nro.trim() || null,
+            pago_mont_num:       Number(monto) || 0,
+            pago_estad_vac:      estado,
+            pago_url_vac:        null,
+            pago_obs_vac:        obs.trim() || null,
+            pago_cre_tmp:        new Date().toISOString(),
+            pago_upd_tmp:        new Date().toISOString(),
+            estudiante_nombre:   parts[0] ?? '',
+            estudiante_apellidos: parts.slice(1).join(' '),
+            curso_nombre:        cur?.cur_nomb_vac ?? '—',
+          })
+        } else {
+          router.refresh()
+        }
         handleClose()
       } else {
         toast.error(res.error ?? 'Error al crear pago')
@@ -224,31 +231,31 @@ export function NuevoPagoSheet({
       {/* Botón disparador */}
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow-md hover:shadow-lg transition-all"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-black dark:text-white font-bold text-sm shadow-md hover:shadow-lg transition-all"
       >
         <PlusCircle className="h-4 w-4" />
         Nuevo pago
       </button>
 
       <Sheet open={open} onOpenChange={(v) => !v && handleClose()}>
-        <SheetContent className="w-full sm:max-w-md bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-y-auto">
-          <SheetHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
-            <SheetTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+        <SheetContent className="w-full sm:max-w-md bg-white dark:bg-sky-950 border-sky-200 dark:border-sky-900 overflow-y-auto">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-sky-200 dark:border-sky-900">
+            <SheetTitle className="text-black dark:text-white flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-amber-500" />
               Registrar nuevo pago
             </SheetTitle>
-            <SheetDescription className="text-slate-500 dark:text-slate-400">
+            <SheetDescription className="text-black dark:text-white">
               Crea un pago manualmente para un alumno en un curso.
             </SheetDescription>
           </SheetHeader>
 
           {loading ? (
-            <div className="flex items-center justify-center py-16 gap-2 text-slate-500">
+            <div className="flex items-center justify-center py-16 gap-2 text-black dark:text-white">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm">Cargando datos...</span>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5 py-5">
+            <form onSubmit={handleSubmit} className="space-y-5 px-6 py-5">
               {/* Alumno */}
               <SearchSelect
                 label="Alumno"
@@ -280,7 +287,7 @@ export function NuevoPagoSheet({
 
               {/* Monto */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                   <DollarSign className="h-3.5 w-3.5" />
                   Monto (S/)
                 </label>
@@ -291,28 +298,28 @@ export function NuevoPagoSheet({
                   value={monto}
                   onChange={(e) => setMonto(e.target.value)}
                   placeholder="0.00"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition"
+                  className="w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 px-4 py-2.5 text-sm text-black dark:text-white placeholder:text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 transition"
                 />
               </div>
 
               {/* Nro. de orden */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                   <Hash className="h-3.5 w-3.5" />
-                  Nro. de orden <span className="text-slate-400 font-normal normal-case ml-1">(opcional)</span>
+                  Nro. de orden <span className="text-black dark:text-white font-normal normal-case ml-1">(opcional)</span>
                 </label>
                 <input
                   type="text"
                   value={nro}
                   onChange={(e) => setNro(e.target.value)}
                   placeholder="OP-2025-001"
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 font-mono transition"
+                  className="w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 px-4 py-2.5 text-sm text-black dark:text-white placeholder:text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 font-mono transition"
                 />
               </div>
 
               {/* Estado inicial */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <label className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   Estado inicial
                 </label>
@@ -326,8 +333,8 @@ export function NuevoPagoSheet({
                         estado === s
                           ? s === 'ACEPTADO'
                             ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm'
-                            : 'bg-amber-500 border-amber-500 text-slate-950 shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-amber-300'
+                            : 'bg-amber-500 border-amber-500 text-black dark:text-white shadow-sm'
+                          : 'border-sky-200 dark:border-sky-900 text-black dark:text-white hover:border-amber-300'
                       }`}
                     >
                       {s === 'ACEPTADO' ? 'Aceptado' : 'Pendiente'}
@@ -338,15 +345,15 @@ export function NuevoPagoSheet({
 
               {/* Observaciones */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                  Observaciones <span className="text-slate-400 font-normal normal-case ml-1">(opcional)</span>
+                <label className="text-xs font-bold text-black dark:text-white uppercase tracking-wider block">
+                  Observaciones <span className="text-black dark:text-white font-normal normal-case ml-1">(opcional)</span>
                 </label>
                 <textarea
                   rows={2}
                   value={obs}
                   onChange={(e) => setObs(e.target.value)}
                   placeholder="Notas internas..."
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
+                  className="w-full rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 px-4 py-3 text-sm text-black dark:text-white placeholder:text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 resize-none transition"
                 />
               </div>
 
@@ -354,7 +361,7 @@ export function NuevoPagoSheet({
               <button
                 type="submit"
                 disabled={isPending || yaExiste || !estuId || !curId}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold transition-all shadow-md hover:shadow-lg"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-black dark:text-white font-bold transition-all shadow-md hover:shadow-lg"
               >
                 {isPending
                   ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>

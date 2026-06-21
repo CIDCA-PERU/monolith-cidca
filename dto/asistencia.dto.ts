@@ -30,6 +30,7 @@ export interface RegistrarAsistenciaResponseDto {
 export interface AsistenciaRegistroDto {
   asist_id_int: number;
   asist_uuid: string;
+  usr_uuid?: string;
   asist_est_int: number; // 0=Ausente, 1=Presente, 2=Tardanza
   ses_id_int: number;
   estu_nomb_vac: string;

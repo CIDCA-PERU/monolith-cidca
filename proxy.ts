@@ -22,26 +22,45 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/estudiante')
 
-  if (!isProtectedRoute) {
+  const isAuthRoute = pathname === '/login'
+
+  if (!isProtectedRoute && !isAuthRoute) {
     return NextResponse.next()
   }
 
   const cookieValue = request.cookies.get('session_token')?.value
 
-  // Sin cookie → redirigir a login
+  // Sin cookie → redirigir a login si es ruta protegida
   if (!cookieValue) {
-    return redirectToLogin(request)
+    if (isProtectedRoute) {
+      return redirectToLogin(request)
+    }
+    return NextResponse.next()
   }
 
   // Verificar firma HMAC (sin BD) — detecta cookies forjadas o manipuladas
   const token = await extractAndVerifyToken(cookieValue)
 
   if (!token) {
-    // Cookie inválida o forjada → limpiar y redirigir
-    const response = redirectToLogin(request)
+    // Cookie inválida o forjada
+    if (isProtectedRoute) {
+      const response = redirectToLogin(request)
+      response.cookies.delete('session_token')
+      response.cookies.delete('userId')
+      return response
+    }
+    const response = NextResponse.next()
     response.cookies.delete('session_token')
     response.cookies.delete('userId')
     return response
+  }
+
+  // Si tiene token válido y entra a /login, mandarlo al dashboard
+  // (el dashboard layout rebotará a los estudiantes hacia /aula/cursos)
+  if (isAuthRoute) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
   }
 
   // Firma válida → continuar al servidor
@@ -56,5 +75,5 @@ function redirectToLogin(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/aula/:path*', '/dashboard/:path*', '/estudiante/:path*'],
+  matcher: ['/aula/:path*', '/dashboard/:path*', '/estudiante/:path*', '/login'],
 }

@@ -89,9 +89,9 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
   }
 
   return (
-    <div className="border-t border-slate-100 dark:border-slate-800/50">
+    <div className="border-t border-sky-200 dark:border-sky-900">
       {items.length === 0 && (
-        <p className="px-8 py-2 text-xs text-slate-400 italic">Sin contenido en este apartado</p>
+        <p className="px-8 py-2 text-xs text-black dark:text-white italic">Sin contenido en este apartado</p>
       )}
 
       {items.map((it, i) => {
@@ -103,50 +103,54 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
         return (
           <div key={it.item_uuid} className={`transition-opacity ${inactive ? 'opacity-40' : ''}`}>
 
-            {/* ── SEPARADOR: render como línea divisoria ── */}
+            {/* -- SEPARADOR: render como línea divisoria -- */}
             {isSep ? (
-              <div className="group flex items-center gap-2 px-8 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-                {it.item_titulo_vac && (
-                  <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
-                    <SeparatorHorizontal className="h-3 w-3" />
-                    {it.item_titulo_vac}
-                  </span>
-                )}
-                {it.item_url_vac && !it.item_titulo_vac && (
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 italic whitespace-nowrap">{it.item_url_vac}</span>
-                )}
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+              <div className="group flex items-center gap-2 px-8 py-2 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors">
+                <div className="flex-1 h-px bg-amber-300 dark:bg-amber-500/30" />
+                <div className="flex flex-col items-center">
+                  {it.item_titulo_vac && (
+                    <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider whitespace-nowrap flex items-center gap-1">
+                      <SeparatorHorizontal className="h-3 w-3 text-amber-500" />
+                      {it.item_titulo_vac}
+                    </span>
+                  )}
+                  {it.item_url_vac && (
+                    <span className="text-[10px] text-amber-700/70 dark:text-amber-300/70 italic text-center px-2 max-w-xs truncate">
+                      {it.item_url_vac}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 h-px bg-amber-300 dark:bg-amber-500/30" />
 
                 {/* acciones separador */}
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {inactive && <span title="Oculto para estudiantes"><EyeOff className="h-3 w-3 text-slate-400 mr-1" /></span>}
+                  {inactive && <span title="Oculto para estudiantes"><EyeOff className="h-3 w-3 text-black dark:text-white mr-1" /></span>}
                   <button onClick={() => toggleEstado(it.item_uuid)} title={inactive ? 'Activar' : 'Desactivar'}
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${inactive ? 'bg-slate-100 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600' : 'bg-emerald-50 text-emerald-600 hover:bg-slate-100 hover:text-slate-500'}`}>
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-colors ${inactive ? 'bg-white dark:bg-sky-950 text-black dark:text-white hover:bg-emerald-50 hover:text-emerald-600' : 'bg-emerald-50 text-emerald-600 hover:bg-white dark:bg-sky-950 hover:text-black dark:text-white'}`}>
                     {inactive ? 'Activar' : 'Ocultar'}
                   </button>
                   <div className="flex flex-col">
-                    <button onClick={() => moveItem(i, -1)} disabled={i === 0} className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronUp className="h-3.5 w-3.5" /></button>
-                    <button onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronDown className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => moveItem(i, -1)} disabled={i === 0} className="p-0.5 text-black dark:text-white hover:text-black dark:text-white dark:hover:text-black dark:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronUp className="h-3.5 w-3.5" /></button>
+                    <button onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} className="p-0.5 text-black dark:text-white hover:text-black dark:text-white dark:hover:text-black dark:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ChevronDown className="h-3.5 w-3.5" /></button>
                   </div>
                   <button onClick={() => setSheet({ itemUuid: it.item_uuid, initial: { tipo: it.item_tipo_vac as ItemTipo, titulo: it.item_titulo_vac, url: it.item_url_vac ?? '', estado: it.item_est_int } })}
-                    className="p-1 rounded text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
+                    className="p-1 rounded text-black dark:text-white hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
                     <Pencil className="h-3 w-3" />
                   </button>
                   <button onClick={() => setDel(it.item_uuid)}
-                    className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                    className="p-1 rounded text-black dark:text-white hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
               </div>
             ) : (
-              /* ── Items normales ── */
-              <div className="flex items-center gap-2 px-8 py-2 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
-                <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${inactive ? 'bg-slate-100 dark:bg-slate-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                  <Icon className={`h-3 w-3 ${inactive ? 'text-slate-400' : cfg.color}`} />
+              /* -- Items normales -- */
+              <div className="flex items-center gap-2 px-8 py-2 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors group">
+                <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${inactive ? 'bg-white dark:bg-sky-950' : 'bg-white dark:bg-sky-950'}`}>
+                  <Icon className={`h-3 w-3 ${inactive ? 'text-black dark:text-white' : cfg.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs font-semibold truncate ${inactive ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                  <p className={`text-xs font-semibold truncate ${inactive ? 'line-through text-black dark:text-white' : 'text-black dark:text-white'}`}>
                     {it.item_titulo_vac}
                   </p>
                   {it.item_url_vac && (
@@ -160,15 +164,15 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
                 </div>
 
                 {/* Badge de tipo */}
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hidden sm:inline">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white dark:bg-sky-950 text-black dark:text-white hidden sm:inline">
                   {cfg.label}
                 </span>
 
                 {/* Toggle estado (click) */}
                 <button onClick={() => toggleEstado(it.item_uuid)} title={inactive ? 'Activar' : 'Desactivar'}
                   className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${inactive
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'
-                    : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-slate-100 hover:text-slate-500'
+                    ? 'bg-white dark:bg-sky-950 text-black dark:text-white border-sky-200 dark:border-sky-900 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'
+                    : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-white dark:bg-sky-950 hover:text-black dark:text-white'
                     }`}>
                   {inactive ? <><EyeOff className="h-2.5 w-2.5 inline mr-0.5" />Oculto</> : 'Visible'}
                 </button>
@@ -176,15 +180,15 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
                 {/* Acciones hover */}
                 <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="flex flex-col">
-                    <button onClick={() => moveItem(i, -1)} disabled={i === 0} className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20"><ChevronUp className="h-3 w-3" /></button>
-                    <button onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20"><ChevronDown className="h-3 w-3" /></button>
+                    <button onClick={() => moveItem(i, -1)} disabled={i === 0} className="p-0.5 text-black dark:text-white hover:text-black dark:text-white disabled:opacity-20"><ChevronUp className="h-3 w-3" /></button>
+                    <button onClick={() => moveItem(i, 1)} disabled={i === items.length - 1} className="p-0.5 text-black dark:text-white hover:text-black dark:text-white disabled:opacity-20"><ChevronDown className="h-3 w-3" /></button>
                   </div>
                   <button onClick={() => setSheet({ itemUuid: it.item_uuid, initial: { tipo: it.item_tipo_vac as ItemTipo, titulo: it.item_titulo_vac, url: it.item_url_vac ?? '', estado: it.item_est_int } })}
-                    className="p-1 rounded text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
+                    className="p-1 rounded text-black dark:text-white hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors">
                     <Pencil className="h-3 w-3" />
                   </button>
                   <button onClick={() => setDel(it.item_uuid)}
-                    className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                    className="p-1 rounded text-black dark:text-white hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
@@ -205,7 +209,7 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
       })}
 
       <button onClick={() => setSheet({ initial: EMPTY })}
-        className="w-full flex items-center gap-1.5 px-8 py-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors">
+        className="w-full flex items-center gap-1.5 px-8 py-2 text-[11px] font-semibold text-black dark:text-white hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/5 transition-colors">
         <Plus className="h-3 w-3" /> Agregar contenido
       </button>
 
@@ -214,14 +218,14 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
       )}
 
       <AlertDialog open={!!itemConfirm} onOpenChange={(open) => { if (!open) setItemConfirm(null) }}>
-        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <AlertDialogContent className="bg-white dark:bg-sky-950 border-sky-200 dark:border-sky-900">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-slate-900 dark:text-white">
+            <AlertDialogTitle className="text-black dark:text-white">
               {itemConfirm?.newEstado === 1 ? 'Activar' : 'Desactivar'} item
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
+            <AlertDialogDescription className="text-black dark:text-white">
               ¿Estás seguro de {itemConfirm?.newEstado === 1 ? 'activar' : 'desactivar'} el item{' '}
-              <strong className="text-slate-800 dark:text-slate-200">«{itemConfirm?.label}»</strong>?
+              <strong className="text-black dark:text-white">«{itemConfirm?.label}»</strong>?
               {itemConfirm?.newEstado === 0 && (
                 <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
                   Este contenido dejará de ser visible para los estudiantes.
@@ -230,11 +234,11 @@ export function ApartadoItems({ aparUuid, initialItems }: { aparUuid: string; in
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-sky-200 dark:border-sky-900 text-black dark:text-white">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={executeItemToggle}
               className={itemConfirm?.newEstado === 0
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                ? 'bg-amber-500 hover:bg-amber-600 text-black dark:text-white font-bold'
                 : 'bg-emerald-500 hover:bg-emerald-600 text-white font-bold'
               }
             >

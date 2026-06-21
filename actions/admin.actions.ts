@@ -3,8 +3,10 @@
 import { supabase } from '@/lib/supabase'
 import { assertAuthenticated, assertAdminOrCoordinador, assertDashboard } from '@/lib/auth-guards'
 import { AppError } from '@/lib/errors'
+import { registerService } from '@/service/auth.service'
+import { existeDocumento, crearDetalleDocumento } from '@/repository/documento.repository'
 
-// ─── Tipos internos ────────────────────────────────────────────────────────────
+// --- Tipos internos ------------------------------------------------------------
 
 export interface CursoAdminDto {
   cur_uuid: string
@@ -32,6 +34,7 @@ export interface EstudianteAdminDto {
   usr_email_vac: string
   usr_nomb_vac: string
   usr_est_int: number
+  usr_origen_vac: string
   cursos_count: number
 }
 
@@ -59,6 +62,7 @@ export interface EstudianteSelectDto {
 
 export interface CursoSelectDto {
   cur_id_int: number
+  cur_uuid: string
   cur_nomb_vac: string
   cur_precio_num: number
 }
@@ -71,7 +75,7 @@ export interface AuditoriaItemDto {
   accion: string
 }
 
-// ─── Certificados ─────────────────────────────────────────────────────────────
+// --- Certificados -------------------------------------------------------------
 
 export interface CursoCertificadoDto {
   cur_id_int: number
@@ -97,18 +101,23 @@ export interface EstudianteCertificadoDto {
   cert_fec_emi_tmp: string | null
 }
 
-// ─── Cursos ────────────────────────────────────────────────────────────────────
+// --- Cursos --------------------------------------------------------------------
 
-export async function getCursosAdmin(): Promise<{
+export async function getCursosAdmin(
+  page: number = 1,
+  limit: number = 10,
+  search?: string
+): Promise<{
   success: boolean
   data?: CursoAdminDto[]
+  meta?: { total: number; page: number; limit: number; totalPages: number }
   error?: string
 }> {
   try {
     const user = await assertAuthenticated()
     assertDashboard(user)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('curso')
       .select(`
         cur_uuid,
@@ -125,13 +134,27 @@ export async function getCursosAdmin(): Promise<{
           usr_email_vac
         ),
         estudiante_curso ( est_cur_id_int )
-      `)
+      `, { count: 'exact' })
+
+    if (search) {
+      const term = `%${search}%`
+      query = query.ilike('cur_nomb_vac', term)
+    }
+
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { data, count, error } = await query
       .order('cur_cre_tmp', { ascending: false })
+      .range(from, to)
 
     if (error) {
       console.error('[getCursosAdmin] Supabase error:', error.message)
       throw new AppError(error.message, 'SERVER_ERROR', 500)
     }
+
+    const total = count ?? 0
+    const totalPages = Math.ceil(total / limit)
 
     const result: CursoAdminDto[] = (data ?? []).map((c: any) => ({
       cur_uuid: c.cur_uuid,
@@ -148,25 +171,34 @@ export async function getCursosAdmin(): Promise<{
       estudiantes_count: (c.estudiante_curso ?? []).length,
     }))
 
-    return { success: true, data: result }
+    return { 
+      success: true, 
+      data: result,
+      meta: { total, page, limit, totalPages }
+    }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
     return { success: false, error: msg }
   }
 }
 
-// ─── Estudiantes ───────────────────────────────────────────────────────────────
+// --- Estudiantes ---------------------------------------------------------------
 
-export async function getEstudiantesAdmin(): Promise<{
+export async function getEstudiantesAdmin(
+  page: number = 1,
+  limit: number = 10,
+  search?: string
+): Promise<{
   success: boolean
   data?: EstudianteAdminDto[]
+  meta?: { total: number; page: number; limit: number; totalPages: number }
   error?: string
 }> {
   try {
     const user = await assertAuthenticated()
     assertAdminOrCoordinador(user)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('estudiante')
       .select(`
         estu_uuid,
@@ -179,13 +211,28 @@ export async function getEstudiantesAdmin(): Promise<{
           usr_uuid,
           usr_email_vac,
           usr_nomb_vac,
-          usr_est_int
+          usr_est_int,
+          usr_origen_vac
         ),
         estudiante_curso ( est_cur_id_int )
-      `)
+      `, { count: 'exact' })
+
+    if (search) {
+      const term = `%${search}%`
+      query = query.or(`estu_nomb_vac.ilike.${term},estu_apell_pat_vac.ilike.${term},estu_apell_mat_vac.ilike.${term}`)
+    }
+
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { data, count, error } = await query
       .order('estu_cre_tmp', { ascending: false })
+      .range(from, to)
 
     if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    const total = count ?? 0
+    const totalPages = Math.ceil(total / limit)
 
     const result: EstudianteAdminDto[] = (data ?? []).map((e: any) => ({
       estu_uuid: e.estu_uuid,
@@ -198,10 +245,15 @@ export async function getEstudiantesAdmin(): Promise<{
       usr_email_vac: e.usuarios?.usr_email_vac ?? '',
       usr_nomb_vac: e.usuarios?.usr_nomb_vac ?? '',
       usr_est_int: e.usuarios?.usr_est_int ?? 0,
+      usr_origen_vac: e.usuarios?.usr_origen_vac ?? 'WEB',
       cursos_count: (e.estudiante_curso ?? []).length,
     }))
 
-    return { success: true, data: result }
+    return { 
+      success: true, 
+      data: result,
+      meta: { total, page, limit, totalPages }
+    }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al cargar estudiantes'
     return { success: false, error: msg }
@@ -223,7 +275,7 @@ export async function getEstudianteByUuid(estuUuid: string): Promise<{
         estu_uuid, estu_nomb_vac, estu_apell_pat_vac, estu_apell_mat_vac,
         estu_gen_vac, estu_cre_tmp,
         usuarios (
-          usr_uuid, usr_email_vac, usr_nomb_vac, usr_est_int
+          usr_uuid, usr_email_vac, usr_nomb_vac, usr_est_int, usr_origen_vac
         ),
         estudiante_curso ( est_cur_id_int )
       `)
@@ -246,6 +298,7 @@ export async function getEstudianteByUuid(estuUuid: string): Promise<{
         usr_email_vac: e.usuarios?.usr_email_vac ?? '',
         usr_nomb_vac: e.usuarios?.usr_nomb_vac ?? '',
         usr_est_int: e.usuarios?.usr_est_int ?? 0,
+        usr_origen_vac: e.usuarios?.usr_origen_vac ?? 'WEB',
         cursos_count: (e.estudiante_curso ?? []).length,
       },
     }
@@ -255,7 +308,127 @@ export async function getEstudianteByUuid(estuUuid: string): Promise<{
   }
 }
 
-// ─── Perfil completo de estudiante ────────────────────────────────────────────
+export async function crearEstudianteManualAdmin(data: {
+  email: string
+  password: string
+  nombre: string
+  apellidoPat: string
+  apellidoMat?: string
+  docTipo: string
+  docNumero: string
+  docId?: number
+}): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    const email       = data.email.trim().toLowerCase()
+    const password    = data.password
+    const nombre      = data.nombre.trim()
+    const apellidoPat = data.apellidoPat.trim()
+    const apellidoMat = data.apellidoMat?.trim() ?? ''
+    const docTipo     = data.docTipo.trim()
+    const docNumero   = data.docNumero.trim().toUpperCase()
+    const docId       = data.docId ?? -1
+
+    if (!email || !nombre || !apellidoPat || !docTipo || !docNumero || !password) {
+      return { success: false, error: 'Faltan campos obligatorios' }
+    }
+
+    const documentoDuplicado = await existeDocumento(docTipo, docNumero)
+    if (documentoDuplicado) {
+      return { success: false, error: `Ya existe una cuenta con ${docTipo} N° ${docNumero}` }
+    }
+
+    // 1. Crear usuario origen MANUAL
+    const userSession = await registerService(email, password, password, 4, 'MANUAL')
+
+    // 2. Crear estudiante
+    const { data: estData, error: estError } = await supabase
+      .from('estudiante')
+      .insert({
+        estu_nomb_vac: nombre,
+        estu_apell_pat_vac: apellidoPat,
+        estu_apell_mat_vac: apellidoMat || null,
+        usr_id_int: userSession.usr_id_int,
+      })
+      .select('estu_id_int')
+      .single()
+
+    if (estError || !estData) {
+      throw new AppError('Error al crear perfil de estudiante', 'SERVER_ERROR', 500)
+    }
+
+    // 3. Crear documento
+    await crearDetalleDocumento(estData.estu_id_int, docId, docTipo, docNumero)
+
+    return { success: true, message: 'Estudiante creado correctamente' }
+  } catch (error: any) {
+    const msg = error instanceof AppError ? error.message : error?.message || 'Error al crear estudiante'
+    return { success: false, error: msg.includes('registrado') ? 'Ese email ya está registrado' : msg }
+  }
+}
+
+export async function editarEstudianteAdmin(data: {
+  estu_uuid: string
+  usr_uuid: string
+  email: string
+  nombre: string
+  apellidoPat: string
+  apellidoMat?: string
+}): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    const user = await assertAuthenticated()
+    assertAdminOrCoordinador(user)
+
+    const email       = data.email.trim().toLowerCase()
+    const nombre      = data.nombre.trim()
+    const apellidoPat = data.apellidoPat.trim()
+    const apellidoMat = data.apellidoMat?.trim() ?? ''
+
+    if (!email || !nombre || !apellidoPat) {
+      return { success: false, error: 'Faltan campos obligatorios' }
+    }
+
+    // 1. Actualizar usuario (email)
+    const { error: usrErr } = await supabase
+      .from('usuarios')
+      .update({
+        usr_email_vac: email,
+        usr_upd_tmp: new Date().toISOString()
+      })
+      .eq('usr_uuid', data.usr_uuid)
+
+    if (usrErr) throw new AppError(usrErr.message, 'SERVER_ERROR', 500)
+
+    // 2. Actualizar estudiante (nombres)
+    const { error: estErr } = await supabase
+      .from('estudiante')
+      .update({
+        estu_nomb_vac: nombre,
+        estu_apell_pat_vac: apellidoPat,
+        estu_apell_mat_vac: apellidoMat || null,
+      })
+      .eq('estu_uuid', data.estu_uuid)
+
+    if (estErr) throw new AppError(estErr.message, 'SERVER_ERROR', 500)
+
+    return { success: true, message: 'Perfil de estudiante actualizado correctamente' }
+  } catch (error: any) {
+    const msg = error instanceof AppError ? error.message : 'Error al editar estudiante'
+    return { success: false, error: msg }
+  }
+}
+
+// --- Perfil completo de estudiante --------------------------------------------
 
 export interface CursoPerfilDto {
   cur_id_int: number
@@ -291,14 +464,14 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
     const user = await assertAuthenticated()
     assertAdminOrCoordinador(user)
 
-    // ── 1. Datos básicos del estudiante ──────────────────────────────────────
+    // -- 1. Datos básicos del estudiante --------------------------------------
     const { data: estData, error: estErr } = await supabase
       .from('estudiante')
       .select(`
         estu_id_int, estu_uuid, estu_nomb_vac, estu_apell_pat_vac,
         estu_apell_mat_vac, estu_gen_vac, estu_cre_tmp,
         usuarios (
-          usr_uuid, usr_email_vac, usr_nomb_vac, usr_est_int
+          usr_uuid, usr_email_vac, usr_nomb_vac, usr_est_int, usr_origen_vac
         ),
         estudiante_curso ( est_cur_id_int )
       `)
@@ -310,7 +483,7 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
     const e = estData as any
     const estuIdInt: number = e.estu_id_int
 
-    // ── 2. Cursos en los que está inscrito ───────────────────────────────────
+    // -- 2. Cursos en los que está inscrito -----------------------------------
     const { data: inscripciones } = await supabase
       .from('estudiante_curso')
       .select(`
@@ -322,14 +495,14 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
       `)
       .eq('est_id_int', estuIdInt)
 
-    // ── 3. Pagos del estudiante ───────────────────────────────────────────────
+    // -- 3. Pagos del estudiante -----------------------------------------------
     const { data: pagos } = await supabase
       .from('pago')
       .select('cur_id_int, pago_estad_vac, pago_mont_num, pago_nro_vac')
       .eq('estu_id_int', estuIdInt)
       .order('pago_cre_tmp', { ascending: false })
 
-    // ── 4. Certificados del estudiante ────────────────────────────────────────
+    // -- 4. Certificados del estudiante ----------------------------------------
     const { data: certs } = await supabase
       .from('certificado')
       .select('cur_id_int, cert_url_vac, cert_cod_vac, cert_fec_emi_tmp')
@@ -343,7 +516,7 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
     const certMap = new Map<number, any>()
     ;(certs ?? []).forEach((c: any) => certMap.set(c.cur_id_int, c))
 
-    // ── 5. Combinar ───────────────────────────────────────────────────────────
+    // -- 5. Combinar -----------------------------------------------------------
     const cursos: CursoPerfilDto[] = (inscripciones ?? [])
       .map((row: any) => {
         const cur = Array.isArray(row.curso) ? row.curso[0] : row.curso
@@ -380,6 +553,7 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
         usr_email_vac:      e.usuarios?.usr_email_vac ?? '',
         usr_nomb_vac:       e.usuarios?.usr_nomb_vac  ?? '',
         usr_est_int:        e.usuarios?.usr_est_int   ?? 0,
+        usr_origen_vac:     e.usuarios?.usr_origen_vac ?? 'SISTEMA',
         cursos_count:       (e.estudiante_curso ?? []).length,
         cursos,
       },
@@ -390,19 +564,24 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
   }
 }
 
-// ─── Pagos ─────────────────────────────────────────────────────────────────────
+// --- Pagos ---------------------------------------------------------------------
 
 
-export async function getPagosAdmin(): Promise<{
+export async function getPagosAdmin(
+  page: number = 1,
+  limit: number = 10,
+  search?: string
+): Promise<{
   success: boolean
   data?: PagoAdminDto[]
+  meta?: { total: number; page: number; limit: number; totalPages: number }
   error?: string
 }> {
   try {
     const user = await assertAuthenticated()
     assertAdminOrCoordinador(user)
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('pago')
       .select(`
         pago_uuid,
@@ -416,16 +595,30 @@ export async function getPagosAdmin(): Promise<{
         pago_obs_vac,
         pago_cre_tmp,
         pago_upd_tmp,
-        estudiante (
+        estudiante!inner (
           estu_nomb_vac,
           estu_apell_pat_vac,
           estu_apell_mat_vac
         ),
         curso ( cur_nomb_vac )
-      `)
+      `, { count: 'exact' })
+
+    if (search) {
+      const term = `%${search}%`
+      query = query.or(`pago_nro_vac.ilike.${term},estudiante.estu_nomb_vac.ilike.${term},estudiante.estu_apell_pat_vac.ilike.${term}`)
+    }
+
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { data, count, error } = await query
       .order('pago_cre_tmp', { ascending: false })
+      .range(from, to)
 
     if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    const total = count ?? 0
+    const totalPages = Math.ceil(total / limit)
 
     const result: PagoAdminDto[] = (data ?? []).map((p: any) => ({
       pago_uuid:           p.pago_uuid,
@@ -447,7 +640,11 @@ export async function getPagosAdmin(): Promise<{
       curso_nombre: p.curso?.cur_nomb_vac ?? '—',
     }))
 
-    return { success: true, data: result }
+    return { 
+      success: true, 
+      data: result,
+      meta: { total, page, limit, totalPages }
+    }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al cargar pagos'
     return { success: false, error: msg }
@@ -466,7 +663,7 @@ export async function actualizarEstadoPago(
     // Obtener pago actual para historial
     const { data: pagoActual, error: fetchErr } = await supabase
       .from('pago')
-      .select('pago_id_int, pago_estad_vac')
+      .select('pago_id_int, pago_estad_vac, estu_id_int, cur_id_int')
       .eq('pago_uuid', pagoUuid)
       .single()
 
@@ -485,6 +682,16 @@ export async function actualizarEstadoPago(
       .eq('pago_uuid', pagoUuid)
 
     if (updateErr) throw new AppError(updateErr.message, 'SERVER_ERROR', 500)
+
+    // Si el pago es aceptado, matricular al estudiante
+    if (nuevoEstado === 'ACEPTADO' && pagoActual.pago_estad_vac !== 'ACEPTADO') {
+      const { createEstudianteCursoFromPago } = await import('@/repository/pago.repository')
+      const matriculado = await createEstudianteCursoFromPago(pagoActual.estu_id_int, pagoActual.cur_id_int)
+      if (!matriculado) {
+        // Podríamos loguearlo, pero no bloqueamos el flujo
+        console.error(`No se pudo crear la relación estudiante_curso para el pago ${pagoActual.pago_id_int}`)
+      }
+    }
 
     // Registrar en historial_pago
     await supabase.from('historial_pago').insert({
@@ -676,7 +883,7 @@ export async function getCursosSelectAdmin(): Promise<{
 
     const { data, error } = await supabase
       .from('curso')
-      .select('cur_id_int, cur_nomb_vac, cur_precio_num')
+      .select('cur_id_int, cur_uuid, cur_nomb_vac, cur_precio_num')
       .eq('cur_est_int', 1)
       .order('cur_nomb_vac', { ascending: true })
 
@@ -684,6 +891,7 @@ export async function getCursosSelectAdmin(): Promise<{
 
     const result: CursoSelectDto[] = (data ?? []).map((c: any) => ({
       cur_id_int:    c.cur_id_int,
+      cur_uuid:      c.cur_uuid,
       cur_nomb_vac:  c.cur_nomb_vac  ?? '—',
       cur_precio_num: Number(c.cur_precio_num ?? 0),
     }))
@@ -740,6 +948,12 @@ export async function crearPagoAdmin(input: {
 
     if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
 
+    // Si el pago se crea directamente como ACEPTADO, matricular al estudiante
+    if (input.pagoEstadVac === 'ACEPTADO') {
+      const { createEstudianteCursoFromPago } = await import('@/repository/pago.repository')
+      await createEstudianteCursoFromPago(input.estuIdInt, input.curIdInt)
+    }
+
     return { success: true }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al crear pago'
@@ -747,7 +961,7 @@ export async function crearPagoAdmin(input: {
   }
 }
 
-// ─── Auditoría ─────────────────────────────────────────────────────────────────
+// --- Auditoría -----------------------------------------------------------------
 
 
 export async function getAuditoriaAdmin(): Promise<{
@@ -819,10 +1033,10 @@ export async function getAuditoriaAdmin(): Promise<{
   }
 }
 
-// ─── Asistencia masiva ─────────────────────────────────────────────────────────
+// --- Asistencia masiva ---------------------------------------------------------
 
 export async function registrarAsistenciaMasiva(
-  sesionUuid: string,
+  sesionIdInt: string,
   asistencias: { usuarioUuid: string; estado: number }[]
 ): Promise<{ success: boolean; registrados: number; error?: string }> {
   try {
@@ -833,7 +1047,7 @@ export async function registrarAsistenciaMasiva(
     const { data: sesion, error: sesErr } = await supabase
       .from('sesion_clase')
       .select('ses_id_int')
-      .eq('asist_uuid', sesionUuid)
+      .eq('ses_id_int', parseInt(sesionIdInt))
       .single()
 
     if (sesErr || !sesion) throw new AppError('Sesión no encontrada', 'NOT_FOUND', 404)
@@ -875,7 +1089,7 @@ export async function registrarAsistenciaMasiva(
   }
 }
 
-// ─── Upload imagen de curso ─────────────────────────────────────────────────────
+// --- Upload imagen de curso -----------------------------------------------------
 
 export async function uploadCursoImagen(formData: FormData): Promise<{
   success: boolean
@@ -938,7 +1152,7 @@ export async function uploadCursoImagen(formData: FormData): Promise<{
   }
 }
 
-// ─── Eliminar imagen de curso del bucket ────────────────────────────────────────
+// --- Eliminar imagen de curso del bucket ----------------------------------------
 
 export async function deleteCursoImagen(publicUrl: string): Promise<{
   success: boolean
@@ -972,7 +1186,7 @@ export async function deleteCursoImagen(publicUrl: string): Promise<{
   }
 }
 
-// ─── Módulos (admin) ───────────────────────────────────────────────────────────
+// --- Módulos (admin) -----------------------------------------------------------
 
 export interface ModuloAdminDto {
   mod_uuid: string
@@ -1086,7 +1300,7 @@ export async function getModulosByCursoAdmin(curUuid: string): Promise<{
   }
 }
 
-// ─── CRUD Módulos ──────────────────────────────────────────────────────────────
+// --- CRUD Módulos --------------------------------------------------------------
 
 export async function crearModulo(
   curUuid: string,
@@ -1169,7 +1383,7 @@ export async function eliminarModulo(
   }
 }
 
-// ─── CRUD Apartados ────────────────────────────────────────────────────────────
+// --- CRUD Apartados ------------------------------------------------------------
 
 export async function crearApartado(
   modUuid: string,
@@ -1254,7 +1468,7 @@ export async function eliminarApartado(
   }
 }
 
-// ─── CRUD Items de Apartado ────────────────────────────────────────────────────
+// --- CRUD Items de Apartado ----------------------------------------------------
 
 export async function crearItem(
   aparUuid: string,
@@ -1341,7 +1555,7 @@ export async function eliminarItem(
   }
 }
 
-// ─── Desactivación en cascada ──────────────────────────────────────────────────
+// --- Desactivación en cascada --------------------------------------------------
 
 export async function desactivarModuloCascada(
   modUuid: string
@@ -1441,14 +1655,19 @@ export async function desactivarApartadoCascada(
   }
 }
 
-// ─── Certificados Admin ────────────────────────────────────────────────────────
+// --- Certificados Admin --------------------------------------------------------
 
 /**
  * Lista todos los cursos con estadísticas de certificados emitidos.
  */
-export async function getCursosConCertificadosAdmin(): Promise<{
+export async function getCursosConCertificadosAdmin(
+  page: number = 1,
+  limit: number = 10,
+  search?: string
+): Promise<{
   success: boolean
   data?: CursoCertificadoDto[]
+  meta?: { total: number; page: number; limit: number; totalPages: number }
   error?: string
 }> {
   try {
@@ -1456,7 +1675,7 @@ export async function getCursosConCertificadosAdmin(): Promise<{
     assertAdminOrCoordinador(user)
 
     // Cursos con sus inscritos y certificados
-    const { data, error } = await supabase
+    let query = supabase
       .from('curso')
       .select(`
         cur_id_int,
@@ -1466,11 +1685,25 @@ export async function getCursosConCertificadosAdmin(): Promise<{
         cur_fec_fin_tmp,
         estudiante_curso ( est_cur_id_int ),
         certificado ( cert_id_int )
-      `)
+      `, { count: 'exact' })
       .eq('cur_est_int', 1)
+
+    if (search) {
+      const term = `%${search}%`
+      query = query.ilike('cur_nomb_vac', term)
+    }
+
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    const { data, count, error } = await query
       .order('cur_fec_inic_tmp', { ascending: false })
+      .range(from, to)
 
     if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+
+    const total = count ?? 0
+    const totalPages = Math.ceil(total / limit)
 
     const result: CursoCertificadoDto[] = (data ?? []).map((c: any) => ({
       cur_id_int:       c.cur_id_int,
@@ -1482,7 +1715,11 @@ export async function getCursosConCertificadosAdmin(): Promise<{
       certs_emitidos:   (c.certificado ?? []).length,
     }))
 
-    return { success: true, data: result }
+    return { 
+      success: true, 
+      data: result,
+      meta: { total, page, limit, totalPages }
+    }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
     return { success: false, error: msg }
@@ -1628,7 +1865,7 @@ export async function upsertCertificado(input: {
   }
 }
 
-// ─── Perfil de usuario (admin/coordinador logueado) ───────────────────────────
+// --- Perfil de usuario (admin/coordinador logueado) ---------------------------
 
 export interface PerfilUsuarioDto {
   usr_uuid: string
@@ -1704,23 +1941,40 @@ export async function getPerfilAdmin(): Promise<{
 export async function actualizarPerfilAdmin(input: {
   usrNombVac?: string
   usrModBol?: boolean
+  usrEmailVac?: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const user = await assertAuthenticated()
     assertDashboard(user)
 
-    const dbUpdates: Record<string, unknown> = {
-      usr_upd_tmp: new Date().toISOString(),
+
+
+    const dbUpdates: string[] = [`usr_upd_tmp = NOW()`]
+    const dbValues: any[] = []
+    let counter = 1
+
+    if (input.usrNombVac !== undefined) {
+      dbUpdates.push(`usr_nomb_vac = $${counter++}`)
+      dbValues.push(input.usrNombVac.trim())
     }
-    if (input.usrNombVac !== undefined) dbUpdates.usr_nomb_vac = input.usrNombVac.trim()
-    if (input.usrModBol  !== undefined) dbUpdates.usr_mod_bol  = input.usrModBol
+    if (input.usrModBol !== undefined) {
+      dbUpdates.push(`usr_mod_bol = $${counter++}`)
+      dbValues.push(input.usrModBol)
+    }
+    if (input.usrEmailVac !== undefined) {
+      dbUpdates.push(`usr_email_vac = $${counter++}`)
+      dbValues.push(input.usrEmailVac.trim())
+    }
 
-    const { error } = await supabase
-      .from('usuarios')
-      .update(dbUpdates)
-      .eq('usr_id_int', user.usr_id_int)
+    if (dbValues.length === 0) return { success: true }
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    // Use unsafe since dynamic SET clauses are required
+    await import('@/lib/db').then(({ sql }) => sql.unsafe(`
+      UPDATE usuarios
+      SET ${dbUpdates.join(', ')}
+      WHERE usr_id_int = $${counter}
+    `, [...dbValues, user.usr_id_int]))
+
     return { success: true }
   } catch (error) {
     const msg = error instanceof AppError ? error.message : 'Error al actualizar perfil'

@@ -43,7 +43,7 @@ const ESTADO_CONFIG = {
 const ESTADO_SESION_CONFIG: Record<string, { color: string; label: string }> = {
   PROGRAMADA: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400', label: 'Programada' },
   EN_PROGRESO: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400', label: 'En Progreso' },
-  FINALIZADA: { color: 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-400', label: 'Finalizada' },
+  FINALIZADA: { color: 'bg-white dark:bg-sky-950 text-black dark:text-white dark:bg-[#06111a] dark:text-white', label: 'Finalizada' },
 }
 
 export function AsistenciasManager({ cursoId, initialSesiones }: AsistenciasManagerProps) {
@@ -224,7 +224,7 @@ export function AsistenciasManager({ cursoId, initialSesiones }: AsistenciasMana
               size="sm"
               disabled={creando}
               onClick={handleCrearSesion}
-              className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs"
+              className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-black dark:text-white text-xs"
             >
               {creando ? 'Creando...' : 'Crear Sesión'}
             </Button>

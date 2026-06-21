@@ -1,109 +1,89 @@
-import { supabase } from '@/lib/supabase';
+import { sql } from '@/lib/db';
 
-/**
- * Obtiene todas las órdenes de pago del usuario/estudiante
- */
 export async function getOrdenesByUsuario(usuarioId: number) {
   try {
-    const { data, error } = await supabase
-      .from('pago')
-      .select(`
-        pago_id_int,
-        pago_uuid,
-        estu_id_int,
-        cur_id_int,
-        pago_nro_vac,
-        pago_mont_num,
-        pago_estad_vac,
-        pago_url_vac,
-        pago_obs_vac,
-        pago_cre_tmp,
-        pago_upd_tmp,
-        curso:cur_id_int (
-          cur_id_int,
-          cur_nomb_vac
-        )
-      `)
-      .eq('estu_id_int', usuarioId)
-      .order('pago_cre_tmp', { ascending: false });
+    const rows = await sql`
+      SELECT 
+        p.pago_id_int,
+        p.pago_uuid,
+        p.estu_id_int,
+        p.cur_id_int,
+        p.pago_nro_vac,
+        p.pago_mont_num,
+        p.pago_estad_vac,
+        p.pago_url_vac,
+        p.pago_obs_vac,
+        p.pago_cre_tmp,
+        p.pago_upd_tmp,
+        json_build_object(
+          'cur_id_int', c.cur_id_int,
+          'cur_nomb_vac', c.cur_nomb_vac
+        ) as curso
+      FROM pago p
+      LEFT JOIN curso c ON p.cur_id_int = c.cur_id_int
+      WHERE p.estu_id_int = ${usuarioId}
+      ORDER BY p.pago_cre_tmp DESC
+    `
 
-    if (error) {
-      console.error('Error getting ordenes by usuario:', error);
-      return [];
-    }
-
-    return data || [];
+    return rows;
   } catch (error) {
     console.error('Exception getting ordenes by usuario:', error);
     return [];
   }
 }
 
-/**
- * Obtiene una orden de pago específica
- */
 export async function getOrdenById(pagoId: number) {
   try {
-    const { data, error } = await supabase
-      .from('pago')
-      .select(`
-        pago_id_int,
-        pago_uuid,
-        estu_id_int,
-        cur_id_int,
-        pago_nro_vac,
-        pago_mont_num,
-        pago_estad_vac,
-        pago_url_vac,
-        pago_obs_vac,
-        pago_cre_tmp,
-        pago_upd_tmp,
-        curso:cur_id_int (
-          cur_id_int,
-          cur_nomb_vac,
-          cur_desc_vac
-        ),
-        estudiante:estu_id_int (
-          estu_id_int,
-          estu_nomb_vac,
-          estu_apell_pat_vac,
-          estu_apell_mat_vac,
-          usr_id_int
-        )
-      `)
-      .eq('pago_id_int', pagoId)
-      .single();
+    const rows = await sql`
+      SELECT 
+        p.pago_id_int,
+        p.pago_uuid,
+        p.estu_id_int,
+        p.cur_id_int,
+        p.pago_nro_vac,
+        p.pago_mont_num,
+        p.pago_estad_vac,
+        p.pago_url_vac,
+        p.pago_obs_vac,
+        p.pago_cre_tmp,
+        p.pago_upd_tmp,
+        json_build_object(
+          'cur_id_int', c.cur_id_int,
+          'cur_nomb_vac', c.cur_nomb_vac,
+          'cur_desc_vac', c.cur_desc_vac
+        ) as curso,
+        json_build_object(
+          'estu_id_int', e.estu_id_int,
+          'estu_nomb_vac', e.estu_nomb_vac,
+          'estu_apell_pat_vac', e.estu_apell_pat_vac,
+          'estu_apell_mat_vac', e.estu_apell_mat_vac,
+          'usr_id_int', e.usr_id_int
+        ) as estudiante
+      FROM pago p
+      LEFT JOIN curso c ON p.cur_id_int = c.cur_id_int
+      LEFT JOIN estudiante e ON p.estu_id_int = e.estu_id_int
+      WHERE p.pago_id_int = ${pagoId}
+      LIMIT 1
+    `
 
-    if (error) {
-      console.error('[v0] getOrdenById - Error:', error);
-      return null;
-    }
-
-    return data;
+    if (!rows.length) return null
+    return rows[0];
   } catch (error) {
     console.error('[v0] getOrdenById - Exception:', error);
     return null;
   }
 }
 
-/**
- * Actualiza el URL del comprobante de pago
- */
 export async function updateComprobanteVoucher(
   pagoId: number,
   voucherPath: string
 ) {
   try {
-    const { error } = await supabase
-      .from('pago')
-      .update({ pago_url_vac: voucherPath })
-      .eq('pago_id_int', pagoId);
-
-    if (error) {
-      console.error('[v0] updateComprobanteVoucher - Error:', error);
-      return false;
-    }
-
+    await sql`
+      UPDATE pago
+      SET pago_url_vac = ${voucherPath}
+      WHERE pago_id_int = ${pagoId}
+    `
     return true;
   } catch (error) {
     console.error('[v0] updateComprobanteVoucher - Exception:', error);
@@ -111,64 +91,52 @@ export async function updateComprobanteVoucher(
   }
 }
 
-/**
- * Obtiene datos del estudiante para el renombrado
- */
 export async function getEstudianteDatos(estudianteId: number) {
   try {
-    const { data, error } = await supabase
-      .from('estudiante')
-      .select(`
-        estu_id_int,
-        estu_nomb_vac,
-        estu_apell_pat_vac,
-        estu_apell_mat_vac,
-        usuario:usr_id_int (
-          usr_id_int,
-          usr_nomb_vac
-        )
-      `)
-      .eq('estu_id_int', estudianteId)
-      .single();
-
-    if (error) {
-      console.error('[v0] getEstudianteDatos - Error:', error);
-      return null;
-    }
-
-    return data;
+    const rows = await sql`
+      SELECT 
+        e.estu_id_int,
+        e.estu_nomb_vac,
+        e.estu_apell_pat_vac,
+        e.estu_apell_mat_vac,
+        json_build_object(
+          'usr_id_int', u.usr_id_int,
+          'usr_nomb_vac', u.usr_nomb_vac
+        ) as usuario
+      FROM estudiante e
+      LEFT JOIN usuarios u ON e.usr_id_int = u.usr_id_int
+      WHERE e.estu_id_int = ${estudianteId}
+      LIMIT 1
+    `
+    if (!rows.length) return null
+    return rows[0];
   } catch (error) {
     console.error('[v0] getEstudianteDatos - Exception:', error);
     return null;
   }
 }
 
-/**
- * Obtiene datos del usuario/estudiante para generar nombres de archivo
- */
 export async function getUsuarioDatos(estudianteId: number) {
   try {
-    const { data, error } = await supabase
-      .from('estudiante')
-      .select(`
+    const rows = await sql`
+      SELECT 
         estu_id_int,
         estu_nomb_vac,
         estu_apell_pat_vac,
         estu_apell_mat_vac
-      `)
-      .eq('estu_id_int', estudianteId)
-      .single();
+      FROM estudiante
+      WHERE estu_id_int = ${estudianteId}
+      LIMIT 1
+    `
 
-    if (error) {
-      console.error('Error getting usuario datos:', error);
-      return null;
-    }
+    if (!rows.length) return null
+    const data = rows[0]
 
     return {
-      id: data?.estu_id_int,
-      nombre: data?.estu_nomb_vac,
-      primer_apellido: data?.estu_apell_pat_vac,
-      segundo_apellido: data?.estu_apell_mat_vac,
+      id: data.estu_id_int,
+      nombre: data.estu_nomb_vac,
+      primer_apellido: data.estu_apell_pat_vac,
+      segundo_apellido: data.estu_apell_mat_vac,
     };
   } catch (error) {
     console.error('Exception getting usuario datos:', error);
@@ -176,24 +144,15 @@ export async function getUsuarioDatos(estudianteId: number) {
   }
 }
 
-/**
- * Acepta un pago y lo cambia a estado ACEPTADO
- */
 export async function acceptPagoOrder(pagoId: number) {
   try {
-    const { error } = await supabase
-      .from('pago')
-      .update({
-        pago_estad_vac: 'ACEPTADO',
-        pago_upd_tmp: new Date().toISOString(),
-      })
-      .eq('pago_id_int', pagoId);
-
-    if (error) {
-      console.error('[v0] acceptPagoOrder - Error:', error);
-      return false;
-    }
-
+    await sql`
+      UPDATE pago
+      SET 
+        pago_estad_vac = 'ACEPTADO',
+        pago_upd_tmp = NOW()
+      WHERE pago_id_int = ${pagoId}
+    `
     return true;
   } catch (error) {
     console.error('[v0] acceptPagoOrder - Exception:', error);
@@ -201,61 +160,46 @@ export async function acceptPagoOrder(pagoId: number) {
   }
 }
 
-/**
- * Crea la relación entre estudiante y curso cuando el pago es aceptado
- */
 export async function createEstudianteCursoFromPago(
   estudianteId: number,
   cursoId: number
 ) {
   try {
-    // Verificar si ya existe la relación
-    const { data: existing, error: checkError } = await supabase
-      .from('estudiante_curso')
-      .select('est_id_int')
-      .eq('est_id_int', estudianteId)
-      .eq('cur_id_int', cursoId)
-      .single();
+    const existingRows = await sql`
+      SELECT est_id_int 
+      FROM estudiante_curso 
+      WHERE est_id_int = ${estudianteId} 
+      AND cur_id_int = ${cursoId}
+      LIMIT 1
+    `
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('[v0] createEstudianteCursoFromPago - Check Error:', checkError);
-      return false;
-    }
-
-    // Si ya existe, solo actualizar el estado
-    if (existing) {
-      const { error: updateError } = await supabase
-        .from('estudiante_curso')
-        .update({
-          est_cur_estado_bol: true,
-          est_cur_upd_tmp: new Date().toISOString(),
-        })
-        .eq('est_id_int', estudianteId)
-        .eq('cur_id_int', cursoId);
-
-      if (updateError) {
-        console.error('[v0] createEstudianteCursoFromPago - Update Error:', updateError);
-        return false;
-      }
-
+    if (existingRows.length > 0) {
+      await sql`
+        UPDATE estudiante_curso
+        SET 
+          est_cur_estado_bol = true,
+          est_cur_upd_tmp = NOW()
+        WHERE est_id_int = ${estudianteId}
+        AND cur_id_int = ${cursoId}
+      `
       return true;
     }
 
-    // Si no existe, crear nuevo registro
-    const { error: insertError } = await supabase
-      .from('estudiante_curso')
-      .insert({
-        est_id_int: estudianteId,
-        cur_id_int: cursoId,
-        est_cur_estado_bol: true,
-        est_cur_cre_tmp: new Date().toISOString(),
-        est_cur_upd_tmp: new Date().toISOString(),
-      });
-
-    if (insertError) {
-      console.error('[v0] createEstudianteCursoFromPago - Insert Error:', insertError);
-      return false;
-    }
+    await sql`
+      INSERT INTO estudiante_curso (
+        est_id_int,
+        cur_id_int,
+        est_cur_estado_bol,
+        est_cur_cre_tmp,
+        est_cur_upd_tmp
+      ) VALUES (
+        ${estudianteId},
+        ${cursoId},
+        true,
+        NOW(),
+        NOW()
+      )
+    `
 
     return true;
   } catch (error) {
@@ -263,4 +207,3 @@ export async function createEstudianteCursoFromPago(
     return false;
   }
 }
-

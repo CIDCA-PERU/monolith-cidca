@@ -26,12 +26,12 @@ export default async function EstudiantesPage({ params }: Props) {
       <div>
         <Link
           href={`/dashboard/cursos/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors mb-3"
+          className="inline-flex items-center gap-1.5 text-sm text-black dark:text-white hover:text-amber-600 dark:hover:text-amber-400 transition-colors mb-3"
         >
           <ArrowLeft className="h-4 w-4" />
           {curso?.nombre ?? 'Volver al curso'}
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        <h1 className="text-2xl font-bold text-black dark:text-white">
           Estudiantes del Curso
         </h1>
         {estudiantesRes.error && (

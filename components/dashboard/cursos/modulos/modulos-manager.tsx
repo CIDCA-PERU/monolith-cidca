@@ -24,7 +24,7 @@ import {
   ChevronRight, Loader2, Layers, FileText, AlertCircle, AlertTriangle,
 } from 'lucide-react'
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
+// --- Helpers -------------------------------------------------------------------
 
 function swap<T>(arr: T[], i: number, j: number): T[] {
   const copy = [...arr]
@@ -41,7 +41,7 @@ function EstadoBadge({ estado, onClick }: { estado: number; onClick?: () => void
       className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all cursor-pointer ${
         estado === 1
           ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100'
-          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+          : 'bg-white dark:bg-sky-950 text-black dark:text-white border border-sky-200 dark:border-sky-900 hover:bg-white dark:bg-sky-950'
       }`}
     >
       {estado === 1 ? 'Activo' : 'Inactivo'}
@@ -49,7 +49,7 @@ function EstadoBadge({ estado, onClick }: { estado: number; onClick?: () => void
   )
 }
 
-// ─── Sheet genérico de formulario ─────────────────────────────────────────────
+// --- Sheet genérico de formulario ---------------------------------------------
 
 interface FormData { nombre: string; descripcion: string; estado: number }
 
@@ -76,33 +76,33 @@ function FormSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-        <SheetHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
-          <SheetTitle className="text-slate-900 dark:text-white">{title}</SheetTitle>
+      <SheetContent side="right" className="w-full sm:max-w-[420px] bg-white dark:bg-sky-950 border-sky-200 dark:border-sky-900 flex flex-col p-0 gap-0">
+        <SheetHeader className="px-6 py-4 border-b border-sky-200 dark:border-sky-900 shrink-0">
+          <SheetTitle className="text-black dark:text-white">{title}</SheetTitle>
         </SheetHeader>
 
-        <div className="space-y-5 py-5">
+        <div className="flex-1 overflow-y-auto space-y-5 px-6 py-5">
           <div>
-            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">Nombre *</Label>
+            <Label className="text-sm font-semibold text-black dark:text-white mb-1.5 block">Nombre *</Label>
             <Input
               value={data.nombre}
               onChange={(e) => setData((p) => ({ ...p, nombre: e.target.value }))}
               placeholder="Nombre del elemento"
-              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
+              className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950"
             />
           </div>
           <div>
-            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">Descripción</Label>
+            <Label className="text-sm font-semibold text-black dark:text-white mb-1.5 block">Descripción</Label>
             <Textarea
               value={data.descripcion}
               onChange={(e) => setData((p) => ({ ...p, descripcion: e.target.value }))}
               placeholder="Descripción (opcional)"
               rows={3}
-              className="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 resize-none"
+              className="border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 resize-none"
             />
           </div>
           <div>
-            <Label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">Estado</Label>
+            <Label className="text-sm font-semibold text-black dark:text-white mb-1.5 block">Estado</Label>
             <div className="flex gap-2">
               {[{ val: 1, label: 'Activo' }, { val: 0, label: 'Inactivo' }].map((opt) => (
                 <button
@@ -111,8 +111,8 @@ function FormSheet({
                   onClick={() => setData((p) => ({ ...p, estado: opt.val }))}
                   className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-all ${
                     data.estado === opt.val
-                      ? 'bg-amber-500 text-slate-950 border-amber-500'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-amber-300'
+                      ? 'bg-amber-500 text-black dark:text-white border-amber-500'
+                      : 'bg-white dark:bg-sky-950 text-black dark:text-white border-sky-200 dark:border-sky-900 hover:border-amber-300'
                   }`}
                 >
                   {opt.label}
@@ -152,11 +152,11 @@ function FormSheet({
           </div>
         </div>
 
-        <SheetFooter className="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+        <SheetFooter className="px-6 py-4 border-t border-sky-200 dark:border-sky-900 flex flex-row gap-2 shrink-0 mt-auto">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="flex-1 py-2.5 rounded-lg border border-sky-200 dark:border-sky-900 text-sm font-semibold text-black dark:text-white hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors"
           >
             Cancelar
           </button>
@@ -164,7 +164,7 @@ function FormSheet({
             type="button"
             disabled={loading || !data.nombre.trim()}
             onClick={() => onSave(data)}
-            className="flex-1 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-sm font-bold transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-black dark:text-white text-sm font-bold transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             Guardar
@@ -175,7 +175,7 @@ function FormSheet({
   )
 }
 
-// ─── Confirm inline ────────────────────────────────────────────────────────────
+// --- Confirm inline ------------------------------------------------------------
 
 function DeleteConfirm({ label, onConfirm, onCancel }: {
   label: string; onConfirm: () => void; onCancel: () => void
@@ -190,7 +190,7 @@ function DeleteConfirm({ label, onConfirm, onCancel }: {
   )
 }
 
-// ─── Main component ────────────────────────────────────────────────────────────
+// --- Main component ------------------------------------------------------------
 
 export function ModulosManager({
   curUuid,
@@ -231,7 +231,7 @@ export function ModulosManager({
 
   const [sheetLoading, setSheetLoading] = useState(false)
 
-  // ── Reorder helpers ────────────────────────────────────────────────────────
+  // -- Reorder helpers --------------------------------------------------------
 
   const moveModulo = (idx: number, dir: -1 | 1) => {
     const j = idx + dir
@@ -263,7 +263,7 @@ export function ModulosManager({
     })
   }
 
-  // ── Toggle estado (abre confirmación) ──────────────────────────────────────
+  // -- Toggle estado (abre confirmación) --------------------------------------
 
   const toggleEstadoModulo = (modUuid: string) => {
     const m = modulos.find((x) => x.mod_uuid === modUuid)
@@ -295,7 +295,7 @@ export function ModulosManager({
     })
   }
 
-  // ── Ejecutar toggle tras confirmación ─────────────────────────────────────
+  // -- Ejecutar toggle tras confirmación -------------------------------------
 
   const executeToggle = () => {
     if (!confirmDialog) return
@@ -369,7 +369,7 @@ export function ModulosManager({
     }
   }
 
-  // ── Save sheet ─────────────────────────────────────────────────────────────
+  // -- Save sheet -------------------------------------------------------------
 
   const handleSave = async (formData: FormData) => {
     if (!sheet) return
@@ -428,7 +428,7 @@ export function ModulosManager({
     }
   }
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
+  // -- Delete -----------------------------------------------------------------
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -452,7 +452,7 @@ export function ModulosManager({
     })
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // -- Render -----------------------------------------------------------------
 
   const EMPTY_FORM: FormData = { nombre: '', descripcion: '', estado: 1 }
 
@@ -460,12 +460,12 @@ export function ModulosManager({
     <>
       {/* Header actions */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-black dark:text-white">
           {modulos.length} módulo{modulos.length !== 1 ? 's' : ''} — el orden se aplica en esta vista
         </p>
         <button
           onClick={() => setSheet({ type: 'mod-new', initial: EMPTY_FORM })}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-sm font-semibold shadow-sm transition-all duration-150 hover:shadow-md active:scale-95"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-black dark:text-white text-sm font-semibold shadow-sm transition-all duration-150 hover:shadow-md active:scale-95"
         >
           <Plus className="h-4 w-4" />
           Nuevo módulo
@@ -474,10 +474,10 @@ export function ModulosManager({
 
       {/* Lista */}
       {modulos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-16 text-center">
-          <Layers className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Sin módulos todavía</p>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Crea el primer módulo para estructurar el curso</p>
+        <div className="rounded-xl border border-dashed border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 p-16 text-center">
+          <Layers className="h-12 w-12 text-black dark:text-white mx-auto mb-4" />
+          <p className="text-black dark:text-white font-medium">Sin módulos todavía</p>
+          <p className="text-sm text-black dark:text-white mt-1">Crea el primer módulo para estructurar el curso</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -485,7 +485,7 @@ export function ModulosManager({
             const expanded = expandedMods.has(mod.mod_uuid)
             const isDeleteTarget = deleteTarget?.type === 'mod' && deleteTarget.uuid === mod.mod_uuid
             return (
-              <div key={mod.mod_uuid} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+              <div key={mod.mod_uuid} className="rounded-xl border border-sky-200 dark:border-sky-900 bg-white dark:bg-sky-950 shadow-sm overflow-hidden">
                 {/* Módulo header */}
                 <div className="flex items-center gap-2 px-4 py-3.5">
                   {/* Número + expand */}
@@ -499,11 +499,11 @@ export function ModulosManager({
                   {/* Info */}
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleExpand(mod.mod_uuid)}>
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{mod.mod_nomb_vac}</p>
+                      <p className="text-sm font-bold text-black dark:text-white truncate">{mod.mod_nomb_vac}</p>
                       <EstadoBadge estado={mod.mod_est_int} onClick={() => toggleEstadoModulo(mod.mod_uuid)} />
                     </div>
                     {mod.mod_desc_vac && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">{mod.mod_desc_vac}</p>
+                      <p className="text-xs text-black dark:text-white truncate mt-0.5">{mod.mod_desc_vac}</p>
                     )}
                   </div>
 
@@ -514,7 +514,7 @@ export function ModulosManager({
                       <button
                         onClick={() => moveModulo(mIdx, -1)}
                         disabled={mIdx === 0}
-                        className="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        className="p-0.5 rounded text-black dark:text-white hover:text-black dark:text-white dark:hover:text-black dark:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                         title="Subir"
                       >
                         <ChevronUp className="h-3.5 w-3.5" />
@@ -522,7 +522,7 @@ export function ModulosManager({
                       <button
                         onClick={() => moveModulo(mIdx, 1)}
                         disabled={mIdx === modulos.length - 1}
-                        className="p-0.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        className="p-0.5 rounded text-black dark:text-white hover:text-black dark:text-white dark:hover:text-black dark:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
                         title="Bajar"
                       >
                         <ChevronDown className="h-3.5 w-3.5" />
@@ -535,7 +535,7 @@ export function ModulosManager({
                         type: 'mod-edit', modUuid: mod.mod_uuid,
                         initial: { nombre: mod.mod_nomb_vac, descripcion: mod.mod_desc_vac, estado: mod.mod_est_int },
                       })}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                      className="p-1.5 rounded-lg text-black dark:text-white hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
                       title="Editar módulo"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -544,14 +544,14 @@ export function ModulosManager({
                     {/* Delete */}
                     <button
                       onClick={() => setDeleteTarget({ type: 'mod', uuid: mod.mod_uuid, label: mod.mod_nomb_vac })}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                      className="p-1.5 rounded-lg text-black dark:text-white hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                       title="Eliminar módulo"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
 
                     {/* Expand chevron */}
-                    <button onClick={() => toggleExpand(mod.mod_uuid)} className="p-1 text-slate-400">
+                    <button onClick={() => toggleExpand(mod.mod_uuid)} className="p-1 text-black dark:text-white">
                       {expanded
                         ? <ChevronDown className="h-4 w-4" />
                         : <ChevronRight className="h-4 w-4" />
@@ -573,23 +573,23 @@ export function ModulosManager({
 
                 {/* Apartados (expanded) */}
                 {expanded && (
-                  <div className="border-t border-slate-100 dark:border-slate-800">
+                  <div className="border-t border-sky-200 dark:border-sky-900">
                     {mod.apartados.length === 0 && (
-                      <p className="px-5 py-3 text-xs text-slate-400 dark:text-slate-500 italic">
+                      <p className="px-5 py-3 text-xs text-black dark:text-white italic">
                         Sin apartados en este módulo
                       </p>
                     )}
                     {mod.apartados.map((apar, aIdx) => {
                       const isAparDelete = deleteTarget?.type === 'apar' && deleteTarget.uuid === apar.apar_uuid
                       return (
-                        <div key={apar.apar_uuid} className="border-b border-slate-50 dark:border-slate-800/50 last:border-0">
-                          <div className="flex items-center gap-2 px-5 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                            <FileText className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600 flex-shrink-0" />
-                            <span className="text-xs text-slate-500 dark:text-slate-500 font-mono flex-shrink-0">{aIdx + 1}.</span>
+                        <div key={apar.apar_uuid} className="border-b border-sky-200 dark:border-sky-900 last:border-0">
+                          <div className="flex items-center gap-2 px-5 py-2.5 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors">
+                            <FileText className="h-3.5 w-3.5 text-black dark:text-white flex-shrink-0" />
+                            <span className="text-xs text-black dark:text-white font-mono flex-shrink-0">{aIdx + 1}.</span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{apar.apar_nomb_vac}</p>
+                              <p className="text-sm font-medium text-black dark:text-white truncate">{apar.apar_nomb_vac}</p>
                               {apar.apar_desc_vac && (
-                                <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{apar.apar_desc_vac}</p>
+                                <p className="text-xs text-black dark:text-white truncate">{apar.apar_desc_vac}</p>
                               )}
                             </div>
                             <EstadoBadge
@@ -598,21 +598,21 @@ export function ModulosManager({
                             />
                             {/* Reorder */}
                             <div className="flex flex-col">
-                              <button onClick={() => moveApartado(mod.mod_uuid, aIdx, -1)} disabled={aIdx === 0} className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed"><ChevronUp className="h-3 w-3" /></button>
-                              <button onClick={() => moveApartado(mod.mod_uuid, aIdx, 1)} disabled={aIdx === mod.apartados.length - 1} className="p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed"><ChevronDown className="h-3 w-3" /></button>
+                              <button onClick={() => moveApartado(mod.mod_uuid, aIdx, -1)} disabled={aIdx === 0} className="p-0.5 text-black dark:text-white hover:text-black dark:text-white disabled:opacity-20 disabled:cursor-not-allowed"><ChevronUp className="h-3 w-3" /></button>
+                              <button onClick={() => moveApartado(mod.mod_uuid, aIdx, 1)} disabled={aIdx === mod.apartados.length - 1} className="p-0.5 text-black dark:text-white hover:text-black dark:text-white disabled:opacity-20 disabled:cursor-not-allowed"><ChevronDown className="h-3 w-3" /></button>
                             </div>
                             <button
                               onClick={() => setSheet({
                                 type: 'apar-edit', modUuid: mod.mod_uuid, aparUuid: apar.apar_uuid,
                                 initial: { nombre: apar.apar_nomb_vac, descripcion: apar.apar_desc_vac, estado: apar.apar_est_int },
                               })}
-                              className="p-1.5 rounded text-slate-300 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                              className="p-1.5 rounded text-black dark:text-white hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
                             >
                               <Pencil className="h-3 w-3" />
                             </button>
                             <button
                               onClick={() => setDeleteTarget({ type: 'apar', uuid: apar.apar_uuid, modUuid: mod.mod_uuid, label: apar.apar_nomb_vac })}
-                              className="p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                              className="p-1.5 rounded text-black dark:text-white hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>
@@ -664,24 +664,24 @@ export function ModulosManager({
 
       {/* Confirm dialog for status toggle */}
       <AlertDialog open={!!confirmDialog} onOpenChange={(open) => { if (!open) setConfirmDialog(null) }}>
-        <AlertDialogContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <AlertDialogContent className="bg-white dark:bg-sky-950 border-sky-200 dark:border-sky-900">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
+            <AlertDialogTitle className="flex items-center gap-2 text-black dark:text-white">
               {confirmDialog?.isCascade && <AlertTriangle className="h-5 w-5 text-amber-500" />}
               {confirmDialog?.newEstado === 1 ? 'Activar' : 'Desactivar'} {confirmDialog?.type === 'mod' ? 'módulo' : 'apartado'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-600 dark:text-slate-400">
+            <AlertDialogDescription className="text-black dark:text-white">
               {confirmDialog?.isCascade ? (
                 confirmDialog.type === 'mod' ? (
                   <>
-                    ¿Estás seguro de desactivar el módulo <strong className="text-slate-800 dark:text-slate-200">«{confirmDialog.label}»</strong>?
+                    ¿Estás seguro de desactivar el módulo <strong className="text-black dark:text-white">«{confirmDialog.label}»</strong>?
                     <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
                       ⚠️ Esto también ocultará todos los apartados e items dentro de este módulo.
                     </span>
                   </>
                 ) : (
                   <>
-                    ¿Estás seguro de desactivar el apartado <strong className="text-slate-800 dark:text-slate-200">«{confirmDialog.label}»</strong>?
+                    ¿Estás seguro de desactivar el apartado <strong className="text-black dark:text-white">«{confirmDialog.label}»</strong>?
                     <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
                       ⚠️ Esto también ocultará todos los items dentro de este apartado.
                     </span>
@@ -690,17 +690,17 @@ export function ModulosManager({
               ) : (
                 <>
                   ¿Estás seguro de activar {confirmDialog?.type === 'mod' ? 'el módulo' : 'el apartado'}{' '}
-                  <strong className="text-slate-800 dark:text-slate-200">«{confirmDialog?.label}»</strong>?
+                  <strong className="text-black dark:text-white">«{confirmDialog?.label}»</strong>?
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-sky-200 dark:border-sky-900 text-black dark:text-white">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={executeToggle}
               className={confirmDialog?.isCascade
-                ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                ? 'bg-amber-500 hover:bg-amber-600 text-black dark:text-white font-bold'
                 : 'bg-emerald-500 hover:bg-emerald-600 text-white font-bold'
               }
             >

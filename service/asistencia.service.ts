@@ -9,7 +9,8 @@ import { getCurrentTimeInCIDCA } from '@/lib/timezone'
 export class AsistenciaService {
   static async getSesionesByCurso(
     cursoId: string,
-    usuarioId: string
+    usuarioId: string,
+    userRole?: string
   ): Promise<SesionClaseDto[]> {
     const curso = await CursoRepository.getCursoById(cursoId)
 
@@ -17,8 +18,9 @@ export class AsistenciaService {
       throw new BusinessError('Curso no encontrado', 404)
     }
 
-    // Solo docente propietario puede ver sesiones
-    if (String(curso.docente_id) !== String(usuarioId)) {
+    // Solo docente propietario puede ver sesiones (o un ADMIN/SISTEMAS)
+    const isAdmin = userRole === 'SISTEMAS' || userRole === 'ADMINISTRADOR';
+    if (!isAdmin && String(curso.docente_id) !== String(usuarioId)) {
       throw new BusinessError('No tienes permiso para ver estas sesiones')
     }
 
