@@ -6,6 +6,7 @@ import { CursoDTO, CreateCursoRequest } from '@/dto/curso.dto'
 import { EstudianteCursoDto } from '@/dto/estudiante-curso.dto'
 import { CursoRepository } from '@/repository/curso.repository'
 import { AppError } from '@/lib/errors'
+import { handleActionError } from '@/lib/errors'
 
 /**
  * Obtiene los cursos del docente autenticado.
@@ -25,9 +26,9 @@ export async function getCursosByDocente(): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: cursos }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -62,9 +63,9 @@ export async function getCursoById(cursoId: string): Promise<{
 
     if (!curso) return { success: false, error: 'Curso no encontrado' }
     return { success: true, data: curso }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -102,9 +103,9 @@ export async function createCurso(request: CreateCursoRequest): Promise<{
           user.usr_id_int.toString()
         )
     return { success: true, data: curso }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -138,9 +139,9 @@ export async function updateCurso(
           user.usr_id_int.toString()
         )
     return { success: true, data: curso }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -158,9 +159,9 @@ export async function deleteCurso(cursoId: string): Promise<{
 
     await CursoService.deleteCurso(cursoId, user.usr_id_int.toString())
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -185,9 +186,9 @@ export async function addEstudianteToCurso(
       user.usr_id_int.toString()
     )
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -212,9 +213,9 @@ export async function removeEstudianteFromCurso(
       user.usr_id_int.toString()
     )
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -233,9 +234,9 @@ export async function getEstudiantesByCurso(cursoId: string): Promise<{
     assertDashboard(user)
     const data = await CursoRepository.getEstudiantesByCurso(cursoId)
     return { success: true, data }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error al obtener estudiantes'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -251,8 +252,8 @@ export async function toggleEstudianteCurso(
     assertDashboard(user)
     await CursoRepository.toggleEstudianteCurso(estCurId, estado)
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error al cambiar estado del estudiante'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

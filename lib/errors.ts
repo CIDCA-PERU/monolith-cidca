@@ -86,3 +86,41 @@ export const handleServiceError = (error: unknown) => {
     statusCode: 500,
   };
 };
+
+/**
+ * Global handler for Server Actions to prevent DB errors from leaking to the client.
+ */
+export const handleActionError = (error: unknown): { success: false; error: string } => {
+  if (error instanceof ServiceError) {
+    return { success: false, error: error.message };
+  }
+
+  const err = error as any;
+
+  // Errores comunes de PostgreSQL
+  if (err?.code === '23505') {
+    // Unique violation
+    if (err.message?.includes('email')) {
+      return { success: false, error: 'Este correo electrónico ya está registrado.' };
+    }
+    if (err.message?.includes('doc_num_vac')) {
+      return { success: false, error: 'Este documento de identidad ya está registrado.' };
+    }
+    return { success: false, error: 'El registro ingresado ya existe.' };
+  }
+
+  if (err?.code === '23503') {
+    // Foreign key violation
+    return { success: false, error: 'No se puede realizar esta acción porque el registro está en uso o depende de otro.' };
+  }
+
+  if (err?.code === '22P02') {
+    // Invalid text representation (UUID o Int mal formados)
+    return { success: false, error: 'Datos de entrada inválidos.' };
+  }
+
+  console.error('[Server Action Error]:', error);
+  
+  // Evitar que el error crudo llegue al cliente
+  return { success: false, error: 'Ha ocurrido un error inesperado. Por favor, inténtelo de nuevo.' };
+};

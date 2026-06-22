@@ -10,6 +10,7 @@ import {
   CreateCertificadoRequest,
 } from '@/dto/reporte.dto'
 import { AppError } from '@/lib/errors'
+import { handleActionError } from '@/lib/errors'
 
 /**
  * Calificaciones de un curso.
@@ -29,9 +30,9 @@ export async function getCalificacionesByCurso(cursoId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: calificaciones }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -57,9 +58,9 @@ export async function getDesempenoEstudiante(
       user.usr_id_int.toString()
     )
     return { success: true, data: desempen }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -81,9 +82,9 @@ export async function getReporteCurso(cursoId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: reporte }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -105,9 +106,9 @@ export async function crearCertificado(request: CreateCertificadoRequest): Promi
       user.usr_id_int.toString()
     )
     return { success: true, data: certificado }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -133,9 +134,9 @@ export async function getCertificadoEstudiante(
       user.usr_id_int.toString()
     )
     return { success: true, data: certificado }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -151,9 +152,9 @@ export async function verificarCertificado(codigo: string): Promise<{
   try {
     const certificado = await ReporteService.verificarCertificado(codigo)
     return { success: true, data: certificado }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -174,9 +175,9 @@ export async function getCertificadosByDocente(): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: certificados }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -202,8 +203,8 @@ export async function getEstadisticasActividad(
       fechaFin
     )
     return { success: true, data: estadisticas }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

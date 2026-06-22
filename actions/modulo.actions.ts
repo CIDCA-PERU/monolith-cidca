@@ -4,6 +4,7 @@ import { ModuloService } from '@/service/modulo.service'
 import { assertAuthenticated, assertDashboard } from '@/lib/auth-guards'
 import { ModuloDTO, ApartadoDTO, CreateModuloRequest, CreateApartadoRequest } from '@/dto/modulo.dto'
 import { AppError } from '@/lib/errors'
+import { handleActionError } from '@/lib/errors'
 
 // --- Módulos ------------------------------------------------------------------
 
@@ -24,9 +25,9 @@ export async function getModulosByCurso(cursoId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: modulos }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -47,9 +48,9 @@ export async function getModuloById(moduloId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: modulo }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -75,9 +76,9 @@ export async function createModulo(
       user.usr_id_int.toString()
     )
     return { success: true, data: modulo }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -103,9 +104,9 @@ export async function updateModulo(
       user.usr_id_int.toString()
     )
     return { success: true, data: modulo }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -123,9 +124,9 @@ export async function deleteModulo(moduloId: string): Promise<{
 
     await ModuloService.deleteModulo(moduloId, user.usr_id_int.toString())
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -148,9 +149,9 @@ export async function getApartadosByModulo(moduloId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: apartados }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -171,9 +172,9 @@ export async function getApartadoById(apartadoId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: apartado }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -199,9 +200,9 @@ export async function createApartado(
       user.usr_id_int.toString()
     )
     return { success: true, data: apartado }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -227,9 +228,9 @@ export async function updateApartado(
       user.usr_id_int.toString()
     )
     return { success: true, data: apartado }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -247,8 +248,8 @@ export async function deleteApartado(apartadoId: string): Promise<{
 
     await ModuloService.deleteApartado(apartadoId, user.usr_id_int.toString())
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

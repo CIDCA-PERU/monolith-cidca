@@ -10,6 +10,7 @@ import bcrypt from 'bcrypt'
 import { sendEmail, buildRecuperacionEmail, buildBienvenidaEmail } from '@/lib/email'
 import { generateSessionToken, signTokenForCookie, hashTokenForDB } from '@/lib/session'
 import { createSesion } from '@/repository/sesion.repository'
+import { handleActionError } from '@/lib/errors'
 
 // -- Registro de estudiante ----------------------------------------------------
 
@@ -123,9 +124,9 @@ export async function registrarEstudiante(formData: FormData): Promise<{
     }
 
     return { success: true, message: `Bienvenido, ${nombre}!` }
-  } catch (err: any) {
-    const msg = err?.message ?? 'Error al registrarse'
-    return { success: false, error: msg.includes('registrado') ? 'Ese email ya está registrado' : msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 

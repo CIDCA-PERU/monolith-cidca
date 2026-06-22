@@ -4,6 +4,7 @@ import { ExamenService } from '@/service/examen.service'
 import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { RespuestaEstudianteDto } from '@/dto/examen.dto'
 import { AppError } from '@/lib/errors'
+import { handleActionError } from '@/lib/errors'
 
 export async function crearIntento(examenId: string): Promise<{
   success: boolean
@@ -19,9 +20,9 @@ export async function crearIntento(examenId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: intento }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -39,9 +40,9 @@ export async function obtenerIntento(intentoId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: intento }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -58,9 +59,9 @@ export async function registrarInfraccion(
 
     await ExamenService.registrarInfraccion(intentoId, tipo, 0)
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -78,9 +79,9 @@ export async function enviarRespuestas(
 
     await ExamenService.enviarRespuestas(intentoId, respuestas, infracciones)
     return { success: true }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -98,9 +99,9 @@ export async function obtenerResultados(intentoId: string): Promise<{
       user.usr_id_int.toString()
     )
     return { success: true, data: resultados }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -115,8 +116,8 @@ export async function validarTiempoExamen(intentoId: string): Promise<{
 
     const valid = await ExamenService.validarTiempoExamen(intentoId)
     return { success: true, valid }
-  } catch (error) {
-    const message = error instanceof AppError ? error.message : 'Error desconocido'
-    return { success: false, error: message }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

@@ -3,6 +3,7 @@
 import { sql } from '@/lib/db'
 import { assertAuthenticated, assertDashboard } from '@/lib/auth-guards'
 import { HorarioDto } from '@/dto/curso.dto'
+import { handleActionError } from '@/lib/errors'
 
 // --- Helpers -------------------------------------------------------------------
 
@@ -48,8 +49,8 @@ export async function getHorariosByCurso(cursoUuid: string): Promise<{
 
     return { success: true, data: mapped }
   } catch (error: any) {
-    const msg = error?.message ?? 'Error al obtener horarios'
-    return { success: false, error: msg }
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -131,8 +132,7 @@ export async function saveHorariosByCurso(
 
     return { success: true }
   } catch (error: any) {
-    const msg = error?.message ?? error?.error_description ?? 'Error al guardar horarios'
-    console.error('[saveHorariosByCurso] Error:', msg)
-    return { success: false, error: msg }
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

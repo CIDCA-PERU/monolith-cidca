@@ -3,6 +3,7 @@
 import { sql } from '@/lib/db'
 import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { revalidatePath } from 'next/cache'
+import { handleActionError } from '@/lib/errors'
 
 export async function crearComentario(formData: FormData): Promise<{
   success: boolean
@@ -41,16 +42,16 @@ export async function crearComentario(formData: FormData): Promise<{
           ${user.usr_id_int}
         )
       `
-    } catch (error) {
-      console.error('[comentario.actions] crearComentario - Error:', error)
-      return { success: false, error: 'Error al guardar el comentario' }
-    }
+    } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
+  }
 
     if (pathRevalidate) revalidatePath(pathRevalidate)
 
     return { success: true, message: 'Comentario publicado' }
-  } catch (err) {
-    console.error('[comentario.actions] crearComentario - Exception:', err)
-    return { success: false, error: err instanceof Error ? err.message : 'Error de conexión' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

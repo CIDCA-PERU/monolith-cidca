@@ -5,6 +5,7 @@ import { assertAuthenticated, assertAdminOrCoordinador, assertDashboard } from '
 import { AppError } from '@/lib/errors'
 import { registerService } from '@/service/auth.service'
 import { existeDocumento, crearDetalleDocumento } from '@/repository/documento.repository'
+import { handleActionError } from '@/lib/errors'
 
 // --- Tipos internos ------------------------------------------------------------
 
@@ -150,7 +151,7 @@ export async function getCursosAdmin(
 
     if (error) {
       console.error('[getCursosAdmin] Supabase error:', error.message)
-      throw new AppError(error.message, 'SERVER_ERROR', 500)
+      throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
     }
 
     const total = count ?? 0
@@ -176,9 +177,9 @@ export async function getCursosAdmin(
       data: result,
       meta: { total, page, limit, totalPages }
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -229,7 +230,7 @@ export async function getEstudiantesAdmin(
       .order('estu_cre_tmp', { ascending: false })
       .range(from, to)
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
 
     const total = count ?? 0
     const totalPages = Math.ceil(total / limit)
@@ -254,9 +255,9 @@ export async function getEstudiantesAdmin(
       data: result,
       meta: { total, page, limit, totalPages }
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar estudiantes'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -302,9 +303,9 @@ export async function getEstudianteByUuid(estuUuid: string): Promise<{
         cursos_count: (e.estudiante_curso ?? []).length,
       },
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar estudiante'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -368,8 +369,8 @@ export async function crearEstudianteManualAdmin(data: {
 
     return { success: true, message: 'Estudiante creado correctamente' }
   } catch (error: any) {
-    const msg = error instanceof AppError ? error.message : error?.message || 'Error al crear estudiante'
-    return { success: false, error: msg.includes('registrado') ? 'Ese email ya está registrado' : msg }
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -423,8 +424,8 @@ export async function editarEstudianteAdmin(data: {
 
     return { success: true, message: 'Perfil de estudiante actualizado correctamente' }
   } catch (error: any) {
-    const msg = error instanceof AppError ? error.message : 'Error al editar estudiante'
-    return { success: false, error: msg }
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -558,9 +559,9 @@ export async function getEstudiantePerfilAdmin(estuUuid: string): Promise<{
         cursos,
       },
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar perfil'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -615,7 +616,7 @@ export async function getPagosAdmin(
       .order('pago_cre_tmp', { ascending: false })
       .range(from, to)
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
 
     const total = count ?? 0
     const totalPages = Math.ceil(total / limit)
@@ -645,9 +646,9 @@ export async function getPagosAdmin(
       data: result,
       meta: { total, page, limit, totalPages }
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar pagos'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -703,9 +704,9 @@ export async function actualizarEstadoPago(
     })
 
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al actualizar pago'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -735,11 +736,11 @@ export async function editarPagoAdmin(
       })
       .eq('pago_uuid', pagoUuid)
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al editar pago'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -795,9 +796,9 @@ export async function eliminarPagoAdmin(
 
     if (delErr) throw new AppError(delErr.message, 'SERVER_ERROR', 500)
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al eliminar pago'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -831,9 +832,9 @@ export async function getVoucherSignedUrl(
     }
 
     return { success: true, url: signed.signedUrl }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al obtener comprobante'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -854,7 +855,7 @@ export async function getEstudiantesSelectAdmin(): Promise<{
       .select('estu_id_int, estu_nomb_vac, estu_apell_pat_vac, estu_apell_mat_vac')
       .order('estu_apell_pat_vac', { ascending: true })
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
 
     const result: EstudianteSelectDto[] = (data ?? []).map((e: any) => ({
       estu_id_int: e.estu_id_int,
@@ -863,9 +864,9 @@ export async function getEstudiantesSelectAdmin(): Promise<{
     }))
 
     return { success: true, data: result }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar estudiantes'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -887,7 +888,7 @@ export async function getCursosSelectAdmin(): Promise<{
       .eq('cur_est_int', 1)
       .order('cur_nomb_vac', { ascending: true })
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
 
     const result: CursoSelectDto[] = (data ?? []).map((c: any) => ({
       cur_id_int:    c.cur_id_int,
@@ -897,9 +898,9 @@ export async function getCursosSelectAdmin(): Promise<{
     }))
 
     return { success: true, data: result }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -946,7 +947,7 @@ export async function crearPagoAdmin(input: {
       pago_upd_tmp:   now,
     })
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
 
     // Si el pago se crea directamente como ACEPTADO, matricular al estudiante
     if (input.pagoEstadVac === 'ACEPTADO') {
@@ -955,9 +956,9 @@ export async function crearPagoAdmin(input: {
     }
 
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al crear pago'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1027,9 +1028,9 @@ export async function getAuditoriaAdmin(): Promise<{
     items.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
 
     return { success: true, data: items.slice(0, 100) }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar auditoría'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1146,9 +1147,9 @@ export async function uploadCursoImagen(formData: FormData): Promise<{
     const { data } = supabase.storage.from('public_assets').getPublicUrl(path)
 
     return { success: true, url: data.publicUrl }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al subir imagen'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1180,9 +1181,9 @@ export async function deleteCursoImagen(publicUrl: string): Promise<{
     }
 
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al eliminar imagen'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1294,9 +1295,9 @@ export async function getModulosByCursoAdmin(curUuid: string): Promise<{
     }))
 
     return { success: true, data: result }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar módulos'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1325,7 +1326,7 @@ export async function crearModulo(
       .select('mod_uuid, mod_nomb_vac, mod_desc_vac, mod_est_int, mod_cre_tmp')
       .single()
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     const m = data as any
     return {
       success: true,
@@ -1338,8 +1339,9 @@ export async function crearModulo(
         apartados: [],
       },
     }
-  } catch (error) {
-    return { success: false, error: 'Error al crear módulo' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1359,10 +1361,11 @@ export async function actualizarModulo(
     const { error } = await supabase
       .from('modulo').update(updates).eq('mod_uuid', modUuid)
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al actualizar módulo' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1376,10 +1379,11 @@ export async function eliminarModulo(
     const { error } = await supabase
       .from('modulo').delete().eq('mod_uuid', modUuid)
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al eliminar módulo' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1409,7 +1413,7 @@ export async function crearApartado(
       .select('apar_uuid, apar_nomb_vac, apar_desc_vac, apar_est_int, apar_ordn_int')
       .single()
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     const a = data as any
     return {
       success: true,
@@ -1422,8 +1426,9 @@ export async function crearApartado(
         items: [],
       },
     }
-  } catch (error) {
-    return { success: false, error: 'Error al crear apartado' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1444,10 +1449,11 @@ export async function actualizarApartado(
     const { error } = await supabase
       .from('apartado').update(updates).eq('apar_uuid', aparUuid)
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al actualizar apartado' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1461,10 +1467,11 @@ export async function eliminarApartado(
     const { error } = await supabase
       .from('apartado').delete().eq('apar_uuid', aparUuid)
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al eliminar apartado' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1495,7 +1502,7 @@ export async function crearItem(
       .select('item_apar_uuid, item_apar_tipo_vac, item_apar_titulo_vac, item_apar_url_vac, item_apar_est_int, item_apar_ordn_inte')
       .single()
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     const it = data as any
     return {
       success: true,
@@ -1508,8 +1515,9 @@ export async function crearItem(
         item_ordn_inte: it.item_apar_ordn_inte ?? 0,
       },
     }
-  } catch (error) {
-    return { success: false, error: 'Error al crear item' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1531,10 +1539,11 @@ export async function actualizarItem(
     const { error } = await supabase
       .from('item_apartado').update(updates).eq('item_apar_uuid', itemUuid)
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al actualizar item' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1548,10 +1557,11 @@ export async function eliminarItem(
     const { error } = await supabase
       .from('item_apartado').delete().eq('item_apar_uuid', itemUuid)
 
-    if (error) return { success: false, error: error.message }
+    if (error) return { success: false, error: handleActionError(error).error }
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al eliminar item' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1610,8 +1620,9 @@ export async function desactivarModuloCascada(
     }
 
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al desactivar módulo en cascada' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1650,8 +1661,9 @@ export async function desactivarApartadoCascada(
     if (e2) return { success: false, error: e2.message }
 
     return { success: true }
-  } catch (error) {
-    return { success: false, error: 'Error al desactivar apartado en cascada' }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1700,7 +1712,7 @@ export async function getCursosConCertificadosAdmin(
       .order('cur_fec_inic_tmp', { ascending: false })
       .range(from, to)
 
-    if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+    if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
 
     const total = count ?? 0
     const totalPages = Math.ceil(total / limit)
@@ -1720,9 +1732,9 @@ export async function getCursosConCertificadosAdmin(
       data: result,
       meta: { total, page, limit, totalPages }
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar cursos'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1799,9 +1811,9 @@ export async function getEstudiantesParaCertificado(curIdInt: number): Promise<{
       data: result,
       cursoNombre: cursoData?.cur_nomb_vac ?? '—',
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar estudiantes'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1840,7 +1852,7 @@ export async function upsertCertificado(input: {
         })
         .eq('cert_id_int', existing.cert_id_int)
 
-      if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+      if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
     } else {
       // INSERT
       const { error } = await supabase
@@ -1855,13 +1867,13 @@ export async function upsertCertificado(input: {
           cert_update_at:  new Date().toISOString(),
         })
 
-      if (error) throw new AppError(error.message, 'SERVER_ERROR', 500)
+      if (error) throw new AppError(handleActionError(error).error, 'SERVER_ERROR', 500)
     }
 
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al guardar certificado'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1928,9 +1940,9 @@ export async function getPerfilAdmin(): Promise<{
         sesiones_count:  sesCount ?? 0,
       },
     }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al cargar perfil'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
 
@@ -1976,8 +1988,8 @@ export async function actualizarPerfilAdmin(input: {
     `, [...dbValues, user.usr_id_int]))
 
     return { success: true }
-  } catch (error) {
-    const msg = error instanceof AppError ? error.message : 'Error al actualizar perfil'
-    return { success: false, error: msg }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }

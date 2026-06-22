@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { assertAuthenticated, assertEstudiante } from '@/lib/auth-guards'
 import { createSoporte } from '@/repository/soporte.repository'
 import { revalidatePath } from 'next/cache'
+import { handleActionError } from '@/lib/errors'
 
 function generateSoporteFilename(userId: number, ext: string): string {
   const now = new Date()
@@ -105,11 +106,8 @@ export async function crearTicketSoporte(formData: FormData): Promise<{
       success: true,
       message: 'Tu solicitud de soporte ha sido enviada. Nos pondremos en contacto contigo a la brevedad.',
     }
-  } catch (error) {
-    console.error('[soporte.actions] crearTicketSoporte - Exception:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido',
-    }
+  } catch (error: any) {
+    const errorResponse = handleActionError(error)
+    return { success: false, error: errorResponse.error }
   }
 }
