@@ -18,7 +18,12 @@ const globalForPostgres = globalThis as unknown as { sql: postgres.Sql | undefin
 // Desactivar camel transform ya que el proyecto ya usaba nombres de columna directos como usr_nomb_vac
 export const sql =
   globalForPostgres.sql ??
-  postgres(dbUrl);
+  postgres(dbUrl, {
+    max: 1, // 1 conexión por instancia serverless
+    idle_timeout: 5,
+    connect_timeout: 10,
+    prepare: false, // OBLIGATORIO para usar Connection Pooling en modo "Transaction"
+  });
 
 export const db = sql;
 
